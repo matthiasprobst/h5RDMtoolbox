@@ -947,6 +947,7 @@ WHERE {
             file_uri="https://example.org#"
         )
         print(ttl)
+        native_int_datatype = f"H5T_INTEL_I{np.dtype(np.int_).itemsize * 8}"
         self.assertEqual("""@prefix hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#> .
 @prefix m4i: <http://w3id.org/nfdi4ing/metadata4ing#> .
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
@@ -1001,8 +1002,46 @@ hdf:H5T_INTEL_I64 a hdf:Datatype .
     hdf:dimensionIndex 0 ;
     hdf:size 3 .
 
-""".replace("tmp0.hdf", _filename.name), ttl)
+""".replace("tmp0.hdf", _filename.name).replace("H5T_INTEL_I64", native_int_datatype), ttl)
         _filename.unlink(missing_ok=True)
+
+    def test_rdf_mappings_callable_none_does_not_abort(self):
+        filename = pathlib.Path("rdf_mapping_none.hdf")
+        with h5tbx.File(filename, mode="w") as h5:
+            ds = h5.create_dataset("u", data=[1, 2, 3])
+            ds.attrs["units"] = "m/s"
+            ds.attrs["standard_name"] = "x_velocity"
+
+        rdf_mappings = {
+            "units": {
+                "predicate": M4I.hasUnit,
+                "object": lambda *_: None,
+            },
+            "standard_name": {
+                "predicate": ssnolib.SSNO.hasStandardName,
+                "object": lambda value, _: f"https://example.org/standard-name/{value}",
+            },
+        }
+        ttl = h5tbx.serialize(
+            filename,
+            fmt="ttl",
+            rdf_mappings=rdf_mappings,
+            file_uri="https://example.org#",
+        )
+        graph = rdflib.Graph().parse(data=ttl, format="ttl")
+        has_standard_name = graph.query(
+            """PREFIX ssno: <https://matthiasprobst.github.io/ssno#>
+SELECT ?o WHERE {
+    ?s ssno:hasStandardName ?o .
+}"""
+        )
+        self.assertEqual(len(has_standard_name.bindings), 1)
+        self.assertEqual(
+            str(has_standard_name.bindings[0][rdflib.Variable("o")]),
+            "https://example.org/standard-name/x_velocity",
+        )
+        self.assertNotIn("None", ttl)
+        filename.unlink(missing_ok=True)
 
     def test_quote(self):
         with h5tbx.File() as h5:
@@ -1039,3 +1078,54 @@ hdf:H5T_INTEL_I64 a hdf:Datatype .
             m4i:hasNumericalValue "2.3"^^xsd:float ] .
 
 """)
+
+    def test_sparql(self):
+        M4I = rdflib.Namespace("http://w3id.org/nfdi4ing/metadata4ing#")
+
+        hdf_filename = pathlib.Path("linked_data_example.h5")
+        with h5tbx.File(hdf_filename, "w") as h5:
+            ds = h5.create_dataset("temperature", data=np.array([20.0, 21.0, 19.0, 22.0]))
+
+            ds.attrs["units"] = h5tbx.Attribute(
+                value="degree_Celsius",
+                rdf_predicate=M4I.hasUnit,
+                rdf_object="http://qudt.org/vocab/unit/DEG_C",
+            )
+            ds.attrs["description", "https://schema.org/description"] = "Room temperature measurements"
+
+            ds_mean = h5.create_dataset("mean_temperature", data=np.mean(ds[()]))
+            ds_mean.attrs["units", M4I.hasUnit] = "degree_Celsius"
+            ds_mean.rdf["units"].object = "http://qudt.org/vocab/unit/DEG_C"
+            ds_mean.attrs["description", "https://schema.org/description"] = "Mean room temperature"
+
+            ds_mean.rdf.type = M4I.NumericalVariable
+            ds_mean.rdf.data_predicate = M4I.hasNumericalValue
+
+        query = """
+        PREFIX schema: <https://schema.org/>
+
+        SELECT ?resource ?description
+        WHERE {
+            ?resource schema:description ?description .
+        }
+        """
+
+        res = h5tbx.sparql(
+            h5.hdf_filename,
+            query
+        )
+        self.assertEqual(
+            len(res),
+            2
+        )
+
+        with h5tbx.File(hdf_filename, "r") as h5:
+            res = h5.sparql(
+                query
+            )
+
+            self.assertEqual(
+                len(res),
+                2
+            )
+        hdf_filename.unlink(missing_ok=True)

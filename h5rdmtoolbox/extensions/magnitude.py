@@ -18,7 +18,8 @@ class MagnitudeInterface:
         self.keep_attrs = keep_attrs
 
     def _compute_magnitude(self, datasets):
-        assert len(datasets) > 1, 'At least two datasets are required to compute magnitude'
+        if len(datasets) <= 1:
+            raise ValueError("At least two datasets are required to compute magnitude")
         keys = list(datasets.keys())
         mag2 = datasets[keys[0]].pint.quantify() ** 2
         with xr.set_options(keep_attrs=self.keep_attrs):

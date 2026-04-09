@@ -5,7 +5,14 @@ import unittest
 import rdflib
 from SPARQLWrapper import SPARQLWrapper, JSON
 
-from h5rdmtoolbox.catalog import Query, QueryResult, SparqlQuery, RemoteSparqlQuery, InMemoryRDFStore, RemoteSparqlStore
+from h5rdmtoolbox.catalog import (
+    Query,
+    QueryResult,
+    SparqlQuery,
+    RemoteSparqlQuery,
+    InMemoryRDFStore,
+    RemoteSparqlStore,
+)
 from h5rdmtoolbox.catalog.utils import sparql_result_to_df
 
 __this_dir__ = pathlib.Path(__file__).parent.resolve()
@@ -19,10 +26,8 @@ def get_python_version():
 
 
 class TestQuery(unittest.TestCase):
-
     def test_query(self):
         class SQLQuery(Query):
-
             def execute(self) -> QueryResult:
                 return QueryResult(self, data="result", description=self.description)
 
@@ -39,21 +44,26 @@ class TestQuery(unittest.TestCase):
         sparql_query = SparqlQuery(query="SELECT * WHERE { ?s ?p ?o }")
         self.assertEqual(
             sparql_query.__repr__(),
-            'SparqlQuery(query="SELECT * WHERE { ?s ?p ?o }", description="")'
+            'SparqlQuery(query="SELECT * WHERE { ?s ?p ?o }", description="")',
         )
         store = InMemoryRDFStore(data_dir=__this_dir__ / "testdata")
         res = SparqlQuery("SELECT * WHERE { ?s ?p ?o }").execute(store)
         self.assertIsInstance(res, QueryResult)
         self.assertEqual(res.query, sparql_query)
         self.assertEqual(res.derived_graph, None)
-        self.assertTrue(res.data.equals(sparql_result_to_df(graph.query("SELECT * WHERE { ?s ?p ?o }"))))
+        self.assertTrue(
+            res.data.equals(
+                sparql_result_to_df(graph.query("SELECT * WHERE { ?s ?p ?o }"))
+            )
+        )
 
-    @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
-                         reason=f"Only test on Python {TESTING_VERSIONS}")
+    @unittest.skipUnless(
+        get_python_version()[1] in TESTING_VERSIONS,
+        reason=f"Only test on Python {TESTING_VERSIONS}",
+    )
     def test_wikidata_query(self):
-        enpoint_url = "https://query.wikidata.org/sparql"
-        sparql_wrapper = SPARQLWrapper(enpoint_url)
-        sparql_wrapper.setReturnFormat(JSON)
+        # User-Agent header is now set by RemoteSparqlStore
+        endpoint_url = "https://query.wikidata.org/sparql"
         query_str = """
 SELECT * WHERE {
   wd:Q131448345 ?property ?value.
@@ -64,9 +74,11 @@ ORDER BY ?propertyLabel
         sparql_query = RemoteSparqlQuery(query_str)
         self.assertEqual(
             sparql_query.__repr__(),
-            f"RemoteSparqlQuery(query=\"{query_str}\", description=\"\")"
+            f'RemoteSparqlQuery(query="{query_str}", description="")',
         )
-        remote_store = RemoteSparqlStore(endpoint_url=enpoint_url, return_format="json")
+        remote_store = RemoteSparqlStore(
+            endpoint_url=endpoint_url, return_format="json"
+        )
 
         res = sparql_query.execute(remote_store)
         self.assertIsInstance(res, QueryResult)
@@ -74,7 +86,9 @@ ORDER BY ?propertyLabel
         self.assertTrue(len(res.data) >= 917)
 
         sparql_query = RemoteSparqlQuery(query="DESCRIBE wd:Q131448345")
-        remote_store = RemoteSparqlStore(endpoint_url=enpoint_url, return_format="json-ld")
+        remote_store = RemoteSparqlStore(
+            endpoint_url=endpoint_url, return_format="json-ld"
+        )
         res = sparql_query.execute(remote_store)
         print(res.data.serialize("json-ld").serialize())
 

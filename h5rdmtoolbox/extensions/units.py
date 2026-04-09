@@ -16,10 +16,15 @@ class ToUnitsInterface:
         self.coord_units = coord_units
 
     def _convert_units(self, data: xr.DataArray):
-        assert isinstance(data, xr.DataArray), 'Data is not an xarray DataArray'
-        assert 'units' in data.attrs, 'No units attribute found in the dataset'
+        if not isinstance(data, xr.DataArray):
+            raise TypeError("Data is not an xarray DataArray")
+        if "units" not in data.attrs:
+            raise KeyError("No units attribute found in the dataset")
         for c, cn in self.coord_units.items():
-            assert 'units' in data.coords[c].attrs, f'No units attribute found in the coordinate {c}'
+            if c not in data.coords:
+                raise KeyError(f"Coordinate {c} not found in data")
+            if "units" not in data.coords[c].attrs:
+                raise KeyError(f"No units attribute found in the coordinate {c}")
             data.coords[c] = data.coords[c].pint.quantify(unit_registry=get_ureg()).pint.to(
                 self.coord_units[c]).pint.dequantify()
         # convert units

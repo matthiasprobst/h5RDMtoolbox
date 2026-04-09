@@ -2,69 +2,70 @@
     "@context": 
         {
             "@import": "https://w3id.org/nfdi4ing/metadata4ing/m4i_context.jsonld",
-            "local": "https://local-domain.org/"
+            "local": "https://local-domain.org/",
+            "foaf": "http://xmlns.com/foaf/0.1/"
         },
     "@graph": [
         {
             "@id": "local:preparation_0001",
-            "@type": "processing step",
+            "@type": "m4i:ProcessingStep",
             "label": "Sample preparation and parameter definition",
             "has participant": "local:alex",
             "start time": "2022-09-22T10:31:22"
         },
         {
             "@id": "local:xrctscan_0001",
-            "@type": "processing step",
+            "@type": "m4i:ProcessingStep",
             "label": "XRCT-Scan",
             "has employed tool": "local:xray_source_finetec_180.01ctt_0001",
             "realizes method": "local:cone_beam_scanning",
             "investigates": "https://www.wikidata.org/wiki/Q189259",
             "investigatesProperty": "https://www.wikidata.org/wiki/Q256699",
-	    "has output": "local:output/xrct-data"
+ 	    "has output": "local:output/xrct-data"
         },
         {
             "@id": "local:reconstruction_0001",
-            "@type": "processing step",
+            "@type": "m4i:ProcessingStep",
             "label": "Image Processing and Reconstruction",
             "has input": "local:xrct_data_0001"
         },
         {
             "@id": "local:postprocessing_0001",
-            "@type": "processing step",
+            "@type": "m4i:ProcessingStep",
             "label": "Post Processing"
         },
         {
             "@id": "local:alex",
-            "@type": "person",
+            "@type": "foaf:Person",
             "has ORCID ID": "0000-0000-0123-4567",
             "first name": "Alexandra",
             "last name": "Test"
         },
         {
             "@id": "local:xray_source_finetec_180.01ctt_0001",
-            "@type": "tool",
+            "@type": "m4i:Tool",
             "label": "FineTec FORE 180.01C TT"
         },
         {
             "@id": "local:cone_beam_scanning",
-            "@type": "method",
+            "@type": "m4i:Method",
             "label": "Standard cone beam scanning",
             "description": "Standard cone beam scanning of the centered sample",
             "has parameter": 
             {
                 "@id": "local:xray_tube_voltage",
-                "@type": "numerical variable",
+                "@type": "m4i:NumericalVariable",
                 "label": "X-Ray Tube Voltage",
                 "has kind of quantity" : "http://qudt.org/vocab/quantitykind/ElectricPotential", 
                 "has numerical value": "140",
-    	    	"has unit": "http://qudt.org/vocab/unit/KiloV"
+     	    	"has unit": "http://qudt.org/vocab/unit/KiloV"
             }
         },
-  	{
-		"@type": "file set",
+   	{
+ 		"@type": "m4i:FileSet",
                 "@id": "local:output/xrct-data",
-  		"includes": "*.tiff",
-		"description": "TIFF files in folder output/image-files"
-  	}
-    ]
+   		"includes": "*.tiff",
+ 		"description": "TIFF files in folder output/image-files"
+   	}
+     ]
 }

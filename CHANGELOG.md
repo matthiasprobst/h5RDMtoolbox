@@ -2,6 +2,20 @@
 
 Log of changes in the versions
 
+## v2.7.4
+
+- add `shacl()` as method to query an HDF5 file
+- lazy loading conventions
+- housekeeping and bugfixes
+  - decouple wrapper form convention module
+  - split utils into submodules
+  - added user-agent header to sparqlstore
+  - improve testing
+  - eliminated code duplications
+  - remove global mutable state in get_rootparent function
+  - fixed duplicated super().__init__() call in File
+- updated and improved documentation
+
 ## v2.7.3
 
 - bugfixes in user rdf serialization

@@ -39,12 +39,15 @@ def apply_rdf_mappings(obj, obj_uri, graph, rdf_mappings):
                 mapping = rdf_mappings[ak]
                 predicate_uri = rdflib.URIRef(mapping['predicate'])
                 if predicate_uri:
-                    object_uri = mapping.get('object')
-                    if object_uri:
-                        if callable(object_uri):
-                            object_uri = str(object_uri(av, obj.attrs))
+                    object_mapper = mapping.get('object')
+                    if object_mapper:
+                        if callable(object_mapper):
+                            object_uri = object_mapper(av, obj.attrs)
                             if object_uri is None:
-                                return
+                                continue
+                            object_uri = str(object_uri)
+                        else:
+                            object_uri = object_mapper
                         graph.add((obj_uri, predicate_uri, rdflib.URIRef(object_uri)))
                     else:
                         graph.add((obj_uri, predicate_uri, to_literal(av)))

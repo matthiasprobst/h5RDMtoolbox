@@ -1,5 +1,4 @@
-"""Core wrapper module containing basic wrapper implementation of File, Dataset and Group
-"""
+"""Core wrapper module containing basic wrapper implementation of File, Dataset and Group"""
 
 import json
 import logging
@@ -14,6 +13,7 @@ from typing import List, Dict, Union, Tuple, Optional
 
 import h5py
 import numpy as np
+
 # noinspection PyUnresolvedReferences
 import pint
 import rdflib
@@ -34,15 +34,38 @@ from ..convention.consts import DefaultValue
 from ..ld import rdf
 from ..ld._types import RDFMappingEntry
 
-logger = logging.getLogger('h5rdmtoolbox')
+logger = logging.getLogger("h5rdmtoolbox")
 
-MODIFIABLE_PROPERTIES_OF_A_DATASET = ('name', 'chunks', 'compression', 'compression_opts',
-                                      'dtype', 'maxshape')
-H5KWARGS = ('driver', 'libver', 'userblock_size', 'swmr',
-            'rdcc_nslots', 'rdcc_nbytes', 'rdcc_w0', 'track_order',
-            'fs_strategy', 'fs_persist', 'fs_threshold', 'fs_page_size',
-            'page_buf_size', 'min_meta_keep', 'min_raw_keep', 'locking',
-            'alignment_threshold', 'alignment_interval', 'meta_block_size')
+MODIFIABLE_PROPERTIES_OF_A_DATASET = (
+    "name",
+    "chunks",
+    "compression",
+    "compression_opts",
+    "dtype",
+    "maxshape",
+)
+H5KWARGS = (
+    "driver",
+    "libver",
+    "userblock_size",
+    "swmr",
+    "rdcc_nslots",
+    "rdcc_nbytes",
+    "rdcc_w0",
+    "track_order",
+    "fs_strategy",
+    "fs_persist",
+    "fs_threshold",
+    "fs_page_size",
+    "page_buf_size",
+    "min_meta_keep",
+    "min_raw_keep",
+    "locking",
+    "alignment_threshold",
+    "alignment_interval",
+    "meta_block_size",
+)
+ISO_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
 
 
 def assert_filename_existence(filename: pathlib.Path) -> pathlib.Path:
@@ -64,13 +87,18 @@ def assert_filename_existence(filename: pathlib.Path) -> pathlib.Path:
         If the filename does not exist.
     """
     if not filename.exists():
-        raise FileNotFoundError('Filename does not exist. It might be moved or deleted!')
+        raise FileNotFoundError(
+            "Filename does not exist. It might be moved or deleted!"
+        )
     return filename
 
 
-def convert_strings_to_datetimes(array, time_format='%Y-%m-%dT%H:%M:%S.%f'):
-    assert np.issubdtype(array.dtype, np.str_), 'Unexpected array type'
-    return np.array([datetime.strptime(date_str, time_format) for date_str in array.flat]).reshape(array.shape)
+def convert_strings_to_datetimes(array, time_format="%Y-%m-%dT%H:%M:%S.%f"):
+    assert np.issubdtype(array.dtype, np.str_), "Unexpected array type"
+    time_format = _normalize_time_format(time_format)
+    return np.array(
+        [datetime.strptime(date_str, time_format) for date_str in array.flat]
+    ).reshape(array.shape)
     # else:
     #     return np.array([convert_strings_to_datetimes(subarray) for subarray in array])
 
@@ -98,12 +126,14 @@ def lower(string: str) -> str:
     return Lower(string)
 
 
-def process_attributes(cls,
-                       meth_name: str,
-                       attrs: Dict,
-                       kwargs: Dict,
-                       name: str,
-                       existing_attrs: Optional[Tuple] = None) -> Tuple[Dict, Dict, Dict]:
+def process_attributes(
+    cls,
+    meth_name: str,
+    attrs: Dict,
+    kwargs: Dict,
+    name: str,
+    existing_attrs: Optional[Tuple] = None,
+) -> Tuple[Dict, Dict, Dict]:
     """Process attributes and kwargs for methods "create_dataset", "create_group" and "File.__init__" method.
 
     Parameters
@@ -126,6 +156,10 @@ def process_attributes(cls,
 
     curr_cv = convention.get_current_convention()
 
+    # Guard against None convention (can happen during initialization or with ContextVar edge cases)
+    if curr_cv is None:
+        return attrs, {}, kwargs
+
     # go through list of registered standard attributes, and check whether they are in kwargs:
     if meth_name not in curr_cv.methods[cls]:
         return attrs, {}, kwargs
@@ -147,15 +181,19 @@ def process_attributes(cls,
                 # potential conflict
                 # if the skwargs is not set and not required, pass attrs to skwargs
                 # same accounts if the current value in skwargs is the default (to be identified by instance check)
-                if skwargs[ak] == DefaultValue.NONE or skwargs[ak] == DefaultValue.EMPTY or isinstance(skwargs[ak],
-                                                                                                       DefaultValue) \
-                        or skwargs[ak] is None:
+                if (
+                    skwargs[ak] == DefaultValue.NONE
+                    or skwargs[ak] == DefaultValue.EMPTY
+                    or isinstance(skwargs[ak], DefaultValue)
+                    or skwargs[ak] is None
+                ):
                     skwargs[ak] = v
                 # else raise error
                 else:
                     raise convention.standard_attributes.errors.StandardAttributeError(
                         f'You passed the standard attribute "{ak}" as a standard argument and it is '
-                        f'also in the "attrs" argument. This is not allowed!')
+                        f'also in the "attrs" argument. This is not allowed!'
+                    )
 
     _pop = []
     # only consider non-None standard attributes
@@ -166,25 +204,34 @@ def process_attributes(cls,
             elif v == DefaultValue.EMPTY:
                 # None may be only a placeholder, but a real value is expected
                 # this is the case if the registered default value is DefaultValue.EMPTY:
-                alt_attr_name = curr_cv.methods[cls][meth_name][k].alternative_standard_attribute
+                alt_attr_name = curr_cv.methods[cls][meth_name][
+                    k
+                ].alternative_standard_attribute
                 if alt_attr_name in skwargs:
                     logger.debug(
-                        f'Standard attribute {k} is empty and alternative standard attribute given by the user')
+                        f"Standard attribute {k} is empty and alternative standard attribute given by the user"
+                    )
                     if skwargs[alt_attr_name] == DefaultValue.EMPTY:
                         raise convention.standard_attributes.errors.StandardAttributeError(
                             f'Error creating {cls.__name__} "{name}": The standard attribute "{k}" '
-                            f'is required but not provided. The alternative '
-                            f'{alt_attr_name} '
-                            f'is also not provided.')
+                            f"is required but not provided. The alternative "
+                            f"{alt_attr_name} "
+                            f"is also not provided."
+                        )
                     else:
-                        logger.debug(f'Remove standard attribute {k} from the parameters and use alternative: '
-                                     f'{alt_attr_name}')
+                        logger.debug(
+                            f"Remove standard attribute {k} from the parameters and use alternative: "
+                            f"{alt_attr_name}"
+                        )
                         _pop.append(k)
                 else:
-                    logger.debug(f'Standard attribute {k} is empty but no alternative attribute given by the user.')
-                    if not get_config('ignore_set_std_attr_err'):
+                    logger.debug(
+                        f"Standard attribute {k} is empty but no alternative attribute given by the user."
+                    )
+                    if not get_config("ignore_set_std_attr_err"):
                         raise convention.standard_attributes.errors.StandardAttributeError(
-                            f'The standard attribute "{k}" is required but not provided.')
+                            f'The standard attribute "{k}" is required but not provided.'
+                        )
 
     _ = [skwargs.pop(p) for p in _pop]
 
@@ -205,17 +252,74 @@ def process_attributes(cls,
 
 def _delattr(obj: protocols.H5TbxHLObject, item: str):
     if obj.standard_attributes.get(item, None):
-        if get_config('allow_deleting_standard_attributes'):
+        if get_config("allow_deleting_standard_attributes"):
             del obj.attrs[item]
             return
-        raise ValueError('Deleting standard attributes is not allowed based on the current configuration! '
-                         'You may change this by calling '
-                         '"h5tbx.set_config(allow_deleting_standard_attributes=True)".')
-    if item in obj and get_config('natural_naming'):
+        raise ValueError(
+            "Deleting standard attributes is not allowed based on the current configuration! "
+            "You may change this by calling "
+            '"h5tbx.set_config(allow_deleting_standard_attributes=True)".'
+        )
+    if item in obj and get_config("natural_naming"):
         del obj[item]
         return
     del obj[item]
     # super().__delattr__(item)
+
+
+def _normalize_time_format(time_format: str) -> str:
+    if isinstance(time_format, str) and time_format.lower() == "iso":
+        return ISO_TIME_FORMAT
+    return time_format
+
+
+def _validate_jsonld_file_uri(file_uri: Optional[str]) -> None:
+    if file_uri is not None and not file_uri.endswith("#"):
+        raise ValueError(
+            "The base URI for semantic metadata describing HDF5 internals must end with '#' to indicate that "
+            "fragment identifiers (e.g., '#entry/data') refer to conceptual parts of the file. Without the '#', "
+            "it would incorrectly suggest that internal components are resolvable sub-resources on the web."
+        )
+
+
+def _warn_on_missing_file_uri(file_uri: Optional[Union[str, Dict]]) -> None:
+    if file_uri is None:
+        warnings.warn(
+            "Not providing a file-uri is not good practice because it will generate blank nodes. Consider providing an URI such as the DOI URL for example.",
+            category=UserWarning,
+        )
+
+
+def _normalize_file_uri_and_prefix(
+    file_uri: Optional[Union[str, Dict]],
+) -> Tuple[Optional[Union[str, Dict]], Optional[str]]:
+    if not isinstance(file_uri, Dict):
+        return file_uri, None
+
+    if len(file_uri) != 1:
+        raise ValueError(
+            "If file_uri is a dict, it must contain exactly one key-value pair."
+        )
+
+    prefix, normalized_file_uri = next(iter(file_uri.items()))
+    return normalized_file_uri, prefix
+
+
+def _serialize_ld_graph(
+    graph: rdflib.Graph,
+    fmt: str,
+    indent: int,
+    context: Optional[Dict],
+) -> str:
+    from h5rdmtoolbox.ld.utils import optimize_context
+
+    optimized_context = optimize_context(graph, context or {})
+    return graph.serialize(
+        format=fmt,
+        indent=indent,
+        auto_compact=True,
+        context=optimized_context,
+    )
 
 
 class Group(h5py.Group):
@@ -241,6 +345,7 @@ class Group(h5py.Group):
     * rootparent - returns the root group instance
     * basename - returns the basename of the group
     """
+
     hdfrepr = H5Repr()
 
     @property
@@ -257,7 +362,7 @@ class Group(h5py.Group):
     @property
     def rootparent(self):
         """Return the root group instance."""
-        if self.name == '/':
+        if self.name == "/":
             return File(self._id)
         return File(get_rootparent(self.parent)._id)
 
@@ -268,29 +373,39 @@ class Group(h5py.Group):
         """Basename of dataset (path without leading forward slash)"""
         return os.path.basename(self.name)
 
-    def get_datasets(self, pattern: str = '.*', recursive: bool = False) -> List[h5py.Dataset]:
+    def get_datasets(
+        self, pattern: str = ".*", recursive: bool = False
+    ) -> List[h5py.Dataset]:
         """Return list of datasets in the current group.
         If pattern is None, all groups are returned.
         If pattern is not None a regrex-match is performed
         on the basenames of the datasets."""
-        if pattern == '.*' and not recursive:
+        if pattern == ".*" and not recursive:
             return [v for v in self.values() if isinstance(v, h5py.Dataset)]
-        return [self.rootparent[ds.name] for ds in
-                self.find({'$name': {'$regex': pattern}}, '$Dataset', recursive=recursive)]
+        return [
+            self.rootparent[ds.name]
+            for ds in self.find(
+                {"$name": {"$regex": pattern}}, "$Dataset", recursive=recursive
+            )
+        ]
 
-    def get_groups(self,
-                   pattern: str = '.*',
-                   recursive: bool = False) -> List[h5py.Group]:
+    def get_groups(
+        self, pattern: str = ".*", recursive: bool = False
+    ) -> List[h5py.Group]:
         """Return list of groups in the current group.
         If pattern is None, all groups are returned.
         If pattern is not None a regrex-match is performed
         on the basenames of the groups."""
-        if pattern == '.*' and not recursive:
+        if pattern == ".*" and not recursive:
             return [v for v in self.values() if isinstance(v, h5py.Group)]
         # if return_lazy:
         #     return self.find({'$name': {'$regex': pattern}}, '$Group', recursive=recursive)
-        return [self.rootparent[g.name] for g in
-                self.find({'$name': {'$regex': pattern}}, '$Group', recursive=recursive)]
+        return [
+            self.rootparent[g.name]
+            for g in self.find(
+                {"$name": {"$regex": pattern}}, "$Group", recursive=recursive
+            )
+        ]
 
     def __init__(self, _id):
         if isinstance(_id, h5py.Group):
@@ -298,12 +413,18 @@ class Group(h5py.Group):
         if isinstance(_id, h5py.h5g.GroupID):
             super().__init__(_id)
         else:
-            raise ValueError('Could not initialize Group. A h5py.h5f.FileID object must be passed')
+            raise ValueError(
+                "Could not initialize Group. A h5py.h5f.FileID object must be passed"
+            )
         self._hdf_filename = Path(self.file.filename)
+        self._convention = (
+            getattr(self.file, "_convention", None)
+            or convention.get_current_convention()
+        )
 
-    def __setitem__(self,
-                    name: str,
-                    obj: Union[xr.DataArray, List, Tuple, Dict, h5py.ExternalLink]) -> protocols.H5TbxDataset:
+    def __setitem__(
+        self, name: str, obj: Union[xr.DataArray, List, Tuple, Dict, h5py.ExternalLink]
+    ) -> protocols.H5TbxDataset:
         """
         Lazy creating datasets. More difficult than using h5py as mandatory
         parameters must be provided.
@@ -324,7 +445,7 @@ class Group(h5py.Group):
             return Dataset(obj.hdf.to_group(Group(self), name).id)
         if isinstance(obj, (list, tuple)):
             if not isinstance(obj[1], dict):
-                raise TypeError(f'Second item must be type dict but is {type(obj[1])}')
+                raise TypeError(f"Second item must be type dict but is {type(obj[1])}")
             kwargs = obj[1]
             return self.create_dataset(name, data=obj[0], **kwargs)
         if isinstance(obj, dict):
@@ -343,24 +464,45 @@ class Group(h5py.Group):
         if isinstance(ret, h5py.Group):
             return self._h5grp(ret.id)
 
+    def values(self):
+        """Yield wrapped group/dataset objects."""
+        for key in self.keys():
+            yield self[key]
+
+    def items(self):
+        """Yield `(name, wrapped-object)` pairs."""
+        for key in self.keys():
+            yield key, self[key]
+
+    def visititems(self, func):
+        """Visit wrapped objects to keep wrapper APIs available in callbacks."""
+        def _visitor(name):
+            return func(name, self[name])
+
+        return super().visit(_visitor)
+
     def __getattr__(self, item: str):
         standard_attributes: Dict = self.standard_attributes
         if standard_attributes:  # are there standard attributes registered?
-            standard_attribute: Optional[protocols.StandardAttribute] = standard_attributes.get(item, None)
-            if standard_attribute:  # is there an attribute requested with name=item available?
+            standard_attribute: Optional[protocols.StandardAttribute] = (
+                standard_attributes.get(item, None)
+            )
+            if (
+                standard_attribute
+            ):  # is there an attribute requested with name=item available?
                 return standard_attribute.get(self)
 
         try:
             return super().__getattribute__(item)
         except (RuntimeError, AttributeError) as e:
-            if not get_config('natural_naming'):
+            if not get_config("natural_naming"):
                 # raise an error if natural naming is NOT enabled
                 raise AttributeError(e)
 
         # if item in self.__dict__:
         #     return super().__getattribute__(item)
         try:
-            _item = item.replace('_', ' ')
+            _item = item.replace("_", " ")
             # item is a Group name?
             if item in [k for k, v in self.items() if isinstance(v, h5py.Group)]:
                 return self._h5grp(self[item].id)
@@ -373,13 +515,15 @@ class Group(h5py.Group):
             raise AttributeError(item)
 
     def __setattr__(self, key, value):
-        if self.__class__ in convention.get_current_convention().properties:
-            if key in convention.get_current_convention().properties[self.__class__]:
-                return convention.get_current_convention().properties[self.__class__][key](self).set(value)
+        _convention = self.__dict__.get("_convention")
+        if _convention is not None:
+            if self.__class__ in _convention.properties:
+                if key in _convention.properties[self.__class__]:
+                    return _convention.properties[self.__class__][key](self).set(value)
         super().__setattr__(key, value)
 
     def __str__(self) -> str:
-        return f'<HDF5 wrapper group "{self.name}" (members: {len(self)}, convention: "{convention.get_current_convention().name}")>'
+        return f'<HDF5 wrapper group "{self.name}" (members: {len(self)}, convention: "{self._convention.name}")>'
 
     def __repr__(self) -> str:
         return self.__str__()
@@ -393,12 +537,15 @@ class Group(h5py.Group):
     @property
     def convention(self):
         """Return the convention currently enabled."""
-        return convention.get_current_convention()
+        return self._convention
 
     @property
     def standard_attributes(self) -> Dict:
         """Return the standard attributes of the class."""
-        return self.convention.properties.get(self.__class__, {})
+        _convention = self.__dict__.get("_convention")
+        if _convention is None:
+            return {}
+        return _convention.properties.get(self.__class__, {})
 
     @property
     def rdf(self):
@@ -420,41 +567,54 @@ class Group(h5py.Group):
     @property
     def iri(self):
         """Deprecated. Use rdf instead."""
-        warnings.warn('Property "iri" is deprecated. Use "rdf" instead.', DeprecationWarning)
+        warnings.warn(
+            'Property "iri" is deprecated. Use "rdf" instead.', DeprecationWarning
+        )
         return rdf.RDFManager(self.attrs)
 
-    # @property
-    # def attrsdef(self) -> definition.DefinitionManager:
-    #     """Return DefinitionManager"""
-    #     return definition.DefinitionManager(self.attrs)
 
-    def get_tree_structure(self, recursive=True, ignore_attrs: List[str] = None):
-        """Return the tree (attributes, names, shapes) of the group and subgroups"""
+    def get_tree_structure(
+        self, recursive=True, ignore_attrs: List[str] = None
+    ) -> Dict:
+        """Return the tree (attributes, names, shapes) of the group and subgroups.
+
+        The structure uses '/' as the key for root attributes, with child groups and
+        datasets as sibling keys at the same level.
+
+        Returns
+        -------
+        Dict
+            Dictionary with '/' containing root attributes, and other keys for
+            groups/datasets. Groups contain nested dictionaries with the same structure.
+        """
         if ignore_attrs is None:
             ignore_attrs = H5PY_SPECIAL_ATTRIBUTES
-        tree = dict(self.attrs.items())
+        tree: Dict = {"/": {}}
+        for ak, av in self.attrs.items():
+            if ak not in H5_DIM_ATTRS and ak not in ignore_attrs:
+                tree["/"][ak] = av
         for k, v in self.items():
             if isinstance(v, h5py.Dataset):
-                ds_dict = {'shape': v.shape, 'ndim': v.ndim}
+                ds_dict: Dict = {"shape": v.shape, "ndim": v.ndim}
                 for ak, av in v.attrs.items():
-                    if ak not in H5_DIM_ATTRS:
-                        if ak not in ignore_attrs:
-                            ds_dict[ak] = av
+                    if ak not in H5_DIM_ATTRS and ak not in ignore_attrs:
+                        ds_dict[ak] = av
                 tree[k] = ds_dict
-            else:
-                if recursive:
-                    tree[k] = v.get_tree_structure(recursive)
+            elif isinstance(v, h5py.Group) and recursive:
+                tree[k] = v.get_tree_structure(recursive, ignore_attrs)
         return tree
 
-    def create_group(self,
-                     name: str,
-                     overwrite: bool = None,
-                     attrs: Dict = None,
-                     rdf_type: Optional[Union[str, rdflib.URIRef]] = None,
-                     rdf_subject: Optional[Union[str, rdflib.URIRef]] = None,
-                     update_attrs: Optional[bool] = False,
-                     track_order=None,
-                     **kwargs) -> "Group":
+    def create_group(
+        self,
+        name: str,
+        overwrite: bool = None,
+        attrs: Dict = None,
+        rdf_type: Optional[Union[str, rdflib.URIRef]] = None,
+        rdf_subject: Optional[Union[str, rdflib.URIRef]] = None,
+        update_attrs: Optional[bool] = False,
+        track_order=None,
+        **kwargs,
+    ) -> "Group":
         """
         Overwrites parent methods. Additional parameters are "long_name" and "attrs".
         Besides, it does and behaves the same. Differently to dataset creating
@@ -480,10 +640,12 @@ class Group(h5py.Group):
         if attrs is None:
             attrs = {}
 
-        attrs, skwargs, kwargs = process_attributes(Group, 'create_group', attrs, kwargs, name)
+        attrs, skwargs, kwargs = process_attributes(
+            Group, "create_group", attrs, kwargs, name
+        )
         if name in self:
             if not isinstance(self[name], h5py.Group):
-                raise ValueError('The name you passed is already used for a dataset!')
+                raise ValueError("The name you passed is already used for a dataset!")
 
             if overwrite is True:
                 del self[name]
@@ -496,10 +658,12 @@ class Group(h5py.Group):
                 # let h5py.Group raise the error...
                 h5py.Group.create_group(self, name, track_order=track_order)
 
-        if _is_not_valid_natural_name(self, name, get_config('natural_naming')):
-            raise ValueError(f'The group name "{name}" is not valid. It is an '
-                             f'attribute of the class and cannot be used '
-                             f'while natural naming is enabled')
+        if _is_not_valid_natural_name(self, name, get_config("natural_naming")):
+            raise ValueError(
+                f'The group name "{name}" is not valid. It is an '
+                f"attribute of the class and cannot be used "
+                f"while natural naming is enabled"
+            )
 
         subgrp = super().create_group(name, track_order=track_order)
 
@@ -511,7 +675,9 @@ class Group(h5py.Group):
             for k, v in attrs.items():
                 try:
                     h5tbxgrp.attrs[k] = v
-                except convention.standard_attributes.errors.StandardAttributeError as e:
+                except (
+                    convention.standard_attributes.errors.StandardAttributeError
+                ) as e:
                     del self[name]  # undo group creation
                     raise e
         if rdf_type is not None:
@@ -520,14 +686,16 @@ class Group(h5py.Group):
             h5tbxgrp.rdf.subject = rdf_subject
         return h5tbxgrp
 
-    def create_time_dataset(self,
-                            name: str,
-                            data: Union[datetime, List],
-                            time_format: str,
-                            assign_rdf: bool = True,
-                            overwrite: bool = False,
-                            attrs: Dict = None,
-                            **kwargs):
+    def create_time_dataset(
+        self,
+        name: str,
+        data: Union[datetime, List],
+        time_format: str,
+        assign_rdf: bool = True,
+        overwrite: bool = False,
+        attrs: Dict = None,
+        **kwargs,
+    ):
         """Special creation function to create a time vector. Data is stored as a string dataset
         where each datetime is converted to a string using the provided time_format
 
@@ -553,34 +721,47 @@ class Group(h5py.Group):
         """
         if attrs is None:
             attrs = {}
-        if time_format.lower() == 'iso':
-            time_format = '%Y-%m-%dT%H:%M:%S.%f'
+        time_format = _normalize_time_format(time_format)
 
-        attrs.update({'time_format': time_format})
+        attrs.update({"time_format": time_format})
 
         if isinstance(data, np.ndarray):
-            ds = self.create_string_dataset(name,
-                                            data=[t.astype(datetime).strftime(time_format) for t in data],
-                                            overwrite=overwrite,
-                                            attrs=attrs,
-                                            **kwargs)
+            ds = self.create_string_dataset(
+                name,
+                data=[t.astype(datetime).strftime(time_format) for t in data],
+                overwrite=overwrite,
+                attrs=attrs,
+                **kwargs,
+            )
         else:
             _data = np.asarray(data)
             _orig_shape = _data.shape
             _flat_data = _data.flatten()
             _flat_data = np.asarray([t.strftime(time_format) for t in _flat_data])
             _reshaped_data = _flat_data.reshape(_orig_shape)
-            ds = self.create_string_dataset(name, data=_reshaped_data.tolist(),
-                                            overwrite=overwrite, attrs=attrs, **kwargs)
+            ds = self.create_string_dataset(
+                name,
+                data=_reshaped_data.tolist(),
+                overwrite=overwrite,
+                attrs=attrs,
+                **kwargs,
+            )
+        if assign_rdf:
+            ds.rdf.type = "https://schema.org/DateTime"
+            ds.rdf["time_format"].predicate = (
+                "https://matthiasprobst.github.io/pivmeta#timeFormat"
+            )
         return ds
 
-    def create_string_dataset(self,
-                              name: str,
-                              data: Union[str, List[str]],
-                              overwrite=False,
-                              attrs=None,
-                              rdf_type: Optional[Union[str, rdflib.URIRef]] = None,
-                              **kwargs):
+    def create_string_dataset(
+        self,
+        name: str,
+        data: Union[str, List[str]],
+        overwrite=False,
+        attrs=None,
+        rdf_type: Optional[Union[str, rdflib.URIRef]] = None,
+        **kwargs,
+    ):
         """Create a string dataset. In this version only one string is allowed.
         In future version a list of strings may be allowed, too.
         No long or standard name needed"""
@@ -588,15 +769,19 @@ class Group(h5py.Group):
         if attrs is None:
             attrs = {}
 
-        attrs, skwargs, kwargs = process_attributes(Group, 'create_string_dataset', attrs, kwargs, name)
+        attrs, skwargs, kwargs = process_attributes(
+            Group, "create_string_dataset", attrs, kwargs, name
+        )
 
         if isinstance(data, str):
             n_letter = len(data)
         elif isinstance(data, (tuple, list)):
             n_letter = max([len(d) for d in np.asarray(data).flatten()])
         else:
-            raise TypeError(f'Unexpected type for parameter "data": {type(data)}. Expected str or List/Tuple of str')
-        dtype = f'S{max(1, n_letter)}'
+            raise TypeError(
+                f'Unexpected type for parameter "data": {type(data)}. Expected str or List/Tuple of str'
+            )
+        dtype = f"S{max(1, n_letter)}"
         if name in self:
             if overwrite is True:
                 del self[name]  # delete existing dataset
@@ -606,12 +791,20 @@ class Group(h5py.Group):
             compression = None
             compression_opts = None
         else:
-            compression = kwargs.pop('compression', get_config('hdf_compression'))
-            compression_opts = kwargs.pop('compression_opts', get_config('hdf_compression_opts'))
+            compression = kwargs.pop("compression", get_config("hdf_compression"))
+            compression_opts = kwargs.pop(
+                "compression_opts", get_config("hdf_compression_opts")
+            )
 
-        make_scale = kwargs.pop('make_scale', False)
-        ds = super().create_dataset(name, dtype=dtype, data=data, **kwargs,
-                                    compression=compression, compression_opts=compression_opts)
+        make_scale = kwargs.pop("make_scale", False)
+        ds = super().create_dataset(
+            name,
+            dtype=dtype,
+            data=data,
+            **kwargs,
+            compression=compression,
+            compression_opts=compression_opts,
+        )
         if make_scale:
             if isinstance(data, str):
                 ds.make_scale(make_scale)
@@ -624,22 +817,23 @@ class Group(h5py.Group):
             ds.rdf.type = rdf_type
         return self._h5ds(ds.id)
 
-    def create_dataset(self,
-                       name,
-                       shape=None,
-                       dtype=None,
-                       data=None,
-                       overwrite=None,
-                       chunks=None,
-                       make_scale=False,
-                       attach_data_scale=None,
-                       attach_data_offset=None,
-                       attach_scales=None,
-                       ancillary_datasets=None,
-                       rdf_type: Optional[Union[str, rdflib.URIRef]] = None,
-                       attrs=None,
-                       **kwargs  # standard attributes and other keyword arguments
-                       ) -> protocols.H5TbxDataset:
+    def create_dataset(
+        self,
+        name,
+        shape=None,
+        dtype=None,
+        data=None,
+        overwrite=None,
+        chunks=None,
+        make_scale=False,
+        attach_data_scale=None,
+        attach_data_offset=None,
+        attach_scales=None,
+        ancillary_datasets=None,
+        rdf_type: Optional[Union[str, rdflib.URIRef]] = None,
+        attrs=None,
+        **kwargs,  # standard attributes and other keyword arguments
+    ) -> protocols.H5TbxDataset:
         """
         Creating a dataset. Allows attaching/making scale, overwriting and setting attributes simultaneously.
 
@@ -703,13 +897,17 @@ class Group(h5py.Group):
 
         if isinstance(data, str):
             if attach_data_scale is not None or attach_data_offset is not None:
-                raise ValueError('Cannot set data_scale or data_offset for string datasets.')
-            return self.create_string_dataset(name=name,
-                                              data=data,
-                                              overwrite=overwrite,
-                                              attrs=attrs,
-                                              rdf_type=rdf_type,
-                                              **kwargs)
+                raise ValueError(
+                    "Cannot set data_scale or data_offset for string datasets."
+                )
+            return self.create_string_dataset(
+                name=name,
+                data=data,
+                overwrite=overwrite,
+                attrs=attrs,
+                rdf_type=rdf_type,
+                **kwargs,
+            )
         if attrs is None:
             attrs = {}
 
@@ -724,16 +922,17 @@ class Group(h5py.Group):
 
         if attach_scales is None:
             # maybe there's a typo:
-            attach_scales = kwargs.pop('attach_scale', None)
+            attach_scales = kwargs.pop("attach_scale", None)
 
         if attach_scales is not None:
             if not isinstance(attach_scales, (list, tuple)):
                 attach_scales = (attach_scales,)
             if any([True for a in attach_scales if a]) and make_scale:
-                raise ValueError(
-                    'Cannot make scale and attach scale at the same time!')
+                raise ValueError("Cannot make scale and attach scale at the same time!")
 
-        attrs, skwargs, kwargs = process_attributes(Group, 'create_dataset', attrs, kwargs, name=name)
+        attrs, skwargs, kwargs = process_attributes(
+            Group, "create_dataset", attrs, kwargs, name=name
+        )
 
         if isinstance(data, xr.DataArray):
             data.attrs.update(attrs)
@@ -749,18 +948,22 @@ class Group(h5py.Group):
                     super().create_dataset(name, shape, dtype, data, **kwargs)
 
         # take compression from kwargs or config:
-        compression = kwargs.pop('compression', get_config('hdf_compression'))
-        compression_opts = kwargs.pop('compression_opts', get_config('hdf_compression_opts'))
+        compression = kwargs.pop("compression", get_config("hdf_compression"))
+        compression_opts = kwargs.pop(
+            "compression_opts", get_config("hdf_compression_opts")
+        )
 
         if shape is not None:
             if len(shape) == 0:
                 compression, compression_opts, chunks = None, None, None
 
         if name:
-            if _is_not_valid_natural_name(self, name, get_config('natural_naming')):
-                raise ValueError(f'The dataset name "{name}" is not a valid. It is an '
-                                 f'attribute of the class and cannot be used '
-                                 f'while natural naming is enabled')
+            if _is_not_valid_natural_name(self, name, get_config("natural_naming")):
+                raise ValueError(
+                    f'The dataset name "{name}" is not a valid. It is an '
+                    f"attribute of the class and cannot be used "
+                    f"while natural naming is enabled"
+                )
 
         if isinstance(data, xr.DataArray):
             if attach_scales:
@@ -772,18 +975,27 @@ class Group(h5py.Group):
                         scale_name = scale.name
                         scale_data = scale[()]
                     else:
-                        raise TypeError(f'Expecting type string or a h5py.Dataset for scale, not {type(scale)}')
-                    data = data.rename({dim: scale_name}).assign_coords({scale_name: scale_data})
+                        raise TypeError(
+                            f"Expecting type string or a h5py.Dataset for scale, not {type(scale)}"
+                        )
+                    data = data.rename({dim: scale_name}).assign_coords(
+                        {scale_name: scale_data}
+                    )
             attrs.update(data.attrs)
-            xrds = data.hdf.to_group(self._h5grp(self), name=name,
-                                     overwrite=overwrite,
-                                     compression=compression,
-                                     compression_opts=compression_opts,
-                                     attrs=attrs)
+            xrds = data.hdf.to_group(
+                self._h5grp(self),
+                name=name,
+                overwrite=overwrite,
+                compression=compression,
+                compression_opts=compression_opts,
+                attrs=attrs,
+            )
             return Dataset(xrds.id)
 
         if not isinstance(make_scale, (bool, str)):
-            raise TypeError(f'Make scale must be a boolean or a string not {type(make_scale)}')
+            raise TypeError(
+                f"Make scale must be a boolean or a string not {type(make_scale)}"
+            )
 
         if isinstance(shape, np.ndarray):  # needed if no keyword is used
             data = shape
@@ -797,44 +1009,57 @@ class Group(h5py.Group):
         if ancillary_datasets:
             for anc_name, anc_ds in ancillary_datasets.items():
                 if not isinstance(anc_ds, h5py.Dataset):
-                    raise TypeError(f'Expected ancillary dataset to be of type h5py.Dataset, '
-                                    f'but got {type(anc_ds)}')
+                    raise TypeError(
+                        f"Expected ancillary dataset to be of type h5py.Dataset, "
+                        f"but got {type(anc_ds)}"
+                    )
                 if anc_ds.shape != _data.shape:
-                    raise ValueError(f'Associated dataset {anc_name} has shape {anc_ds.shape} '
-                                     f'which does not match dataset shape {_data.shape}')
-            attrs[consts.ANCILLARY_DATASET] = json.dumps({k: v.name for k, v in ancillary_datasets.items()})
+                    raise ValueError(
+                        f"Associated dataset {anc_name} has shape {anc_ds.shape} "
+                        f"which does not match dataset shape {_data.shape}"
+                    )
+            attrs[consts.ANCILLARY_DATASET] = json.dumps(
+                {k: v.name for k, v in ancillary_datasets.items()}
+            )
 
-        _maxshape = kwargs.get('maxshape', shape)
+        _maxshape = kwargs.get("maxshape", shape)
 
-        logger.debug(f'Creating dataset "{name}" in "{self.name}" with maxshape "{_maxshape}" '
-                     f'and using compression "{compression}" with opt "{compression_opts}"')
+        logger.debug(
+            f'Creating dataset "{name}" in "{self.name}" with maxshape "{_maxshape}" '
+            f'and using compression "{compression}" with opt "{compression_opts}"'
+        )
 
         # if possible, create dataset with shape first:
         if _data is not None:
             if _data.ndim == 0:
                 # create 0D dataset
-                _ds = super().create_dataset(name,
-                                             shape=shape,
-                                             dtype=dtype,
-                                             data=_data,
-                                             **kwargs)
+                _ds = super().create_dataset(
+                    name, shape=shape, dtype=dtype, data=_data, **kwargs
+                )
             else:
                 # create ND dataset with shape, data is assigned later
-                _ds = super().create_dataset(name,
-                                             shape=shape,
-                                             dtype=dtype,
-                                             data=_data,
-                                             chunks=chunks,
-                                             compression=compression,
-                                             compression_opts=compression_opts,
-                                             **kwargs)
+                _ds = super().create_dataset(
+                    name,
+                    shape=shape,
+                    dtype=dtype,
+                    data=_data,
+                    chunks=chunks,
+                    compression=compression,
+                    compression_opts=compression_opts,
+                    **kwargs,
+                )
         else:
             # no data given, initialize with shape only
-            _ds = super().create_dataset(name, shape=shape, dtype=dtype, data=_data,
-                                         compression=compression,
-                                         compression_opts=compression_opts,
-                                         chunks=chunks,
-                                         **kwargs)
+            _ds = super().create_dataset(
+                name,
+                shape=shape,
+                dtype=dtype,
+                data=_data,
+                compression=compression,
+                compression_opts=compression_opts,
+                chunks=chunks,
+                **kwargs,
+            )
 
         ds = Dataset(_ds.id)
 
@@ -842,9 +1067,9 @@ class Group(h5py.Group):
             ds.rdf.type = rdf_type
 
         if attach_data_scale is not None or attach_data_offset is not None:
-            units = attrs.get('units', None)
+            units = attrs.get("units", None)
             if units:
-                ds.attrs['units'] = units
+                ds.attrs["units"] = units
             ds.attach_data_scale_and_offset(attach_data_scale, attach_data_offset)
 
         # assign attributes, which may raise errors if attributes are standardized and not fulfill requirements:
@@ -857,9 +1082,13 @@ class Group(h5py.Group):
                         ds.attrs.__setitem__(k, v.name, attrs)
                     else:
                         ds.attrs.__setitem__(k, v, attrs)
-                except convention.standard_attributes.errors.StandardAttributeError as e:
-                    logger.debug(f'Could not set attribute "{k}" with value "{v}" to dataset "{name}" for convention '
-                                 f'{self.convention.name}. Orig err: "{e}"')
+                except (
+                    convention.standard_attributes.errors.StandardAttributeError
+                ) as e:
+                    logger.debug(
+                        f'Could not set attribute "{k}" with value "{v}" to dataset "{name}" for convention '
+                        f'{self.convention.name}. Orig err: "{e}"'
+                    )
                     del self[name]
                     raise e
 
@@ -871,7 +1100,7 @@ class Group(h5py.Group):
         # make scale
         if make_scale:
             if isinstance(make_scale, bool):
-                ds.make_scale('')
+                ds.make_scale("")
             elif isinstance(make_scale, str):
                 ds.make_scale(make_scale)
 
@@ -891,29 +1120,38 @@ class Group(h5py.Group):
 
                         shape_of_axis_i = ds.shape[i]
                         if ds_to_attach.ndim != 1:
-                            raise ValueError(f'Cannot only attach 1D datasets, but got '
-                                             f'{ds_to_attach.ndim}D dataset {ds_to_attach.name}')
+                            raise ValueError(
+                                f"Cannot only attach 1D datasets, but got "
+                                f"{ds_to_attach.ndim}D dataset {ds_to_attach.name}"
+                            )
                         if not shape_of_axis_i == ds_to_attach.shape[0]:
                             del self[ds.name]
-                            raise ValueError(f'Cannot assign {ds_to_attach.name} to {name} because it has '
-                                             f'different shape {ds_to_attach.shape[0]} than {shape_of_axis_i}')
+                            raise ValueError(
+                                f"Cannot assign {ds_to_attach.name} to {name} because it has "
+                                f"different shape {ds_to_attach.shape[0]} than {shape_of_axis_i}"
+                            )
                         ds.dims[i].attach_scale(ds_to_attach)
         return ds
 
-    def find_one(self,
-                 flt: Union[Dict, str],
-                 objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None,
-                 recursive: bool = True,
-                 ignore_attribute_error: bool = False) -> protocols.LazyObject:
+    def find_one(
+        self,
+        flt: Union[Dict, str],
+        objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None,
+        recursive: bool = True,
+        ignore_attribute_error: bool = False,
+    ) -> protocols.LazyObject:
         """See ObjDB.find_one()"""
         from h5rdmtoolbox.database import ObjDB
+
         return ObjDB(self).find_one(flt, objfilter, recursive, ignore_attribute_error)
 
-    def find(self,
-             flt: Union[Dict, str, List[str]],
-             objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None,
-             recursive: bool = True,
-             ignore_attribute_error: bool = False) -> List[protocols.LazyObject]:
+    def find(
+        self,
+        flt: Union[Dict, str, List[str]],
+        objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None,
+        recursive: bool = True,
+        ignore_attribute_error: bool = False,
+    ) -> List[protocols.LazyObject]:
         """
         Examples for filter parameters:
         filter = {'long_name': 'any objects long name'} --> searches in attributes only
@@ -937,25 +1175,38 @@ class Group(h5py.Group):
         h5obj: List[LazyObject]
         """
         from h5rdmtoolbox.database import ObjDB
-        return ObjDB(self).find(flt,
-                                objfilter,
-                                recursive=recursive,
-                                ignore_attribute_error=ignore_attribute_error)
 
-    def create_dataset_from_csv(self, csv_filename: Union[str, pathlib.Path], *args, **kwargs):
+        return ObjDB(self).find(
+            flt,
+            objfilter,
+            recursive=recursive,
+            ignore_attribute_error=ignore_attribute_error,
+        )
+
+    def create_dataset_from_csv(
+        self, csv_filename: Union[str, pathlib.Path], *args, **kwargs
+    ):
         """Create datasets from a single csv file. Docstring: See File.create_datasets_from_csv()"""
-        return self.create_datasets_from_csv(csv_filenames=[csv_filename, ], *args, **kwargs)
+        return self.create_datasets_from_csv(
+            csv_filenames=[
+                csv_filename,
+            ],
+            *args,
+            **kwargs,
+        )
 
-    def create_datasets_from_csv(self,
-                                 csv_filenames: Union[str, pathlib.Path, List[Union[str, pathlib.Path]]],
-                                 dimension: Union[int, str] = 0,
-                                 shape=None,
-                                 overwrite=False,
-                                 combine_opt='stack',
-                                 axis=0,
-                                 chunks=None,
-                                 attrs: Dict = None,
-                                 **pandas_kwargs):
+    def create_datasets_from_csv(
+        self,
+        csv_filenames: Union[str, pathlib.Path, List[Union[str, pathlib.Path]]],
+        dimension: Union[int, str] = 0,
+        shape=None,
+        overwrite=False,
+        combine_opt="stack",
+        axis=0,
+        chunks=None,
+        attrs: Dict = None,
+        **pandas_kwargs,
+    ):
         """
         Reads data from a csv and adds a dataset according to column names.
         Pandas.read_csv() is used. So all arguments for this function may be passed.
@@ -996,46 +1247,59 @@ class Group(h5py.Group):
         try:
             import pandas as pd
         except ImportError:
-            raise ImportError('pandas is required for this function')
+            raise ImportError("pandas is required for this function")
 
-        if combine_opt not in ['concatenate', 'stack']:
-            raise ValueError(f'Invalid input for combine_opt: {combine_opt}')
+        if combine_opt not in ["concatenate", "stack"]:
+            raise ValueError(f"Invalid input for combine_opt: {combine_opt}")
 
         if attrs is None:
             attrs = {}
-        if 'names' in pandas_kwargs.keys():
-            if 'header' not in pandas_kwargs.keys():
+        if "names" in pandas_kwargs.keys():
+            if "header" not in pandas_kwargs.keys():
                 raise RuntimeError('Missing "header" argument for pandas.read_csv')
 
         if isinstance(csv_filenames, (list, tuple)):
             n_files = len(csv_filenames)
-            dfs = [pd.read_csv(csv_fname, **pandas_kwargs) for csv_fname in csv_filenames]
+            dfs = [
+                pd.read_csv(csv_fname, **pandas_kwargs) for csv_fname in csv_filenames
+            ]
         elif isinstance(csv_filenames, (str, Path)):
             n_files = 1
-            dfs = [pd.read_csv(csv_filenames, **pandas_kwargs), ]
+            dfs = [
+                pd.read_csv(csv_filenames, **pandas_kwargs),
+            ]
         else:
-            raise ValueError(
-                f'Wrong input for "csv_filenames: {type(csv_filenames)}')
+            raise ValueError(f'Wrong input for "csv_filenames: {type(csv_filenames)}')
 
-        compression, compression_opts = get_config('hdf_compression'), get_config('hdf_compression_opts')
+        compression, compression_opts = (
+            get_config("hdf_compression"),
+            get_config("hdf_compression_opts"),
+        )
 
-        if n_files > 1 and combine_opt == 'concatenate':
-            dfs = [pd.concat(dfs, axis=axis), ]
+        if n_files > 1 and combine_opt == "concatenate":
+            dfs = [
+                pd.concat(dfs, axis=axis),
+            ]
             n_files = 1
 
         if n_files == 1:
             datasets = []
 
             column_names = dfs[0].columns
-            dataset_names = [utils.remove_special_chars(str(variable_name)) for variable_name in column_names]
+            dataset_names = [
+                utils.remove_special_chars(str(variable_name))
+                for variable_name in column_names
+            ]
 
             if dimension is None:
-                dimension = ''
+                dimension = ""
             else:
                 if shape:
-                    raise ValueError('shape must be None if dimension is not None')
+                    raise ValueError("shape must be None if dimension is not None")
                 if not isinstance(dimension, (int, str)):
-                    raise TypeError(f'Invalid input for dimension: {type(dimension)}. Expected int or str')
+                    raise TypeError(
+                        f"Invalid input for dimension: {type(dimension)}. Expected int or str"
+                    )
                 if isinstance(dimension, int):
                     dimension = column_names[dimension]
 
@@ -1046,16 +1310,22 @@ class Group(h5py.Group):
                 else:
                     data = dfs[0][str(variable_name)].values
                 try:
-                    datasets.append(self.create_dataset(name=ds_name,
-                                                        data=data,
-                                                        attrs=attrs.get(ds_name, None),
-                                                        overwrite=overwrite, compression=compression,
-                                                        compression_opts=compression_opts,
-                                                        make_scale=variable_name == dimension,
-                                                        chunks=chunks))
+                    datasets.append(
+                        self.create_dataset(
+                            name=ds_name,
+                            data=data,
+                            attrs=attrs.get(ds_name, None),
+                            overwrite=overwrite,
+                            compression=compression,
+                            compression_opts=compression_opts,
+                            make_scale=variable_name == dimension,
+                            chunks=chunks,
+                        )
+                    )
                 except RuntimeError as e:
                     logger.error(
-                        f'Could not read {variable_name} from csv file due to: {e}')
+                        f"Could not read {variable_name} from csv file due to: {e}"
+                    )
 
             # attach scale if dimension is set
             if dimension:
@@ -1063,19 +1333,27 @@ class Group(h5py.Group):
                     if variable_name != dimension:
                         ds.dims[0].attach_scale(self[dimension])
             for ds in datasets:
-                ds.attrs['source_filename'] = csv_filenames
+                ds.attrs["source_filename"] = csv_filenames
                 if isinstance(csv_filenames, (list, tuple)):
-                    ds.attrs['source_filename_hash_md5'] = [utils.get_checksum(f) for f in csv_filenames]
+                    ds.attrs["source_filename_hash_md5"] = [
+                        utils.get_checksum(f) for f in csv_filenames
+                    ]
                 else:
-                    ds.attrs['source_filename_hash_md5'] = utils.get_checksum(csv_filenames)
+                    ds.attrs["source_filename_hash_md5"] = utils.get_checksum(
+                        csv_filenames
+                    )
             return datasets
 
         data = {}
         for name, value in dfs[0].items():
             if shape is None:
-                data[name] = [value.values, ]
+                data[name] = [
+                    value.values,
+                ]
             else:
-                data[name] = [value.values.reshape(shape), ]
+                data[name] = [
+                    value.values.reshape(shape),
+                ]
         for df in dfs[1:]:
             for name, value in df.items():
                 if shape is None:
@@ -1084,24 +1362,30 @@ class Group(h5py.Group):
                     data[name].append(value.values.reshape(shape))
 
         for name, value in data.items():
-            ds = self.create_dataset(name=str(name),
-                                     data=np.stack(value, axis=axis),
-                                     attrs=attrs.get(name, None),
-                                     overwrite=overwrite,
-                                     compression=compression,
-                                     compression_opts=compression_opts,
-                                     chunks=chunks)
+            ds = self.create_dataset(
+                name=str(name),
+                data=np.stack(value, axis=axis),
+                attrs=attrs.get(name, None),
+                overwrite=overwrite,
+                compression=compression,
+                compression_opts=compression_opts,
+                chunks=chunks,
+            )
 
-            ds.attrs['source_filename'] = csv_filenames
-            ds.attrs['source_filename_has_md5'] = [utils.get_checksum(f) for f in csv_filenames]
+            ds.attrs["source_filename"] = csv_filenames
+            ds.attrs["source_filename_has_md5"] = [
+                utils.get_checksum(f) for f in csv_filenames
+            ]
 
-    def create_dataset_from_image(self,
-                                  img_data: Union[Iterable, np.ndarray, List[np.ndarray]],
-                                  name,
-                                  chunks=None,
-                                  dtype=None,
-                                  axis=0,
-                                  **kwargs):
+    def create_dataset_from_image(
+        self,
+        img_data: Union[Iterable, np.ndarray, List[np.ndarray]],
+        name,
+        chunks=None,
+        dtype=None,
+        axis=0,
+        **kwargs,
+    ):
         """
         Creates a dataset for a single or multiple files. If a list of filenames is passed
         All images are stacked (thus shape of all images must be equal!)
@@ -1129,20 +1413,25 @@ class Group(h5py.Group):
         """
 
         # take compression from kwargs or config:
-        _compression, _compression_opts = get_config('hdf_compression'), get_config('hdf_compression_opts')
-        compression = kwargs.pop('compression', _compression)
-        compression_opts = kwargs.pop('compression_opts', _compression_opts)
+        _compression, _compression_opts = (
+            get_config("hdf_compression"),
+            get_config("hdf_compression_opts"),
+        )
+        compression = kwargs.pop("compression", _compression)
+        compression_opts = kwargs.pop("compression_opts", _compression_opts)
         first_image = None
         n = None
 
         if axis not in (0, -1):
-            raise ValueError(f'Parameter for parameter axis can only be 0 or 1 but not {axis}')
+            raise ValueError(
+                f"Parameter for parameter axis can only be 0 or 1 but not {axis}"
+            )
 
         iterable: bool = isinstance(img_data, Iterable)
         if iterable:
             # check if img_data has method __len__():
-            if not hasattr(img_data, '__len__'):
-                raise ValueError('img_data must have method __len__()')
+            if not hasattr(img_data, "__len__"):
+                raise ValueError("img_data must have method __len__()")
             n = len(img_data)
 
             img_data = iter(img_data)
@@ -1162,18 +1451,20 @@ class Group(h5py.Group):
             else:
                 shape = None
 
-        ds = self.create_dataset(name=name,
-                                 shape=shape,
-                                 compression=compression,
-                                 compression_opts=compression_opts,
-                                 chunks=chunks,
-                                 dtype=dtype,
-                                 **kwargs)
+        ds = self.create_dataset(
+            name=name,
+            shape=shape,
+            compression=compression,
+            compression_opts=compression_opts,
+            chunks=chunks,
+            dtype=dtype,
+            **kwargs,
+        )
         if isinstance(img_data, np.ndarray):
             ds[()] = img_data
             return ds
 
-        assert first_image is not None, 'First image is None. This should not happen!'
+        assert first_image is not None, "First image is None. This should not happen!"
         if axis == 0:
             ds[0, ...] = first_image
         else:
@@ -1191,27 +1482,34 @@ class Group(h5py.Group):
         and handles the dimension scales."""
         ds_coords = {}
         for coord in dataset.coords.keys():
-            ds = self.create_dataset(str(coord),
-                                     data=dataset.coords[coord].values,
-                                     attrs=dataset.coords[coord].attrs,
-                                     overwrite=False)
+            ds = self.create_dataset(
+                str(coord),
+                data=dataset.coords[coord].values,
+                attrs=dataset.coords[coord].attrs,
+                overwrite=False,
+            )
             ds.make_scale()
             ds_coords[coord] = ds
         for data_var in dataset.data_vars.keys():
-            ds = self.create_dataset(data_var,
-                                     data=dataset[data_var].values,
-                                     attrs=dataset[data_var].attrs,
-                                     overwrite=False)
+            ds = self.create_dataset(
+                data_var,
+                data=dataset[data_var].values,
+                attrs=dataset[data_var].attrs,
+                overwrite=False,
+            )
             for idim, dim in enumerate(dataset[data_var].dims):
                 if dim not in ds_coords:
                     # xarray does not let me add attributes to this dimension
-                    h5py.Group(self.id).create_dataset(name=dim, data=dataset[data_var][dim].values)
+                    h5py.Group(self.id).create_dataset(
+                        name=dim, data=dataset[data_var][dim].values
+                    )
                     ds_coords[dim] = ds
                 else:
                     ds.dims[idim].attach_scale(ds_coords[dim])
 
-    def create_external_link(self, name, filename, path, overwrite=False,
-                             keep_relative=False):
+    def create_external_link(
+        self, name, filename, path, overwrite=False, keep_relative=False
+    ):
         """
         Creates a group which points to group in another file. See h5py.ExternalLink()
         for more information.
@@ -1229,8 +1527,10 @@ class Group(h5py.Group):
         keep_relative : bool, optional
             If true, path is untouched. If False, os.path.abspath() is applied.
         """
-        logger.debug(f'Trying to create external link group with name "{name}". Source is filename="{filename}" and '
-                     f'path="{path}". Overwrite is set to {overwrite} and keep_relative to {keep_relative}')
+        logger.debug(
+            f'Trying to create external link group with name "{name}". Source is filename="{filename}" and '
+            f'path="{path}". Overwrite is set to {overwrite} and keep_relative to {keep_relative}'
+        )
         if not keep_relative:
             filename = os.path.abspath(filename)
         if name in self:
@@ -1238,14 +1538,19 @@ class Group(h5py.Group):
                 del self[name]
                 self[name] = h5py.ExternalLink(filename, path)
                 return self[name]
-            logger.debug('External link %s was not created. A Dataset with this name'
-                         ' already exists and overwrite is set to False! '
-                         'You can pass overwrite=True in order to overwrite the '
-                         'existing dataset', name)
-            raise ValueError(f'External link {name} was not created. A Dataset with this name'
-                             ' already exists and overwrite is set to False! '
-                             'You can pass overwrite=True in order to overwrite the '
-                             'existing dataset')
+            logger.debug(
+                "External link %s was not created. A Dataset with this name"
+                " already exists and overwrite is set to False! "
+                "You can pass overwrite=True in order to overwrite the "
+                "existing dataset",
+                name,
+            )
+            raise ValueError(
+                f"External link {name} was not created. A Dataset with this name"
+                " already exists and overwrite is set to False! "
+                "You can pass overwrite=True in order to overwrite the "
+                "existing dataset"
+            )
         self[name] = h5py.ExternalLink(filename, path)
         return self[name]
 
@@ -1282,16 +1587,19 @@ class Group(h5py.Group):
         >>>     h5.create_from_yaml('test.yaml')
         """
         from . import h5yaml
+
         h5yaml.H5Yaml(yaml_filename).write(self, num_dtype=num_dtype)
 
     def create_from_dict(self, dictionary: Dict):
         """Create groups and datasets based on a dictionary"""
         from . import h5yaml
+
         h5yaml.H5Dict(dictionary).write(self)
 
     def create_from_jsonld(self, data: str, context: Optional[Dict] = None):
         """Create groups/datasets from a jsonld string."""
         from . import jsonld
+
         jsonld.to_hdf(self, data=json.loads(data), context=context)
 
     def _get_obj_names(self, obj_type, recursive):
@@ -1319,11 +1627,13 @@ class Group(h5py.Group):
         all below"""
         return self._get_obj_names(h5py.Dataset, recursive)
 
-    def dump(self,
-             collapsed: bool = True,
-             max_attr_length: Union[int, None] = None,
-             chunks: bool = False,
-             maxshape: bool = False) -> None:
+    def dump(
+        self,
+        collapsed: bool = True,
+        max_attr_length: Union[int, None] = None,
+        chunks: bool = False,
+        maxshape: bool = False,
+    ) -> None:
         """Outputs xarray-inspired _html representation of the file content if a
         notebook environment is used
 
@@ -1340,7 +1650,9 @@ class Group(h5py.Group):
         """
         if max_attr_length:
             self.hdfrepr.max_attr_length = max_attr_length
-        return self.hdfrepr.__html__(self, collapsed=collapsed, chunks=chunks, maxshape=maxshape)
+        return self.hdfrepr.__html__(
+            self, collapsed=collapsed, chunks=chunks, maxshape=maxshape
+        )
 
     def _repr_html_(self):
         return self.hdfrepr.__html__(self)
@@ -1370,7 +1682,7 @@ def only_0d_and_1d(obj):
 
     def wrapper(*args):
         if args[0].ndim > 1:
-            raise ValueError('Only applicable to 0D and 1D datasets!')
+            raise ValueError("Only applicable to 0D and 1D datasets!")
 
     return obj
 
@@ -1417,7 +1729,7 @@ class Dataset(h5py.Dataset):
     @only_0d_and_1d
     def __le__(self, other: Union[int, float]):
         if not isinstance(other, (int, float)):
-            raise ValueError('Can only compare to floats and integers!')
+            raise ValueError("Can only compare to floats and integers!")
         data = self.values[()]
         if data.ndim == 1:
             return np.where(data <= other)[0]
@@ -1426,7 +1738,7 @@ class Dataset(h5py.Dataset):
     @only_0d_and_1d
     def __gt__(self, other: Union[int, float]):
         if not isinstance(other, (int, float)):
-            raise ValueError('Can only compare to floats and integers!')
+            raise ValueError("Can only compare to floats and integers!")
         data = self.values[()]
         if data.ndim == 1:
             return np.where(data > other)[0]
@@ -1435,7 +1747,7 @@ class Dataset(h5py.Dataset):
     @only_0d_and_1d
     def __ge__(self, other: Union[int, float]):
         if not isinstance(other, (int, float)):
-            raise ValueError('Can only compare to floats and integers!')
+            raise ValueError("Can only compare to floats and integers!")
         data = self.values[()]
         if data.ndim == 1:
             return np.where(data >= other)[0]
@@ -1466,12 +1778,15 @@ class Dataset(h5py.Dataset):
     @property
     def convention(self):
         """Return the convention currently enabled."""
-        return convention.get_current_convention()
+        return self._convention
 
     @property
     def standard_attributes(self) -> Dict:
         """Return the standard attributes of the class."""
-        return self.convention.properties.get(self.__class__, {})
+        _convention = self.__dict__.get("_convention")
+        if _convention is None:
+            return {}
+        return _convention.properties.get(self.__class__, {})
 
     @property
     def rdf(self):
@@ -1481,7 +1796,9 @@ class Dataset(h5py.Dataset):
     @property
     def iri(self):
         """Deprecated. Use rdf instead."""
-        warnings.warn('Property "iri" is deprecated. Use "rdf" instead.', DeprecationWarning)
+        warnings.warn(
+            'Property "iri" is deprecated. Use "rdf" instead.', DeprecationWarning
+        )
         return rdf.RDFManager(self.attrs)
 
     @property
@@ -1492,7 +1809,7 @@ class Dataset(h5py.Dataset):
     @property
     def attrs(self) -> protocols.H5TbxAttributeManager:
         """Exact copy of parent class:
-        Attributes attached to this object """
+        Attributes attached to this object"""
         with phil:
             return WrapperAttributeManager(self)
 
@@ -1577,7 +1894,9 @@ class Dataset(h5py.Dataset):
         if isinstance(ancillary_dataset, str):
             ancillary_dataset = self.parent[ancillary_dataset]
         if ancillary_dataset.shape != self.shape:
-            raise ValueError('Shape of flag dataset does not match the shape of the current dataset!')
+            raise ValueError(
+                "Shape of flag dataset does not match the shape of the current dataset!"
+            )
         ancillary_datasets = self.ancillary_datasets
         ancillary_datasets[ancillary_dataset.basename] = ancillary_dataset.name
         self.attrs[consts.ANCILLARY_DATASET] = ancillary_datasets
@@ -1585,60 +1904,75 @@ class Dataset(h5py.Dataset):
 
     def detach_data_scale(self):
         """Remove the attached data scale dataset from this dataset."""
-        warnings.warn('Note, that detaching data scale may influence the correctness and traceability of your data',
-                      UserWarning)
-        self.attrs.pop('DATA_SCALE', None)
+        warnings.warn(
+            "Note, that detaching data scale may influence the correctness and traceability of your data",
+            UserWarning,
+        )
+        self.attrs.pop("DATA_SCALE", None)
 
     def detach_data_offset(self):
         """Remove the attached data offset dataset from this dataset."""
-        warnings.warn('Note, that detaching data offset may influence the correctness and traceability of your data',
-                      UserWarning)
-        self.attrs.pop('DATA_OFFSET', None)
+        warnings.warn(
+            "Note, that detaching data offset may influence the correctness and traceability of your data",
+            UserWarning,
+        )
+        self.attrs.pop("DATA_OFFSET", None)
 
-    def attach_data_scale_and_offset(self, scale: Union[None, h5py.Dataset], offset: Union[None, h5py.Dataset]):
+    def attach_data_scale_and_offset(
+        self, scale: Union[None, h5py.Dataset], offset: Union[None, h5py.Dataset]
+    ):
         """Attach a data scale and offset to this dataset. The scale and offset must have the same"""
-        if self.attrs.get('IS_DATA_SCALE', False):
-            raise ValueError('Cannot attach data scale to a dataset, which is already a data scale!')
-        if self.attrs.get('IS_DATA_OFFSET', False):
-            raise ValueError('Cannot attach data offset to a dataset, which is already a data offset!')
-        if 'units' not in self.attrs:
-            raise ValueError('Cannot attach data scale if no attribute "units" is not set!')
+        if self.attrs.get("IS_DATA_SCALE", False):
+            raise ValueError(
+                "Cannot attach data scale to a dataset, which is already a data scale!"
+            )
+        if self.attrs.get("IS_DATA_OFFSET", False):
+            raise ValueError(
+                "Cannot attach data offset to a dataset, which is already a data offset!"
+            )
+        if "units" not in self.attrs:
+            raise ValueError(
+                'Cannot attach data scale if no attribute "units" is not set!'
+            )
 
-        this_units = get_ureg().Unit(self.attrs.get('units', ''))
+        this_units = get_ureg().Unit(self.attrs.get("units", ""))
 
         # try:
         if scale is not None:
-            scaled_units = this_units * get_ureg().Unit(scale.attrs.get('units', ''))
+            scaled_units = this_units * get_ureg().Unit(scale.attrs.get("units", ""))
         else:
             scaled_units = this_units
 
         if offset is not None:
-            if scaled_units.dimensionality == get_ureg().Unit(offset.attrs.get('units', '')).dimensionality:
+            if (
+                scaled_units.dimensionality
+                == get_ureg().Unit(offset.attrs.get("units", "")).dimensionality
+            ):
                 pass
             else:
-                raise ValueError('Units of scale and offset must be compatible!')
+                raise ValueError("Units of scale and offset must be compatible!")
 
         if scale is not None:
-            self.attrs['DATA_SCALE'] = scale.name
+            self.attrs["DATA_SCALE"] = scale.name
         if offset is not None:
-            self.attrs['DATA_OFFSET'] = offset.name
+            self.attrs["DATA_OFFSET"] = offset.name
 
     def get_data_scale(self):
         """Return the data scale dataset if attached to this dataset."""
-        if 'DATA_SCALE' in self.attrs:
-            _src = self.attrs['DATA_SCALE']
+        if "DATA_SCALE" in self.attrs:
+            _src = self.attrs["DATA_SCALE"]
             if isinstance(_src, str):
                 return self.rootparent[_src]
-            return self.rootparent[self.attrs['DATA_SCALE'].name]
+            return self.rootparent[self.attrs["DATA_SCALE"].name]
         return None
 
     def get_data_offset(self):
         """Return the data offset dataset if attached to this dataset."""
-        if 'DATA_OFFSET' in self.attrs:
-            _src = self.attrs['DATA_OFFSET']
+        if "DATA_OFFSET" in self.attrs:
+            _src = self.attrs["DATA_OFFSET"]
             if isinstance(_src, str):
                 return self.rootparent[_src]
-            return self.rootparent[self.attrs['DATA_OFFSET'].name]
+            return self.rootparent[self.attrs["DATA_OFFSET"].name]
         return None
 
     @property
@@ -1649,14 +1983,14 @@ class Dataset(h5py.Dataset):
         for dim in self.dims:
             if len(dim) > 0:
                 for i, d in enumerate(dim):
-                    coords[dim[i].name.rsplit('/')[-1]] = dim[i]
+                    coords[dim[i].name.rsplit("/")[-1]] = dim[i]
         return coords
         # return {d[0].name.rsplit('/')[-1]: d[0] for d in self.dims if len(d) > 0}
 
     def assign_coord(self, coord):
         if isinstance(coord, str):
             if coord not in self.rootparent:
-                raise ValueError(f'Coordinate {coord} not found in the file!')
+                raise ValueError(f"Coordinate {coord} not found in the file!")
             coord = self.rootparent[coord]
         curr_coords = self.attrs.get(protected_attributes.COORDINATES, [])
         curr_coords.append(coord.name)
@@ -1711,9 +2045,14 @@ class Dataset(h5py.Dataset):
         if ds_coords:
             for cname in indexers.keys():
                 if cname not in ds_coords:
-                    raise KeyError(f'Coordinate {cname} not in {list(ds_coords.keys())}')
+                    raise KeyError(
+                        f"Coordinate {cname} not in {list(ds_coords.keys())}"
+                    )
 
-            sl = {cname: slice(None) for cname, _ in zip(ds_coords.keys(), range(self.ndim))}
+            sl = {
+                cname: slice(None)
+                for cname, _ in zip(ds_coords.keys(), range(self.ndim))
+            }
             sl_key_list = list(sl.keys())
             for (cname, item), _ in zip(indexers.items(), range(self.ndim)):
                 # if the indexer name is in the same dimension as one of the already registered
@@ -1721,7 +2060,7 @@ class Dataset(h5py.Dataset):
                 _replaced = False
                 for idim, d in enumerate(self.dims):
                     for i in range(len(d)):
-                        if d[i].name.rsplit('/')[-1] == cname:
+                        if d[i].name.rsplit("/")[-1] == cname:
                             sl[sl_key_list[idim]] = item
                             _replaced = True
                             break
@@ -1732,11 +2071,14 @@ class Dataset(h5py.Dataset):
             #         sl.pop(k)
         else:
             # no indexers available. User must provide dim_<i> then!
-            if not all([cname.startswith('dim_') for cname in indexers.keys()]):
-                raise KeyError(f'No coordinates available. Provide dim_<i> as key!')
-            dim_dict = {f'dim_{i}': slice(None) for i in range(len(self.shape))}
+            if not all([cname.startswith("dim_") for cname in indexers.keys()]):
+                raise KeyError(f"No coordinates available. Provide dim_<i> as key!")
+            dim_dict = {f"dim_{i}": slice(None) for i in range(len(self.shape))}
             # indices = [int(cname.split('_')[1]) for cname in indexers.keys()]
-            sl = {cname: slice(None) for cname, _ in zip(dim_dict.keys(), range(self.ndim))}
+            sl = {
+                cname: slice(None)
+                for cname, _ in zip(dim_dict.keys(), range(self.ndim))
+            }
             for (cname, item), _ in zip(indexers.items(), range(self.ndim)):
                 sl[cname] = item
 
@@ -1765,32 +2107,39 @@ class Dataset(h5py.Dataset):
         isel = {}
         for coord_name, coord_values in coords.items():
             if coord_name not in av_coord_datasets:
-                raise KeyError(f'Coordinate {coord_name} not in {list(av_coord_datasets.keys())}')
+                raise KeyError(
+                    f"Coordinate {coord_name} not in {list(av_coord_datasets.keys())}"
+                )
             sel_coord_data = av_coord_datasets[coord_name][()]
-            if method is None or method == 'exact':
+            if method is None or method == "exact":
                 idx = np.where(sel_coord_data == coord_values)[0]
 
                 if idx.size == 0:
                     raise ValueError(
-                        f'No matching coordinate found for coordinate {coord_name} and value {coord_values}. '
-                        f'Consider using method "nearest".')
+                        f"No matching coordinate found for coordinate {coord_name} and value {coord_values}. "
+                        f'Consider using method "nearest".'
+                    )
                 if len(idx) == 1:
                     idx = int(idx[0])
 
-            elif method == 'nearest':
+            elif method == "nearest":
                 # idx = (sel_coord_data - coord_values).argmin()[()]
                 # print(idx)
                 if not isinstance(coord_values, (int, float)):
                     _coord_values = np.array(coord_values)
                     if _coord_values.ndim != 1:
-                        raise NotImplementedError('Cuurently .sel() only allows 0D or 1D data for coord_values')
+                        raise NotImplementedError(
+                            "Cuurently .sel() only allows 0D or 1D data for coord_values"
+                        )
                     _absmins = [np.abs(sel_coord_data - cv) for cv in coord_values]
                     idx = [int(np.argmin(_absmin)) for _absmin in _absmins]
                 else:
                     _absmin = np.abs(sel_coord_data - coord_values)
                     idx = int(np.argmin(_absmin))
             else:
-                raise NotImplementedError('Only exact and nearest match method implemented')
+                raise NotImplementedError(
+                    "Only exact and nearest match method implemented"
+                )
             isel[coord_name] = idx
         return self.isel(**isel)
 
@@ -1810,9 +2159,11 @@ class Dataset(h5py.Dataset):
         return super().__getattribute__(item)
 
     def __setattr__(self, key, value):
-        if self.__class__ in convention.get_current_convention().properties:
-            if key in convention.get_current_convention().properties[self.__class__]:
-                return convention.get_current_convention().properties[self.__class__][key].set(self, value)
+        _convention = self.__dict__.get("_convention")
+        if _convention is not None:
+            if self.__class__ in _convention.properties:
+                if key in _convention.properties[self.__class__]:
+                    return _convention.properties[self.__class__][key].set(self, value)
         return super().__setattr__(key, value)
 
     def __setitem__(self, key, value):
@@ -1823,11 +2174,9 @@ class Dataset(h5py.Dataset):
             super().__setitem__(key, value)
 
     @dataset_value_decoder
-    def __getitem__(self,
-                    args,
-                    new_dtype=None,
-                    nparray=False,
-                    links_as_strings: bool = False) -> Union[xr.DataArray, np.ndarray]:
+    def __getitem__(
+        self, args, new_dtype=None, nparray=False, links_as_strings: bool = False
+    ) -> Union[xr.DataArray, np.ndarray]:
         """Return sliced HDF dataset. If global setting `return_xarray`
         is set to True, a `xr.DataArray` is returned, otherwise the default
         behaviour of the h5p-package is used and a np.ndarray is returned.
@@ -1842,7 +2191,7 @@ class Dataset(h5py.Dataset):
 
         args = args if isinstance(args, tuple) else (args,)
 
-        if not get_config('return_xarray') or nparray:
+        if not get_config("return_xarray") or nparray:
             return super().__getitem__(args, new_dtype=new_dtype)
 
         # check if any entry in args is of type Ellipsis:
@@ -1851,8 +2200,9 @@ class Dataset(h5py.Dataset):
             args = list(args)
             ellipsis_index = args.index(Ellipsis)
             args.pop(ellipsis_index)
-            args[ellipsis_index:ellipsis_index] = [slice(None)
-                                                   for _ in range(self.ndim - len(args))]
+            args[ellipsis_index:ellipsis_index] = [
+                slice(None) for _ in range(self.ndim - len(args))
+            ]
             args = tuple(args)
 
         arr = super().__getitem__(args, new_dtype=new_dtype)
@@ -1868,7 +2218,7 @@ class Dataset(h5py.Dataset):
 
         attrs = pop_hdf_attributes(ds_attrs)
 
-        if 'DIMENSION_LIST' in ds_attrs:
+        if "DIMENSION_LIST" in ds_attrs:
             # there are coordinates to attach...
 
             myargs = [slice(None) for _ in range(self.ndim)]
@@ -1876,98 +2226,138 @@ class Dataset(h5py.Dataset):
                 myargs[ia] = a
 
             # remember the first dimension name for all axis:
-            dims_names = [d[0].name.rsplit('/')[-1] if len(
-                d) > 0 else f'dim_{ii}' for ii, d in enumerate(self.dims)]
+            dims_names = [
+                d[0].name.rsplit("/")[-1] if len(d) > 0 else f"dim_{ii}"
+                for ii, d in enumerate(self.dims)
+            ]
 
             coords = {}
 
             for dim, dim_name, arg in zip(self.dims, dims_names, myargs):
                 for iax, _ in enumerate(dim):
                     dim_ds = dim[iax]
-                    coord_name = dim[iax].name.rsplit('/')[-1]
+                    coord_name = dim[iax].name.rsplit("/")[-1]
                     if dim_ds.ndim == 0:
                         dim_ds_data = dim_ds[()]
                     else:
                         dim_ds_data = dim_ds[arg]
                     dim_ds_attrs = pop_hdf_attributes(dim_ds.attrs)
-                    if dim_ds_data.dtype.kind == 'S':
+                    if dim_ds_data.dtype.kind == "S":
                         # decode string array
-                        if dim_ds_attrs.get('time_format', False):
+                        if dim_ds_attrs.get("time_format", False):
+                            _time_format = _normalize_time_format(
+                                dim_ds_attrs["time_format"]
+                            )
                             if dim_ds_data.ndim == 0:
                                 dim_ds_data = np.array(
-                                    datetime.strptime(dim_ds_data.astype(str), dim_ds_attrs['time_format'])).astype(
-                                    datetime)
+                                    datetime.strptime(
+                                        dim_ds_data.astype(str),
+                                        _time_format,
+                                    )
+                                ).astype(datetime)
                             else:
-                                dim_ds_data = convert_strings_to_datetimes(dim_ds_data.astype(str))
+                                dim_ds_data = convert_strings_to_datetimes(
+                                    dim_ds_data.astype(str),
+                                    time_format=_time_format,
+                                )
                                 # dim_ds_data = np.array(
                                 #     [datetime.fromisoformat(t) for t in dim_ds_data.astype(str)]).astype(
                                 #     datetime)
                     if dim_ds_data.ndim == 0:
                         if isinstance(arg, int):
-                            coords[coord_name] = xr.DataArray(name=coord_name,
-                                                              dims=(
-                                                              ),
-                                                              data=dim_ds_data,
-                                                              attrs=dim_ds_attrs)
+                            coords[coord_name] = xr.DataArray(
+                                name=coord_name,
+                                dims=(),
+                                data=dim_ds_data,
+                                attrs=dim_ds_attrs,
+                            )
                         else:
-                            coords[coord_name] = xr.DataArray(name=coord_name, dims=coord_name,
-                                                              data=[dim_ds[()], ],
-                                                              attrs=dim_ds_attrs)
+                            coords[coord_name] = xr.DataArray(
+                                name=coord_name,
+                                dims=coord_name,
+                                data=[
+                                    dim_ds[()],
+                                ],
+                                attrs=dim_ds_attrs,
+                            )
                     else:
                         if isinstance(dim_ds_data, np.ndarray):
-                            coords[coord_name] = xr.DataArray(name=coord_name, dims=dim_name,
-                                                              data=dim_ds_data,
-                                                              attrs=dim_ds_attrs)
+                            coords[coord_name] = xr.DataArray(
+                                name=coord_name,
+                                dims=dim_name,
+                                data=dim_ds_data,
+                                attrs=dim_ds_attrs,
+                            )
                         else:
-                            coords[coord_name] = xr.DataArray(name=coord_name, dims=(),
-                                                              data=dim_ds_data,
-                                                              attrs=dim_ds_attrs)
+                            coords[coord_name] = xr.DataArray(
+                                name=coord_name,
+                                dims=(),
+                                data=dim_ds_data,
+                                attrs=dim_ds_attrs,
+                            )
 
-            used_dims = [dim_name for arg, dim_name in zip(
-                myargs, dims_names) if isinstance(arg, (slice, np.ndarray, list))]
+            used_dims = [
+                dim_name
+                for arg, dim_name in zip(myargs, dims_names)
+                if isinstance(arg, (slice, np.ndarray, list))
+            ]
 
-            coordinates: Optional[Union[str, List[str]]] = ds_attrs.get(protected_attributes.COORDINATES)
+            coordinates: Optional[Union[str, List[str]]] = ds_attrs.get(
+                protected_attributes.COORDINATES
+            )
             if coordinates is not None:
                 if isinstance(coordinates, str):
-                    coordinates = [coordinates, ]
+                    coordinates = [
+                        coordinates,
+                    ]
                 else:
                     coordinates = list(coordinates)
 
                 for c in coordinates:
-                    if c[0] == '/':
+                    if c[0] == "/":
                         _data = self.rootparent[c]
                     else:
                         _data = self.parent[c]
                     _name = Path(c).stem
-                    coords.update({_name: xr.DataArray(name=_name, dims=(),
-                                                       data=_data,
-                                                       attrs=pop_hdf_attributes(self.parent[c].attrs))})
-            return xr.DataArray(name=Path(self.name).stem,
-                                data=arr,
-                                dims=used_dims,
-                                coords=coords,
-                                attrs=attrs)
+                    coords.update(
+                        {
+                            _name: xr.DataArray(
+                                name=_name,
+                                dims=(),
+                                data=_data,
+                                attrs=pop_hdf_attributes(self.parent[c].attrs),
+                            )
+                        }
+                    )
+            return xr.DataArray(
+                name=Path(self.name).stem,
+                data=arr,
+                dims=used_dims,
+                coords=coords,
+                attrs=attrs,
+            )
         # check if arr is string
-        if self.dtype == 'object':
+        if self.dtype == "object":
             pass
-        elif arr.dtype.kind == 'S':
+        elif arr.dtype.kind == "S":
             # decode string array
             try:
                 _arr = arr.astype(str)
             except UnicodeDecodeError:
                 return xr.DataArray(arr, attrs=attrs)
 
-            time_format = self.attrs.get('time_format', None)
+            time_format = self.attrs.get("time_format", None)
             if time_format is not None:
-                if time_format.lower() == 'iso':
-                    time_format = '%Y-%m-%dT%H:%M:%S.%f'
+                time_format = _normalize_time_format(time_format)
                 if _arr.ndim == 0:
                     _arr = np.asarray(datetime.strptime(_arr, time_format))
                 elif _arr.ndim == 1:
                     _arr = [datetime.strptime(str(t), time_format) for t in _arr]
                 else:  # _arr.ndim > 1:
                     orig_shape = _arr.shape
-                    _flat_arr = np.asarray([datetime.strptime(t, time_format) for t in _arr.flatten()])
+                    _flat_arr = np.asarray(
+                        [datetime.strptime(t, time_format) for t in _arr.flatten()]
+                    )
                     _arr = _flat_arr.reshape(orig_shape)
                 return xr.DataArray(_arr, attrs=attrs)
 
@@ -1976,22 +2366,33 @@ class Dataset(h5py.Dataset):
             return _arr
 
         coords = {}
-        coordinates: Optional[Union[str, List[str]]] = ds_attrs.get(protected_attributes.COORDINATES, None)
+        coordinates: Optional[Union[str, List[str]]] = ds_attrs.get(
+            protected_attributes.COORDINATES, None
+        )
         if coordinates is not None:
             if isinstance(coordinates, str):
-                coordinates = [coordinates, ]
+                coordinates = [
+                    coordinates,
+                ]
             else:
                 coordinates = list(coordinates)
 
             for c in coordinates:
-                if c[0] == '/':
+                if c[0] == "/":
                     _data = self.rootparent[c]
                 else:
                     _data = self.parent[c]
                 _name = Path(c).stem
-                coords.update({_name: xr.DataArray(name=_name, dims=(),
-                                                   data=_data,
-                                                   attrs=pop_hdf_attributes(self.parent[c].attrs))})
+                coords.update(
+                    {
+                        _name: xr.DataArray(
+                            name=_name,
+                            dims=(),
+                            data=_data,
+                            attrs=pop_hdf_attributes(self.parent[c].attrs),
+                        )
+                    }
+                )
             da = xr.DataArray(name=Path(self.name).stem, data=arr, attrs=attrs)
             for k, v in coords.items():
                 da = da.assign_coords({k: v})
@@ -2001,9 +2402,9 @@ class Dataset(h5py.Dataset):
     def __repr__(self) -> str:
         r = super().__repr__()
         if not self:
-            return r[:-1] + f' (convention "{convention.get_current_convention().name}")>'
+            return r[:-1] + f' (convention "{self._convention.name}")>'
         else:
-            return r[:-1] + f', convention "{convention.get_current_convention().name}">'
+            return r[:-1] + f', convention "{self._convention.name}">'
 
     def dump(self) -> None:
         """Call sdump()"""
@@ -2012,25 +2413,25 @@ class Dataset(h5py.Dataset):
     def sdump(self) -> None:
         """Print the dataset content in a more comprehensive way"""
         out = f'{self.__class__.__name__} "{self.name}"'
-        out += f'\n{"-" * len(out)}'
-        out += f'\n{"*shape:":14} {self.shape}'
-        out += f'\n{"*dtype:":14} {self.dtype}'
-        out += f'\n{"*compression:":14} {self.compression} ({self.compression_opts})'
+        out += f"\n{'-' * len(out)}"
+        out += f"\n{'*shape:':14} {self.shape}"
+        out += f"\n{'*dtype:':14} {self.dtype}"
+        out += f"\n{'*compression:':14} {self.compression} ({self.compression_opts})"
 
         for k, v in self.attrs.items():
-            out += f'\n{k + ":":14} {v}'
+            out += f"\n{k + ':':14} {v}"
 
         has_dim = False
-        dim_str = '\n\nDimensions'
+        dim_str = "\n\nDimensions"
         for _id, d in enumerate(self.dims):
             naxis = len(d)
             if naxis > 0:
                 has_dim = True
                 for iaxis in range(naxis):
                     if naxis > 1:
-                        dim_str += f'\n   [{_id}({iaxis})] {_repr.make_bold(d[iaxis].name)} {d[iaxis].shape}'
+                        dim_str += f"\n   [{_id}({iaxis})] {_repr.make_bold(d[iaxis].name)} {d[iaxis].shape}"
                     else:
-                        dim_str += f'\n   [{_id}] {_repr.make_bold(d[iaxis].name)} {d[iaxis].shape}'
+                        dim_str += f"\n   [{_id}] {_repr.make_bold(d[iaxis].name)} {d[iaxis].shape}"
         if has_dim:
             out += dim_str
         print(out)
@@ -2043,11 +2444,17 @@ class Dataset(h5py.Dataset):
         if isinstance(_id, h5py.h5d.DatasetID):
             super().__init__(_id)
         else:
-            raise ValueError(f'Could not initialize Dataset with type(_id)={type(_id)}. '
-                             'A h5py.h5f.FileID object must be passed')
+            raise ValueError(
+                f"Could not initialize Dataset with type(_id)={type(_id)}. "
+                "A h5py.h5f.FileID object must be passed"
+            )
 
         super().__init__(_id)
         self._hdf_filename = Path(self.file.filename)
+        self._convention = (
+            getattr(self.file, "_convention", None)
+            or convention.get_current_convention()
+        )
 
     def set_primary_scale(self, axis, iscale: int):
         """Set the primary scale for a specific axis.
@@ -2066,14 +2473,15 @@ class Dataset(h5py.Dataset):
         nscales = len(self.dims[axis])
         if iscale >= nscales:
             raise ValueError(
-                f'The target scale index "iscale" is out of range [0, {nscales - 1}]')
+                f'The target scale index "iscale" is out of range [0, {nscales - 1}]'
+            )
         backup_scales = self.dims[axis].items()
         for _, ds in backup_scales:
             self.dims[axis].detach_scale(ds)
         ils = [iscale, *[i for i in range(nscales) if i != iscale]]
         for i in ils:
             self.dims[axis].attach_scale(backup_scales[i][1])
-        logger.debug('new primary scale: %s', self.dims[axis][0])
+        logger.debug("new primary scale: %s", self.dims[axis][0])
 
 
 class File(h5py.File, Group):
@@ -2124,23 +2532,37 @@ class File(h5py.File, Group):
         with phil:
             return WrapperAttributeManager(self)
 
+    def __getitem__(self, name):
+        return Group.__getitem__(self, name)
+
+    def values(self):
+        return Group.values(self)
+
+    def items(self):
+        return Group.items(self)
+
+    def visititems(self, func):
+        return Group.visititems(self, func)
+
     @property
     def version(self) -> str:
         """Return version stored in file, which is the package version used at the time of creation.
         Not necessarily the current version of the package."""
-        return self.get('h5rdmtoolbox', {}).attrs.get('__h5rdmtoolbox_version__')
+        return self.get("h5rdmtoolbox", {}).attrs.get("__h5rdmtoolbox_version__")
 
     @property
     def modification_time(self) -> datetime:
         """Return the modification from the file. Not stored as an attribute!"""
-        return datetime.fromtimestamp(self._hdf_filename.stat().st_mtime,
-                                      tz=timezone.utc).astimezone()
+        return datetime.fromtimestamp(
+            self._hdf_filename.stat().st_mtime, tz=timezone.utc
+        ).astimezone()
 
     @property
     def creation_time(self) -> datetime:
         """Return the creation time from the file. Not stored as an attribute!"""
-        return datetime.fromtimestamp(self._hdf_filename.stat().st_ctime,
-                                      tz=timezone.utc).astimezone()
+        return datetime.fromtimestamp(
+            self._hdf_filename.stat().st_ctime, tz=timezone.utc
+        ).astimezone()
 
     @property
     def filesize(self):
@@ -2155,27 +2577,35 @@ class File(h5py.File, Group):
         """
         return utils.get_filesize(self.filename)
 
-    def __init__(self,
-                 name: Union[str, Path] = None,
-                 mode: str = None,
-                 attrs: Dict = None,
-                 **kwargs):
+    def __init__(
+        self,
+        name: Union[str, Path] = None,
+        mode: str = None,
+        attrs: Dict = None,
+        **kwargs,
+    ):
+        self._convention = convention.get_current_convention()
         is_fileobj_init = False
         # path is file object:
         if isinstance(name, ObjectID):
             # filter out standard attributes from kwargs:
-            if "__init__" in convention.get_current_convention().methods[self.__class__]:
+            if (
+                "__init__"
+                in convention.get_current_convention().methods[self.__class__]
+            ):
                 kwargs, _ = _pop_standard_attributes(
-                    kwargs, cache_entry=convention.get_current_convention().methods[self.__class__]["__init__"]
+                    kwargs,
+                    cache_entry=convention.get_current_convention().methods[
+                        self.__class__
+                    ]["__init__"],
                 )
             super(File, self).__init__(name, mode, **kwargs)
             self._hdf_filename = Path(self.filename)
             return
-        elif hasattr(name, 'read') and hasattr(name, 'seek'):
+        elif hasattr(name, "read") and hasattr(name, "seek"):
             super(File, self).__init__(name, mode, **kwargs)
             self._hdf_filename = Path(self.filename)
             is_fileobj_init = True
-            super(File, self).__init__(name, mode, **kwargs)
 
         if not is_fileobj_init:
             # name is path or None:
@@ -2184,38 +2614,44 @@ class File(h5py.File, Group):
                 logger.debug("An empty File class is initialized")
                 name = utils.touch_tmp_hdf5_file()
                 if mode is None:
-                    mode = 'r+'
+                    mode = "r+"
                 else:
                     mode = mode
             elif isinstance(name, (str, pathlib.Path)):
-                logger.debug('A filename is given to initialize the File class')
+                logger.debug("A filename is given to initialize the File class")
                 fname = pathlib.Path(name)
                 # a filename is given.
 
                 if mode is None:  # mode not given:
                     # file does exist and mode not given --> read only!
                     if fname.exists():
-                        mode = 'r'
-                        logger.debug('Mode is set to "r" because file exists and mode was not given.')
+                        mode = "r"
+                        logger.debug(
+                            'Mode is set to "r" because file exists and mode was not given.'
+                        )
 
                     # file does not exist and mode is not given--> write!
                     elif not fname.exists():
-                        raise FileNotFoundError(f'File "{fname}" does not exist and mode is not given.')
+                        raise FileNotFoundError(
+                            f'File "{fname}" does not exist and mode is not given.'
+                        )
 
-                elif mode == 'w' and fname.exists():
+                elif mode == "w" and fname.exists():
                     fname.unlink()
-                    logger.debug('File exists and mode is set to "w". Deleting file first.')
+                    logger.debug(
+                        'File exists and mode is set to "w". Deleting file first.'
+                    )
                 # else mode is given, so just continue... may be correct, may be not... let h5py find out
 
             if mode is None:
                 logger.debug('Mode not set. Set it to "r" by default')
-                mode = 'r'
+                mode = "r"
             elif not isinstance(name, (str, Path)):
                 raise ValueError(
                     f'It seems that no proper file name is passed: type of "{name}" is {type(name)}'
                 )
             else:
-                if mode == 'r+':
+                if mode == "r+":
                     if not Path(name).exists():
                         _tmp_init = True
                         # mode = 'r+'
@@ -2224,79 +2660,106 @@ class File(h5py.File, Group):
                         for k in list(kwargs.keys()):
                             if k not in H5KWARGS:
                                 _h5pykwargs.pop(k, None)
-                        with h5py.File(name, mode='w', **_h5pykwargs) as _h5:
+                        with h5py.File(name, mode="w", **_h5pykwargs) as _h5:
                             pass  # just touching the file
-                        logger.debug(f'An empty File class is initialized for "{name}".Mode is set to "r+"')
+                        logger.debug(
+                            f'An empty File class is initialized for "{name}".Mode is set to "r+"'
+                        )
 
             if attrs is None:
                 attrs = {}
 
-            if mode == 'r':
+            if mode == "r":
                 # check for required standard attributes
-                if "__init__" in convention.get_current_convention().methods[self.__class__]:
+                if (
+                    "__init__"
+                    in convention.get_current_convention().methods[self.__class__]
+                ):
                     kwargs, skwargs = _pop_standard_attributes(
-                        kwargs, cache_entry=convention.get_current_convention().methods[self.__class__]["__init__"]
+                        kwargs,
+                        cache_entry=convention.get_current_convention().methods[
+                            self.__class__
+                        ]["__init__"],
                     )
-                    logger.debug('The file mode is read only ("r"). Provided standard attributes are ignored: '
-                                 f'{skwargs.keys()}')
+                    logger.debug(
+                        'The file mode is read only ("r"). Provided standard attributes are ignored: '
+                        f"{skwargs.keys()}"
+                    )
                 # ignore standard attributes during read-only
                 skwargs = {}
             else:
                 # note, that in r+ mode, some attributes may already exist which are mandatory!
                 # get existing first:
                 if pathlib.Path(name).exists():
-                    with h5py.File(pathlib.Path(name), mode='r') as _h5:
+                    with h5py.File(pathlib.Path(name), mode="r") as _h5:
                         existing_attrs = tuple(_h5.attrs.keys())
                 else:
                     existing_attrs = None
-                attrs, skwargs, kwargs = process_attributes(self.__class__, '__init__', attrs, kwargs, name,
-                                                            existing_attrs=existing_attrs)
+                attrs, skwargs, kwargs = process_attributes(
+                    self.__class__,
+                    "__init__",
+                    attrs,
+                    kwargs,
+                    name,
+                    existing_attrs=existing_attrs,
+                )
 
-            if mode == 'r' and len(skwargs) > 0:
+            if mode == "r" and len(skwargs) > 0:
                 for k, v in skwargs.items():
                     if v is not None:
-                        raise ValueError(f'Cannot set attribute {k} in read mode')
+                        raise ValueError(f"Cannot set attribute {k} in read mode")
 
             # if not isinstance(name, ObjectID):
             #     self._hdf_filename = Path(name)
-            logger.debug(f'Initializing h5py.File with name={name}, mode={mode} and kwargs={kwargs}')
+            logger.debug(
+                f"Initializing h5py.File with name={name}, mode={mode} and kwargs={kwargs}"
+            )
             try:
-                super().__init__(name=name,
-                                 mode=mode,
-                                 **kwargs)
+                super().__init__(name=name, mode=mode, **kwargs)
             except OSError as e:
                 logger.error(f"Unable to open file {name}. Error message: {e}")
                 from ..utils import DownloadFileManager
+
                 DownloadFileManager().remove_corrupted_file(name)
 
                 raise e
             self._hdf_filename = Path(self.filename)
 
-            if self.mode != 'r':
+            if self.mode != "r":
                 # update file toolbox version, wrapper version
-                if get_config('auto_create_h5tbx_version'):
-                    if 'h5rdmtoolbox' not in self and get_config('auto_create_h5tbx_version'):
+                if get_config("auto_create_h5tbx_version"):
+                    if "h5rdmtoolbox" not in self and get_config(
+                        "auto_create_h5tbx_version"
+                    ):
                         utils.create_h5tbx_version_grp(self)
                 for k, v in attrs.items():
                     self.attrs[k] = v
 
     def __setattr__(self, key, value):
-        props = self.convention.properties.get(self.__class__, None)
-        if props:
-            prop = props.get(key, None)
-            if prop:  # does the object have a standard attribute with name stored in key?
-                return prop.set(self, value)
-        if key.startswith('_'):
+        _convention = self.__dict__.get("_convention")
+        if _convention is not None:
+            props = _convention.properties.get(self.__class__, None)
+            if props:
+                prop = props.get(key, None)
+                if (
+                    prop
+                ):  # does the object have a standard attribute with name stored in key?
+                    return prop.set(self, value)
+        if key.startswith("_"):
             return super().__setattr__(key, value)
-        raise AttributeError(f'Cannot set attribute {key} in {self.__class__}. Only standard attributes are allowed '
-                             f'to be set in this way. "{key}" seems not be standardized in the current convention. ')
+        raise AttributeError(
+            f"Cannot set attribute {key} in {self.__class__}. Only standard attributes are allowed "
+            f'to be set in this way. "{key}" seems not be standardized in the current convention. '
+        )
 
     def __repr__(self) -> str:
         r = super().__repr__()
-        return r.replace('HDF5', f'HDF5 (convention: "{convention.get_current_convention().name}")')
+        return r.replace("HDF5", f'HDF5 (convention: "{self._convention.name}")')
 
     def __str__(self) -> str:
-        return f'<class "{self.__class__.__name__}" convention: "{convention.get_current_convention().name}">'
+        return (
+            f'<class "{self.__class__.__name__}" convention: "{self._convention.name}">'
+        )
 
     def __delattr__(self, item):
         _delattr(self, item)
@@ -2304,12 +2767,15 @@ class File(h5py.File, Group):
     @property
     def convention(self):
         """Return the convention currently enabled."""
-        return convention.get_current_convention()
+        return self._convention
 
     @property
     def standard_attributes(self) -> Dict:
         """Return the standard attributes of the class."""
-        return self.convention.properties.get(self.__class__, {})
+        _convention = self.__dict__.get("_convention")
+        if _convention is None:
+            return {}
+        return _convention.properties.get(self.__class__, {})
 
     @property
     def rdf(self):
@@ -2319,7 +2785,9 @@ class File(h5py.File, Group):
     @property
     def iri(self):
         """Deprecated. Use rdf instead."""
-        warnings.warn('Property "iri" is deprecated. Use "rdf" instead.', DeprecationWarning)
+        warnings.warn(
+            'Property "iri" is deprecated. Use "rdf" instead.', DeprecationWarning
+        )
         return rdf.RDFManager(self.attrs)
 
     # @property
@@ -2327,11 +2795,13 @@ class File(h5py.File, Group):
     #     """Return DefinitionManager"""
     #     return definition.DefinitionManager(self.attrs)
 
-    def shacl_validate(self,
-                       data: Union[str, rdflib.Graph] = None,
-                       source: Union[str, Path] = None,
-                       shacl_format: Union[str] = 'turtle',
-                       **kwargs):
+    def shacl_validate(
+        self,
+        data: Union[str, rdflib.Graph] = None,
+        source: Union[str, Path] = None,
+        shacl_format: Union[str] = "turtle",
+        **kwargs,
+    ):
         """Validate the HDF5 file content against SHACL shapes.
 
         Parameters
@@ -2355,11 +2825,21 @@ class File(h5py.File, Group):
             - messages: List[str]
         """
         from ..ld.shacl import validate_hdf
-        return validate_hdf(hdf_source=self,
-                            shacl_data=data,
-                            shacl_source=source,
-                            shacl_format=shacl_format,
-                            **kwargs)
+
+        return validate_hdf(
+            hdf_source=self,
+            shacl_data=data,
+            shacl_source=source,
+            shacl_format=shacl_format,
+            **kwargs,
+        )
+
+    def sparql(self,
+               query,
+               **kwargs):
+        """Run a SPARQL query on the RDF graph of the file."""
+        from ..ld.sparql import sparql
+        return sparql(self, query, **kwargs)
 
     def moveto(self, destination: Path, overwrite: bool = False) -> Path:
         """Move the opened file to a new destination.
@@ -2383,13 +2863,15 @@ class File(h5py.File, Group):
         """
         dest_fname = Path(destination)
         if dest_fname.exists() and not overwrite:
-            raise FileExistsError(f'The target file "{dest_fname}" already exists and overwriting is set to False.'
-                                  ' Not moving the file!')
-        logger.debug('Moving file %s to %s', {self._hdf_filename}, dest_fname)
+            raise FileExistsError(
+                f'The target file "{dest_fname}" already exists and overwriting is set to False.'
+                " Not moving the file!"
+            )
+        logger.debug("Moving file %s to %s", {self._hdf_filename}, dest_fname)
 
         if not dest_fname.parent.exists():
             Path.mkdir(dest_fname.parent, parents=True)
-            logger.debug('Created directory %s', dest_fname.parent)
+            logger.debug("Created directory %s", dest_fname.parent)
 
         mode = self.mode
         self.close()
@@ -2422,8 +2904,10 @@ class File(h5py.File, Group):
             if overwrite:
                 os.remove(_filename)
             else:
-                raise FileExistsError("Note: File was not moved to new location as a file already exists with this name"
-                                      " and overwriting was disabled")
+                raise FileExistsError(
+                    "Note: File was not moved to new location as a file already exists with this name"
+                    " and overwriting was disabled"
+                )
 
         src = self.filename
         mode = self.mode
@@ -2433,12 +2917,12 @@ class File(h5py.File, Group):
         self._hdf_filename = _filename
         return File(_filename, mode=mode)
 
-    def reopen(self, mode: str = 'r+') -> None:
+    def reopen(self, mode: str = "r+") -> None:
         """Open the closed file"""
         self.__init__(self._hdf_filename, mode=mode)
 
     @staticmethod
-    def open(filename: Union[str, pathlib.Path], mode: str = "r+") -> 'File':
+    def open(filename: Union[str, pathlib.Path], mode: str = "r+") -> "File":
         """Open the closed file and use the correct wrapper class
 
         Parameters
@@ -2454,21 +2938,17 @@ class File(h5py.File, Group):
         """
         return File(filename, mode)
 
-    def dump_jsonld(self,
-                    indent: int = 2,
-                    skipND: int = 1,
-                    structural: bool = True,
-                    contextual: bool = True,
-                    context: Optional[Dict] = None,
-                    file_uri: Optional[str] = None) -> str:
+    def dump_jsonld(
+        self,
+        indent: int = 2,
+        skipND: int = 1,
+        structural: bool = True,
+        contextual: bool = True,
+        context: Optional[Dict] = None,
+        file_uri: Optional[str] = None,
+    ) -> str:
         """Dump the file content as JSON-LD string"""
-        if file_uri is not None:
-            if not file_uri.endswith("#"):
-                raise ValueError(
-                    "The base URI for semantic metadata describing HDF5 internals must end with '#' to indicate that "
-                    "fragment identifiers (e.g., '#entry/data') refer to conceptual parts of the file. Without the '#', "
-                    "it would incorrectly suggest that internal components are resolvable sub-resources on the web."
-                )
+        _validate_jsonld_file_uri(file_uri)
 
         return self.serialize(
             fmt="json-ld",
@@ -2477,52 +2957,38 @@ class File(h5py.File, Group):
             structural=structural,
             contextual=contextual,
             context=context,
-            file_uri=file_uri
+            file_uri=file_uri,
         )
 
-    def serialize(self,
-                  fmt: str,
-                  skipND: int = 1,
-                  structural: bool = True,
-                  contextual: bool = True,
-                  file_uri: Optional[Union[str, Dict]] = None,
-                  context: Optional[Dict] = None,
-                  indent: int = 2,
-                  rdf_mappings: Dict[str, RDFMappingEntry] = None
-                  ):
+    def serialize(
+        self,
+        fmt: str,
+        skipND: int = 1,
+        structural: bool = True,
+        contextual: bool = True,
+        file_uri: Optional[Union[str, Dict]] = None,
+        context: Optional[Dict] = None,
+        indent: int = 2,
+        rdf_mappings: Dict[str, RDFMappingEntry] = None,
+    ):
         """Serialize the file content to a specific format"""
-        from h5rdmtoolbox.ld.utils import optimize_context
         from h5rdmtoolbox.ld import get_ld
 
-        if file_uri is None:
-            warnings.warn(
-                "Not providing a file-uri is not good practice because it will generate blank nodes. Consider providing an URI such as the DOI URL for example.",
-                category=UserWarning
-            )
+        _warn_on_missing_file_uri(file_uri)
+        file_uri, prefix = _normalize_file_uri_and_prefix(file_uri)
 
-        if isinstance(file_uri, Dict):
-            if not len(file_uri.keys()) == 1:
-                raise ValueError('If file_uri is a dict, it must contain exactly one key-value pair.')
-            prefix = list(file_uri.keys())[0]
-            file_uri = list(file_uri.values())[0]
-        else:
-            prefix = None
-
-        graph = get_ld(self.hdf_filename,
-                       structural=structural,
-                       contextual=contextual,
-                       file_uri=file_uri,
-                       skipND=skipND,
-                       context=context,
-                       rdf_mappings=rdf_mappings)
-        if prefix:
+        graph = get_ld(
+            self.hdf_filename,
+            structural=structural,
+            contextual=contextual,
+            file_uri=file_uri,
+            skipND=skipND,
+            context=context,
+            rdf_mappings=rdf_mappings,
+        )
+        if prefix is not None:
             graph.bind(prefix, file_uri)
-        context = context or {}
-        context = optimize_context(graph, context)
-        return graph.serialize(format=fmt,
-                               indent=indent,
-                               auto_compact=True,
-                               context=context)
+        return _serialize_ld_graph(graph, fmt=fmt, indent=indent, context=context)
 
 
 Dataset._h5grp = Group

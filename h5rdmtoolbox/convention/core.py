@@ -29,17 +29,14 @@ from ..user import UserDir
 from ..repository import zenodo
 from ..repository.zenodo.utils import recid_from_doi_or_redid
 
-logger = logging.getLogger('h5rdmtoolbox')
-CV_DIR = UserDir['convention']
+logger = logging.getLogger("h5rdmtoolbox")
+CV_DIR = UserDir["convention"]
 
-datetime_str = '%Y-%m-%dT%H:%M:%SZ%z'
+datetime_str = "%Y-%m-%dT%H:%M:%SZ%z"
 
 
 class MissingAttribute:
-
-    def __init__(self,
-                 object_name: str,
-                 attribute_name: str):
+    def __init__(self, object_name: str, attribute_name: str):
         self.object_name = object_name
         self.attribute_name = attribute_name
 
@@ -47,26 +44,30 @@ class MissingAttribute:
         return f'Attribute "{self.attribute_name}" is missing in "{self.object_name}".'
 
     def __repr__(self):
-        return f'MissingAttribute({self.object_name}, {self.attribute_name})'
+        return f"MissingAttribute({self.object_name}, {self.attribute_name})"
 
 
 class InvalidAttribute:
-    def __init__(self,
-                 object_name: str,
-                 attribute_name: str,
-                 attribute_value: Any,
-                 error_message: str):
+    def __init__(
+        self,
+        object_name: str,
+        attribute_name: str,
+        attribute_value: Any,
+        error_message: str,
+    ):
         self.object_name = object_name
         self.attribute_name = attribute_name
         self.attribute_value = attribute_value
         self.error_message = error_message
 
     def __str__(self):
-        return f'Attribute "{self.attribute_name}" in "{self.object_name}" has an invalid value ' \
-               f'"{self.attribute_value}". Error message: "{self.error_message}"'
+        return (
+            f'Attribute "{self.attribute_name}" in "{self.object_name}" has an invalid value '
+            f'"{self.attribute_value}". Error message: "{self.error_message}"'
+        )
 
     def __repr__(self):
-        return f'InvalidAttribute({self.object_name}, {self.attribute_name}, {self.attribute_value}, {self.error_message})'
+        return f"InvalidAttribute({self.object_name}, {self.attribute_name}, {self.attribute_value}, {self.error_message})"
 
 
 class AbstractConvention(abc.ABC):
@@ -86,7 +87,9 @@ class AbstractConvention(abc.ABC):
 
     # Validater:
     @abc.abstractmethod
-    def validate(self, file_or_filename: Union["h5tbx.File", h5py.File, str, pathlib.Path]) -> List[Dict]:
+    def validate(
+        self, file_or_filename: Union["h5tbx.File", h5py.File, str, pathlib.Path]
+    ) -> List[Dict]:
         """Checking a file for compliance with the convention. Shall return dictionary indicating
         invalid attributes."""
 
@@ -111,14 +114,16 @@ class Convention(AbstractConvention):
         Decoders can be written by the user and registered with `h5tbx.register_dataset_decoder(<decoder_func>)`.
     """
 
-    def __init__(self,
-                 *,  # enforce keyword arguments
-                 name: str,
-                 contact: str,  # ORCID of researcher
-                 institution: str = None,  # only if different than that from contact
-                 standard_attributes: dict = None,
-                 decoders: Union[str, List[str]] = None,
-                 filename=None):
+    def __init__(
+        self,
+        *,  # enforce keyword arguments
+        name: str,
+        contact: str,  # ORCID of researcher
+        institution: str = None,  # only if different than that from contact
+        standard_attributes: dict = None,
+        decoders: Union[str, List[str]] = None,
+        filename=None,
+    ):
         from ..wrapper.core import File, Group, Dataset
 
         if decoders is None:
@@ -156,14 +161,16 @@ class Convention(AbstractConvention):
         # check if the name is already registered:
         _cls = std_attr.target_cls
 
-        std_attr_name = std_attr.name.split('-')[0]
+        std_attr_name = std_attr.name.split("-")[0]
         std_attr.name = std_attr_name
 
         prop = self.properties.get(_cls, None)
         if prop is not None:
             if std_attr_name in self.properties[_cls]:
-                raise errors.ConventionError(f'A standard attribute with the name "{std_attr_name}" '
-                                             f'is already registered for "{std_attr.target_cls}".')
+                raise errors.ConventionError(
+                    f'A standard attribute with the name "{std_attr_name}" '
+                    f'is already registered for "{std_attr.target_cls}".'
+                )
         if std_attr.requirements is not None:
             if not all(r in _registered_names for r in std_attr.requirements):
                 # collect the missing ones:
@@ -171,8 +178,10 @@ class Convention(AbstractConvention):
                 for r in std_attr.requirements:
                     if r not in _registered_names:
                         _missing_requirements.append(r)
-                raise errors.ConventionError(f'Not all requirements for "{std_attr_name}" are registered. '
-                                             f'Please add them to the convention first: {_missing_requirements}')
+                raise errors.ConventionError(
+                    f'Not all requirements for "{std_attr_name}" are registered. '
+                    f"Please add them to the convention first: {_missing_requirements}"
+                )
 
         self._registered_standard_attributes[std_attr_name] = std_attr
 
@@ -197,49 +206,54 @@ class Convention(AbstractConvention):
 
     def add(self, std_attr: StandardAttribute) -> None:
         """Add a standard attribute to the convention."""
-        warnings.warn('The method "add" is deprecated. Please use "add_standard_attribute" instead.',
-                      DeprecationWarning)
+        warnings.warn(
+            'The method "add" is deprecated. Please use "add_standard_attribute" instead.',
+            DeprecationWarning,
+        )
         return self.add_standard_attribute(std_attr)
 
     def delete(self):
         """Delete the convention from the user directory."""
-        delete(self.name.lower().replace('-', '_'))
+        delete(self.name.lower().replace("-", "_"))
 
     def __repr__(self):
         return f'{self.__class__.__name__}("{self.name}")'
 
     def __str__(self):
         header = f'Convention("{self.name}")'
-        out = f'{make_bold(header)}'
-        out += f'\ncontact: {self.contact}'
+        out = f"{make_bold(header)}"
+        out += f"\ncontact: {self.contact}"
 
         for cls, method_standard_attributes in self.methods.items():
             for method_name, standard_attributes in method_standard_attributes.items():
-                out += f'\n  {cls.__name__}.{method_name}():'
+                out += f"\n  {cls.__name__}.{method_name}():"
                 if len(standard_attributes) == 0:
-                    out += f' ({make_italic("Nothing registered")})'
+                    out += f" ({make_italic('Nothing registered')})"
                     continue
                 # if props exist list them. first required, then optional
-                prop_dict = {'positional': {}, 'keyword': {}}
+                prop_dict = {"positional": {}, "keyword": {}}
                 for std_attr_name, std_attr in standard_attributes.items():
                     # for property_name, property_dict in methods.items():
                     if std_attr.is_positional():
-                        prop_dict['positional'][std_attr_name] = std_attr
+                        prop_dict["positional"][std_attr_name] = std_attr
                     else:
-                        prop_dict['keyword'][std_attr_name] = std_attr
+                        prop_dict["keyword"][std_attr_name] = std_attr
 
-                for k, v in prop_dict['positional'].items():
-                    out += f'\n    * {make_bold(k + " (obligatory)")} :\n\t\t' \
-                           f'{v.description}'
-                for k, v in prop_dict['keyword'].items():
+                for k, v in prop_dict["positional"].items():
+                    out += (
+                        f"\n    * {make_bold(k + ' (obligatory)')} :\n\t\t"
+                        f"{v.description}"
+                    )
+                for k, v in prop_dict["keyword"].items():
                     default_value = v.default_value
                     if default_value == StandardAttribute.NONE:
-                        out += f'\n    * {make_italic(k)}:\n\t\t' \
-                               f'{v.description}'
+                        out += f"\n    * {make_italic(k)}:\n\t\t{v.description}"
                     else:
-                        out += f'\n    * {make_italic(k)} (default={default_value}):\n\t\t' \
-                               f'{v.description}'
-        out += '\n'
+                        out += (
+                            f"\n    * {make_italic(k)} (default={default_value}):\n\t\t"
+                            f"{v.description}"
+                        )
+        out += "\n"
         return out
 
     def __enter__(self):
@@ -263,8 +277,9 @@ class Convention(AbstractConvention):
     def add_decoder(self, decoder: str):
         """Add a decoder to the convention."""
         if not isinstance(decoder, str):
-            raise TypeError(f'Expected a string, got {type(decoder)}')
+            raise TypeError(f"Expected a string, got {type(decoder)}")
         from ..wrapper import ds_decoder
+
         if decoder not in ds_decoder.registered_dataset_decoders:
             raise KeyError(f'The decoder "{decoder}" is not registered.')
         self._decoders += (decoder,)
@@ -283,12 +298,16 @@ class Convention(AbstractConvention):
         return self._decoders
 
     @classmethod
-    def from_json(cls, json_filename: Union[str, pathlib.Path], overwrite: bool = False) -> "Convention":
+    def from_json(
+        cls, json_filename: Union[str, pathlib.Path], overwrite: bool = False
+    ) -> "Convention":
         """Create a convention from a json file."""
         return cls.from_yaml(json2yaml(json_filename), overwrite=overwrite)
 
     @classmethod
-    def from_yaml(cls, yaml_filename: Union[str, pathlib.Path], overwrite: bool = False):
+    def from_yaml(
+        cls, yaml_filename: Union[str, pathlib.Path], overwrite: bool = False
+    ):
         """Create a convention from a yaml file.
         The YAML file must have the following structure:
 
@@ -326,35 +345,45 @@ class Convention(AbstractConvention):
             If the YAML file does not contain "__name__" or "__contact__"
         """
         if not isinstance(yaml_filename, (str, pathlib.Path)):
-            raise TypeError('Parameter yaml_filename must be a filename, i.e. str or pathlib.Path, '
-                            f'got {type(yaml_filename)}')
+            raise TypeError(
+                "Parameter yaml_filename must be a filename, i.e. str or pathlib.Path, "
+                f"got {type(yaml_filename)}"
+            )
 
         yaml_filename = pathlib.Path(yaml_filename)
 
-        with open(yaml_filename, 'r') as f:
+        with open(yaml_filename, "r") as f:
             attrs = _process_paths(yaml.safe_load(f), relative_to=yaml_filename.parent)
 
-        if '__name__' not in attrs:
-            raise ValueError(f'YAML file {yaml_filename} does not contain "__name__". Is the file a valid convention?')
-        if '__contact__' not in attrs:
+        if "__name__" not in attrs:
             raise ValueError(
-                f'YAML file {yaml_filename} does not contain "__contact__". Is the file a valid convention?')
+                f'YAML file {yaml_filename} does not contain "__name__". Is the file a valid convention?'
+            )
+        if "__contact__" not in attrs:
+            raise ValueError(
+                f'YAML file {yaml_filename} does not contain "__contact__". Is the file a valid convention?'
+            )
 
         # check if name already exists!
-        convention_name = attrs['__name__'].lower().replace('-', '_')
-        if convention_name in [d.name for d in CV_DIR.glob('*')]:
+        convention_name = attrs["__name__"].lower().replace("-", "_")
+        if convention_name in [d.name for d in CV_DIR.glob("*")]:
             if not overwrite:
-                return _get_convention_from_dir(attrs['__name__'])
+                return _get_convention_from_dir(attrs["__name__"])
             # overwriting existing convention
             delete(convention_name)
-            logger.debug(f'Convention exists and overwrite is True: Deleting convention "{convention_name}"')
+            logger.debug(
+                f'Convention exists and overwrite is True: Deleting convention "{convention_name}"'
+            )
 
         from . import generate
-        generate.write_convention_module_from_yaml(yaml_filename, name=attrs['__name__'])
+
+        generate.write_convention_module_from_yaml(
+            yaml_filename, name=attrs["__name__"]
+        )
 
         # add_convention(yaml_filename, name=attrs['__name__'])
         # assert attrs['__name__'] in get_registered_conventions()
-        return _get_convention_from_dir(attrs['__name__'])
+        return _get_convention_from_dir(attrs["__name__"])
 
     def pop(self, *names) -> "Convention":
         """removes the standard attribute with the given name from the convention
@@ -386,11 +415,14 @@ class Convention(AbstractConvention):
         for cls, methods in self.methods.items():
             for method_name, std_attrs in methods.items():
                 for std_attr_name, std_attr in std_attrs.items():
-
                     __doc_string_parser__[cls][method_name].add_additional_parameters(
-                        {std_attr_name: {'default': std_attr.default_value,
-                                         'type': std_attr.type_hint,
-                                         'description': std_attr.description}}
+                        {
+                            std_attr_name: {
+                                "default": std_attr.default_value,
+                                "type": std_attr.type_hint,
+                                "description": std_attr.description,
+                            }
+                        }
                     )
 
                     if isinstance(std_attr.position, dict):
@@ -398,23 +430,41 @@ class Convention(AbstractConvention):
                     else:
                         signature = inspect.signature(cls.__dict__[method_name])
                         if std_attr.is_positional():
-                            params = [param for param in signature.parameters.values() if
-                                      param.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD]
-                            position = {'after': params[-1].name}
+                            params = [
+                                param
+                                for param in signature.parameters.values()
+                                if param.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD
+                            ]
+                            position = {"after": params[-1].name}
                         else:
-                            params = [param for param in signature.parameters.values() if
-                                      param.kind == inspect.Parameter.KEYWORD_ONLY]
+                            params = [
+                                param
+                                for param in signature.parameters.values()
+                                if param.kind == inspect.Parameter.KEYWORD_ONLY
+                            ]
                             if len(params) == 0:
-                                params = [param for param in signature.parameters.values() if
-                                          param.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD]
-                            position = {'after': params[-1].name}
+                                params = [
+                                    param
+                                    for param in signature.parameters.values()
+                                    if param.kind
+                                    == inspect.Parameter.POSITIONAL_OR_KEYWORD
+                                ]
+                            position = {"after": params[-1].name}
 
                     type_hint = locate(std_attr.type_hint)
 
-                    setattr(cls, method_name, forge.insert(forge.arg(f'{std_attr_name}',
-                                                                     default=std_attr.default_value,
-                                                                     type=type_hint),
-                                                           **position)(cls.__dict__[method_name]))
+                    setattr(
+                        cls,
+                        method_name,
+                        forge.insert(
+                            forge.arg(
+                                f"{std_attr_name}",
+                                default=std_attr.default_value,
+                                type=type_hint,
+                            ),
+                            **position,
+                        )(cls.__dict__[method_name]),
+                    )
         for cls, methods in self.methods.items():
             for name, props in methods.items():
                 __doc_string_parser__[cls][name].update_docstring()
@@ -424,7 +474,9 @@ class Convention(AbstractConvention):
             for name, props in methods.items():
                 for prop_name, prop_attrs in props.items():
                     try:  # try it. If a convention is created during runtime, this may happen!
-                        setattr(cls, name, forge.delete(f'{prop_name}')(cls.__dict__[name]))
+                        setattr(
+                            cls, name, forge.delete(f"{prop_name}")(cls.__dict__[name])
+                        )
                     except ValueError:
                         pass
                     __doc_string_parser__[cls][name].restore_docstring()
@@ -434,7 +486,9 @@ class Convention(AbstractConvention):
         """Register the convention in the convention directory"""
         add_convention(self)
 
-    def validate(self, file_or_filename: Union[str, pathlib.Path, "File"]) -> List[Dict]:
+    def validate(
+        self, file_or_filename: Union[str, pathlib.Path, "File"]
+    ) -> List[Dict]:
         """Checks a file for compliance with the convention. It will NOT raise an error but
         return a list of invalid attributes.
 
@@ -449,15 +503,16 @@ class Convention(AbstractConvention):
             The invalid attributes
         """
         from ..wrapper.core import File
+
         if not isinstance(file_or_filename, (str, pathlib.Path)):
-            with File(file_or_filename, 'r') as f:
+            with File(file_or_filename, "r") as f:
                 return self.check(f)
         failed = []
 
         convention = self
 
         def _is_str_dataset(node):
-            if node.dtype.kind == 'S':
+            if node.dtype.kind == "S":
                 return True
             return False
 
@@ -471,21 +526,36 @@ class Convention(AbstractConvention):
                                 try:
                                     node.attrs[ak]
                                 except errors.StandardAttributeError as e:
-                                    failed.append(dict(name=node.name, attr_name=ak, attr_value=node.attrs.raw[ak],
-                                                       reason='invalid_value',
-                                                       error_message=str(e)))
+                                    failed.append(
+                                        dict(
+                                            name=node.name,
+                                            attr_name=ak,
+                                            attr_value=node.attrs.raw[ak],
+                                            reason="invalid_value",
+                                            error_message=str(e),
+                                        )
+                                    )
                         else:  # av.default_value is consts.DefaultValue.EMPTY:
-                            if av.target_method == 'create_string_dataset' and not _is_str_dataset(node):
+                            if (
+                                av.target_method == "create_string_dataset"
+                                and not _is_str_dataset(node)
+                            ):
                                 continue  # not the responsibility of this validator
-                            if av.target_method == 'create_dataset' and _is_str_dataset(node):
+                            if av.target_method == "create_dataset" and _is_str_dataset(
+                                node
+                            ):
                                 continue  # not the responsibility of this validator
 
                             if ak not in node.attrs:
                                 logger.debug(
                                     f'The attribute "{ak}" is missing in the dataset "{name}" but '
-                                    'is required by the convention')
-                                failed.append(MissingAttribute(object_name=node.name,
-                                                               attribute_name=ak))
+                                    "is required by the convention"
+                                )
+                                failed.append(
+                                    MissingAttribute(
+                                        object_name=node.name, attribute_name=ak
+                                    )
+                                )
                             else:
                                 # just by accessing the standard attribute, the validation is performed
                                 try:
@@ -493,44 +563,105 @@ class Convention(AbstractConvention):
                                     # av.validate(value_to_check, parent=node, attrs=node.attrs.raw)
                                     logger.debug(f'The attribute "{ak}" is valid')
                                 except errors.StandardAttributeError as e:
-                                    logger.debug(f'The attribute "{ak}" exists but is invalid')
-                                    failed.append(InvalidAttribute(object_name=node.name,
-                                                                   attribute_name=ak,
-                                                                   attribute_value=node.attrs.raw[ak],
-                                                                   error_message=str(e)))
+                                    logger.debug(
+                                        f'The attribute "{ak}" exists but is invalid'
+                                    )
+                                    failed.append(
+                                        InvalidAttribute(
+                                            object_name=node.name,
+                                            attribute_name=ak,
+                                            attribute_value=node.attrs.raw[ak],
+                                            error_message=str(e),
+                                        )
+                                    )
 
-        with File(file_or_filename, 'r') as f:
-            logger.debug(f'Checking file {file_or_filename} for compliance with convention {self.name}')
-            _validate_convention('/', f)
+        with File(file_or_filename, "r") as f:
+            logger.debug(
+                f"Checking file {file_or_filename} for compliance with convention {self.name}"
+            )
+            _validate_convention("/", f)
             f.visititems(_validate_convention)
 
         return failed
 
 
+def _clear_all_signatures():
+    """Clear all convention parameters from all registered conventions.
+
+    This is needed when switching conventions to ensure no leftover parameters
+    from previous conventions remain on the class methods.
+    """
+    for conv in get_registered_conventions().values():
+        for cls, methods in conv.methods.items():
+            for method_name, std_attrs in methods.items():
+                for std_attr_name in std_attrs:
+                    try:
+                        setattr(
+                            cls,
+                            method_name,
+                            forge.delete(std_attr_name)(cls.__dict__[method_name]),
+                        )
+                    except (ValueError, KeyError):
+                        pass
+                    try:
+                        __doc_string_parser__[cls][method_name].restore_docstring()
+                    except KeyError:
+                        pass
+
+
 def _import_convention(convention_name) -> "module":
     import importlib
+
     try:
-        return importlib.import_module(f'{convention_name}')
+        return importlib.import_module(f"{convention_name}")
     except ImportError:
-        logger.error(f"Failed to import module {convention_name}. Most likely the created convention file is erroneous.")
+        logger.error(
+            f"Failed to import module {convention_name}. Most likely the created convention file is erroneous."
+        )
 
 
 def _get_convention_from_dir(convention_name: str) -> "Convention":
-    _convention_name = convention_name.lower().replace('-', '_')
-    assert '-' not in _convention_name
+    _convention_name = convention_name.lower().replace("-", "_")
+    assert "-" not in _convention_name
     if _convention_name in get_registered_conventions():
         return get_registered_conventions()[convention_name]
-    _convention_py_filename = CV_DIR / f'{_convention_name}' / f'{_convention_name}.py'
+    _convention_py_filename = CV_DIR / f"{_convention_name}" / f"{_convention_name}.py"
     if not _convention_py_filename.exists():
         raise ConventionNotFound(f'Convention "{convention_name}" not found.')
-    logger.debug(f"Adding path {_convention_py_filename.parent.absolute()} to system path...")
+    logger.debug(
+        f"Adding path {_convention_py_filename.parent.absolute()} to system path..."
+    )
     sys.path.insert(0, str(_convention_py_filename.parent))
-    # import:
     _import_convention(_convention_name)
-    # now it is registered and can be returned:
     cv = get_registered_conventions()[convention_name]
     cv.filename = _convention_py_filename
     return cv
+
+
+def _is_builtin_convention(name: str) -> bool:
+    """Check if convention name is a built-in convention that can be auto-generated."""
+    return name.lower().replace("-", "_") == "h5tbx"
+
+
+def _ensure_builtin_convention(name: str) -> bool:
+    """Ensure a built-in convention is built and registered.
+
+    Returns True if the convention was built, False if already existed or not a builtin.
+    """
+    if not _is_builtin_convention(name):
+        return False
+    _convention_name = name.lower().replace("-", "_")
+    if _convention_name in get_registered_conventions():
+        return False
+    _convention_py_filename = CV_DIR / f"{_convention_name}" / f"{_convention_name}.py"
+    if not _convention_py_filename.exists():
+        logger.debug(f"Auto-building built-in convention '{name}' on first use")
+        from . import generate
+
+        h5tbx_yaml = pathlib.Path(__file__).parent.parent / "data/h5tbx.yaml"
+        generate.write_convention_module_from_yaml(h5tbx_yaml)
+        return True
+    return False
 
 
 class use:
@@ -553,12 +684,16 @@ class use:
                 convention_name = convention_or_name.name
             else:
                 convention_name = convention_or_name
-            _convention_name = convention_name.lower().replace('-', '_')
-            assert '-' not in _convention_name
-            registered_convention_names = [n.lower().replace('-', '_') for n in registered_conventions]
+            _convention_name = convention_name.lower().replace("-", "_")
+            assert "-" not in _convention_name
+            registered_convention_names = [
+                n.lower().replace("-", "_") for n in registered_conventions
+            ]
             if _convention_name not in registered_convention_names:
-                cv = _get_convention_from_dir(convention_name)
-                convention_name = cv.name
+                _ensure_builtin_convention(convention_name)
+                if _convention_name not in registered_convention_names:
+                    cv = _get_convention_from_dir(convention_name)
+                    convention_name = cv.name
             self._current_convention = _use(convention_name)
 
     def __repr__(self):
@@ -581,10 +716,12 @@ def _use(convention_or_name: Union[str, Convention, None]) -> Convention:
 
     if convention_name is None:
         # reset to default convention
-        convention_name = 'h5py'
+        convention_name = "h5py"
 
     if convention_name not in get_registered_conventions():
-        raise ValueError(f'Convention "{convention_name}" is not registered')
+        _ensure_builtin_convention(convention_name)
+        if convention_name not in get_registered_conventions():
+            raise ValueError(f'Convention "{convention_name}" is not registered')
 
     logger.debug(f'Switching to convention "{convention_name}"')
 
@@ -598,19 +735,21 @@ def _use(convention_or_name: Union[str, Convention, None]) -> Convention:
 
     # update signature:
     current_convention = get_registered_conventions()[convention_name]
+    _clear_all_signatures()  # Clear all convention parameters before adding new ones
     current_convention._add_signature()
 
     # update dataset decoders:
     ds_decoder.decoder_names = current_convention.decoders
 
     # set_current_convention(current_convention)
-    cfg._current_convention = current_convention
+    cfg._current_convention.set(current_convention)
     return current_convention
 
 
 def get_registered_conventions() -> Dict:
     """Return dictionary of registered convention"""
     return cfg._registered_conventions
+
 
 def add_convention(convention: Convention, name=None):
     """Add a convention to the list of registered convention"""
@@ -622,8 +761,8 @@ def add_convention(convention: Convention, name=None):
 
 
 def get_current_convention() -> Union[None, Convention]:
-    """Return the current convention"""
-    return cfg._current_convention
+    """Return the current convention (thread-safe)."""
+    return cfg._current_convention.get()
 
 
 def _process_relpath(rel_filename, relative_to):
@@ -633,7 +772,7 @@ def _process_relpath(rel_filename, relative_to):
 def _process_paths(data: Union[Dict, str], relative_to) -> Dict:
     # processed_data = {}
     if isinstance(data, str):
-        match = re.search(r'relpath\((.*?)\)', data)
+        match = re.search(r"relpath\((.*?)\)", data)
         if match:
             return _process_relpath(match.group(1), relative_to)
         return data
@@ -643,7 +782,7 @@ def _process_paths(data: Union[Dict, str], relative_to) -> Dict:
         _data = data.copy()
         for key, value in data.items():
             if isinstance(value, str):
-                match = re.search(r'relpath\((.*?)\)', value)
+                match = re.search(r"relpath\((.*?)\)", value)
                 if match:
                     _data[key] = _process_relpath(match.group(1), relative_to)
             elif isinstance(value, list):
@@ -671,27 +810,30 @@ def delete(convention: Union[str, Convention]):
 
 def from_file(filename) -> Convention:
     """Load a convention from a file. Currently yaml and json files are supported"""
-    if filename.suffix == '.yaml':
+    if filename.suffix == ".yaml":
         return from_yaml(filename)
-    elif filename.suffix == '.json':
+    elif filename.suffix == ".json":
         return from_json(filename)
     else:
-        raise ValueError(f'File {filename} has an unknown suffix')
+        raise ValueError(f"File {filename} has an unknown suffix")
 
 
-def from_yaml(filename: Union[str, pathlib.Path], overwrite: bool = False) -> Convention:
+def from_yaml(
+    filename: Union[str, pathlib.Path], overwrite: bool = False
+) -> Convention:
     """Load a convention from a YAML file. See Convention.from_yaml() for details"""
     logger.debug(f"Reading Convention from yaml file: {filename}")
     return Convention.from_yaml(filename, overwrite=overwrite)
 
 
-def from_json(filename: Union[str, pathlib.Path], overwrite: bool = False) -> Convention:
+def from_json(
+    filename: Union[str, pathlib.Path], overwrite: bool = False
+) -> Convention:
     """Load a convention from a JSON file. See Convention.from_json() for details"""
     return Convention.from_json(filename, overwrite=overwrite)
 
 
-def from_repo(repo_interface: RepositoryInterface,
-              name: str):
+def from_repo(repo_interface: RepositoryInterface, name: str):
     """Download a YAML file from a repository
 
     Parameters
@@ -708,23 +850,26 @@ def from_repo(repo_interface: RepositoryInterface,
     vfunc_filename = name.split(_suffix, 1)
     has_vfunc = False
     if len(vfunc_filename) == 2:
-        vfunc_filename = f'{vfunc_filename[0]}_vfuncs.py'
+        vfunc_filename = f"{vfunc_filename[0]}_vfuncs.py"
         try:
             downloaded_vfunc_filename = repo_interface.download_file(vfunc_filename)
             has_vfunc = True
         except Exception as e:
-            logger.debug(f'No vfuncs file found for {name}: {e}')
+            logger.debug(f"No vfuncs file found for {name}: {e}")
     if has_vfunc:
-        shutil.copy(downloaded_vfunc_filename,
-                    filename.parent / downloaded_vfunc_filename.name)
+        shutil.copy(
+            downloaded_vfunc_filename, filename.parent / downloaded_vfunc_filename.name
+        )
     logger.debug(f"File downloaded to {filename}. Now loading convention from file.")
     return from_file(filename)
 
 
-def from_zenodo(doi_or_recid: str,
-                name: str = None,
-                overwrite: bool = False,
-                force_download: bool = False) -> Convention:
+def from_zenodo(
+    doi_or_recid: str,
+    name: str = None,
+    overwrite: bool = False,
+    force_download: bool = False,
+) -> Convention:
     """Download a YAML file from a zenodo repository
 
     Depreciated. Use `from_repo` in the future.
@@ -748,13 +893,13 @@ def from_zenodo(doi_or_recid: str,
     """
     # depending on the input, try to convert to a valid DOI:
     # parse record id:
-    warnings.warn('Please use `from_repo` instead of from_zenodo', DeprecationWarning)
+    warnings.warn("Please use `from_repo` instead of from_zenodo", DeprecationWarning)
     rec_id = recid_from_doi_or_redid(doi_or_recid)
 
     if name is None:
-        filename = UserDir['cache'] / f'{rec_id}'
+        filename = UserDir["cache"] / f"{rec_id}"
     else:
-        filename = UserDir['cache'] / f'{rec_id}/{name}'
+        filename = UserDir["cache"] / f"{rec_id}/{name}"
 
     if not filename.exists() or force_download:
         record = zenodo.ZenodoRecord(rec_id)
@@ -762,30 +907,38 @@ def from_zenodo(doi_or_recid: str,
         filenames = list(record.files.keys())
 
         if name is None:
-            yaml_matches = [file for file in filenames if pathlib.Path(file).suffix == '.yaml']
-            vfuns_matches = [file for file in filenames if file.endswith('vfuncs.py')]
+            yaml_matches = [
+                file for file in filenames if pathlib.Path(file).suffix == ".yaml"
+            ]
+            vfuns_matches = [file for file in filenames if file.endswith("vfuncs.py")]
         else:
             yaml_matches = [file for file in filenames if file == name]
-            vfuns_matches = [file for file in filenames if file == f'{name}_vfuncs.py']
+            vfuns_matches = [file for file in filenames if file == f"{name}_vfuncs.py"]
             if len(yaml_matches) == 0:
-                raise ValueError(f'No file with name "{name}" found in record {doi_or_recid}')
+                raise ValueError(
+                    f'No file with name "{name}" found in record {doi_or_recid}'
+                )
 
         found_filenames = [f for f in yaml_matches]
         found_filenames.extend(vfuns_matches)
         for match in found_filenames:
-            _filename = record.download_file(match, target_folder=pathlib.Path(match).parent)
+            _filename = record.download_file(
+                match, target_folder=pathlib.Path(match).parent
+            )
             shutil.move(_filename, match)
 
     return from_yaml(yaml_matches[0], overwrite=overwrite)
 
 
-def yaml2jsonld(yaml_filename: Union[str, pathlib.Path],
-                file_url: str = None,
-                jsonld_filename: Union[str, pathlib.Path] = None) -> pathlib.Path:
+def yaml2jsonld(
+    yaml_filename: Union[str, pathlib.Path],
+    file_url: str = None,
+    jsonld_filename: Union[str, pathlib.Path] = None,
+) -> pathlib.Path:
     """Converts a convention stored in a YAML file to JSON-LD"""
     yaml_filename = pathlib.Path(yaml_filename)
     if jsonld_filename is None:
-        jsonld_filename = yaml_filename.with_suffix('.jsonld')
+        jsonld_filename = yaml_filename.with_suffix(".jsonld")
     else:
         jsonld_filename = pathlib.Path(jsonld_filename)
 
@@ -795,6 +948,7 @@ def yaml2jsonld(yaml_filename: Union[str, pathlib.Path],
     from ontolutils import M4I
     from rdflib import Graph
     import rdflib
+
     person_orcid_id = cv.contact  # m4i
 
     g = Graph()
@@ -818,14 +972,16 @@ def yaml2jsonld(yaml_filename: Union[str, pathlib.Path],
     g.add((n_ds, DCTERMS.creator, n_person))
 
     # as jsonld:
-    with open(jsonld_filename, 'w', encoding='utf-8') as f:
-        f.write(g.serialize(format='json-ld',
-                            indent=4,
-                            context={'dcat': DCAT._NS,
-                                     'dcterms': DCTERMS._NS,
-                                     'm4i': M4I._NS},
-                            compact=False))
+    with open(jsonld_filename, "w", encoding="utf-8") as f:
+        f.write(
+            g.serialize(
+                format="json-ld",
+                indent=4,
+                context={"dcat": DCAT._NS, "dcterms": DCTERMS._NS, "m4i": M4I._NS},
+                compact=False,
+            )
+        )
     return jsonld_filename
 
 
-__all__ = ['datetime_str', 'StandardAttribute', "Convention"]
+__all__ = ["datetime_str", "StandardAttribute", "Convention"]

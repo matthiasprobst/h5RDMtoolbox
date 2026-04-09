@@ -13,7 +13,9 @@ on:
       - develop-*
       - dev-*
       - dev/*
-
+      - feature/*
+      - release/*
+      - hotfix/*
 jobs:
   test:
     runs-on: ${{ matrix.os }}

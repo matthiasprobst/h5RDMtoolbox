@@ -1,3 +1,5 @@
+:orphan:
+
 # Documentation
 
 Make sure to have installed all required dependencies in order to build the documentation

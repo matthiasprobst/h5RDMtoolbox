@@ -27,7 +27,7 @@ def _parse_shacl(shacl: Union[str, pathlib.Path, rdflib.Graph], format) -> rdfli
         shacl_graph.parse(str(shacl), format=rdflib.util.guess_format(str(shacl)))
     elif isinstance(shacl, str):
         if format is None:
-            format = 'turtle'
+            format = "turtle"
         try:
             shacl_graph = rdflib.Graph()
             shacl_graph.parse(shacl, format=format)
@@ -37,53 +37,56 @@ def _parse_shacl(shacl: Union[str, pathlib.Path, rdflib.Graph], format) -> rdfli
     elif isinstance(shacl, rdflib.Graph):
         shacl_graph = shacl
     else:
-        raise TypeError('shacl must be a pathlib.Path, str, or rdflib.Graph')
+        raise TypeError("shacl must be a pathlib.Path, str, or rdflib.Graph")
     return shacl_graph
 
 
 def validate_hdf(
-        *,
-        hdf_data: Union[str, rdflib.Graph] = None,
-        hdf_source: Union[h5py.File, pathlib.Path] = None,
-        shacl_data: Union[str, rdflib.Graph] = None,
-        shacl_source: Union[str, pathlib.Path] = None,
-        hdf_file_uri="https://example.org/hdf5file#",
-        shacl_format: str = 'turtle',
-        hdf_data_format: str = 'turtle',
-        **pyshacl_kwargs
+    *,
+    hdf_data: Union[str, rdflib.Graph] = None,
+    hdf_source: Union[h5py.File, pathlib.Path] = None,
+    shacl_data: Union[str, rdflib.Graph] = None,
+    shacl_source: Union[str, pathlib.Path] = None,
+    hdf_file_uri="https://example.org/hdf5file#",
+    shacl_format: str = "turtle",
+    hdf_data_format: str = "turtle",
+    **pyshacl_kwargs,
 ) -> ValidationResult:
-    """
-    Validate an HDF5 file against SHACL shapes.
+    """Validate an HDF5 file against SHACL shapes.
+
     Parameters
     ----------
-    hdf_data: Union[str, rdflib.Graph], optional
+    hdf_data : Union[str, rdflib.Graph], optional
         The HDF5 data as a string or rdflib.Graph. If is string is provided
-        it is assumed to be in Turtle format (you may overwrite this by passing hdf_data_format.
-    hdf_source: Union[h5py.File, pathlib.Path], optional
+        it is assumed to be in Turtle format (you may overwrite this by passing hdf_data_format).
+    hdf_source : Union[h5py.File, pathlib.Path], optional
         The path to the HDF5 file.
-    shacl_data: Union[str, rdflib.Graph], optional
+    shacl_data : Union[str, rdflib.Graph], optional
         The SHACL shapes as a string or rdflib.Graph. If is string is provided
         it is assumed to be in Turtle format.
-    shacl_source: Union[str, pathlib.Path], optional
+    shacl_source : Union[str, pathlib.Path], optional
         The path to the SHACL shapes file.
-    shacl_format: str, optional
+    shacl_format : str, optional
         The format of the SHACL shapes string. Default is 'turtle'.
-    hdf_data_format: str, optional
+    hdf_data_format : str, optional
         The format of the HDF5 data string. Default is 'turtle'.
-    **pyshacl_kwargs:
+    **pyshacl_kwargs
         Additional keyword arguments to pass to pyshacl.validate().
 
     Returns
     -------
     ValidationResult
         The result of the validation containing:
+
         - conforms: bool
         - results_graph: rdflib.Graph
         - results_text: str
         - messages: List[str]
     """
     if shacl_data is not None and shacl_source is not None:
-        raise ValueError('Only one of "shacl_data" or "shacl_source" should be provided.')
+        raise ValueError(
+            'Only one of "shacl_data" or "shacl_source" should be provided.'
+        )
     if shacl_data is None and shacl_source is None:
         raise ValueError('One of "shacl_data" or shacl_source must be provided.')
 
@@ -95,16 +98,18 @@ def validate_hdf(
     if hdf_data is not None:
         if isinstance(hdf_data, str):
             h5_graph = rdflib.Graph()
-            h5_graph.parse(hdf_data, format='turtle')
+            h5_graph.parse(hdf_data, format="turtle")
         elif isinstance(hdf_data, rdflib.Graph):
             h5_graph = hdf_data
         else:
-            raise TypeError(f'Parameter "hdf_data" must be a str or rdflib.Graph, but is {type(hdf_data)}')
+            raise TypeError(
+                f'Parameter "hdf_data" must be a str or rdflib.Graph, but is {type(hdf_data)}'
+            )
     if hdf_source is not None:
         if isinstance(hdf_source, (str, pathlib.Path)):
             if not pathlib.Path(hdf_source).exists():
                 raise FileNotFoundError(f'HDF5 file source "{hdf_source}" not found.')
-            with h5py.File(hdf_source, 'r') as h5f:
+            with h5py.File(hdf_source, "r") as h5f:
                 return validate_hdf(
                     hdf_data=None,
                     hdf_source=h5f,
@@ -112,10 +117,12 @@ def validate_hdf(
                     shacl_source=shacl_source,
                     hdf_file_uri=hdf_file_uri,
                     hdf_data_format=hdf_data_format,
-                    **pyshacl_kwargs
+                    **pyshacl_kwargs,
                 )
         if not isinstance(hdf_source, h5py.File):
-            raise TypeError('Parameter "hdf_source" must be an h5py.File or a path to an HDF5 file.')
+            raise TypeError(
+                'Parameter "hdf_source" must be an h5py.File or a path to an HDF5 file.'
+            )
         h5_graph1 = get_hdf_ld(hdf_source, file_uri=hdf_file_uri, skipND=True)
         h5_graph2 = get_contextual_ld(hdf_source, file_uri=hdf_file_uri)
         h5_graph = h5_graph1 + h5_graph2
@@ -137,27 +144,26 @@ def validate_hdf(
         shacl_graph.parse(source=shacl_source, format=shacl_format)
 
     conforms, results_graph, results_text = _validate_graphs(
-        h5_graph,
-        shacl_graph,
-        **pyshacl_kwargs
+        h5_graph, shacl_graph, **pyshacl_kwargs
     )
     return ValidationResult(
         conforms=conforms,
         results_graph=results_graph,
         results_text=results_text,
         messages=_get_messages(results_graph),
-        nodes=_get_focus_nodes(results_graph)
+        nodes=_get_focus_nodes(results_graph),
     )
 
 
 def _validate_graphs(
-        data_graph,
-        shacl_graph,
-        inference='rdfs',
-        abort_on_first=False,
-        meta_shacl=False,
-        advanced=False,
-        debug=False):
+    data_graph,
+    shacl_graph,
+    inference="rdfs",
+    abort_on_first=False,
+    meta_shacl=False,
+    advanced=False,
+    debug=False,
+):
     """
     Validate a data graph against a SHACL shapes graph.
 
@@ -184,7 +190,7 @@ def _validate_graphs(
         abort_on_first=abort_on_first,
         meta_shacl=meta_shacl,
         advanced=advanced,
-        debug=debug
+        debug=debug,
     )
 
     return conforms, results_graph, results_text
@@ -201,9 +207,12 @@ def _get_messages(results_graph):
     - A list of validation messages.
     """
     messages = []
-    for s, p, o in results_graph.triples((None, rdflib.namespace.SH.resultMessage, None)):
+    for s, p, o in results_graph.triples(
+        (None, rdflib.namespace.SH.resultMessage, None)
+    ):
         messages.append(str(o))
     return messages
+
 
 def _get_focus_nodes(results_graph):
     """

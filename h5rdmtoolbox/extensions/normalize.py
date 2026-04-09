@@ -28,7 +28,8 @@ class NormalizationInterface:
         return super().__getattribute__(item)
 
     def _normalize(self, data: xr.DataArray) -> xr.DataArray:
-        assert isinstance(data, xr.DataArray)
+        if not isinstance(data, xr.DataArray):
+            raise TypeError("Data is not an xarray DataArray")
         quantified_data = data.pint.quantify(unit_registry=get_ureg())
         new_name = self.dataset.basename
         for k, v in self.norm_data.items():
@@ -97,7 +98,8 @@ class ToUnitsAccessor(Accessor):
     def __call__(self,
                  name=None,
                  **norm_data: Dict[str, Union[float, str]]) -> NormalizationInterface:
-        assert len(norm_data) > 0, "No normalization data given!"
+        if len(norm_data) == 0:
+            raise ValueError("No normalization data given!")
         return NormalizationInterface(self._obj,
                                       norm_data=norm_data,
                                       name=name)

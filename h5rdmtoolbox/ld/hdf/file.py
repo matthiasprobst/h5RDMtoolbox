@@ -14,32 +14,41 @@ from ..utils import optimize_context, get_obj_bnode, get_file_bnode
 HDF = Namespace(str(HDF5))
 
 
+def _get_file_node(h5_file: h5py.File, file_uri: Optional[str]):
+    file_rdf_manager = FileRDFManager(h5_file.attrs)
+    if file_rdf_manager.subject:
+        return rdflib.URIRef(file_rdf_manager.subject)
+    return get_file_bnode(h5_file, file_uri=file_uri)
+
+
+def _build_graph_from_file(
+        h5_file: h5py.File,
+        *,
+        file_uri: Optional[str],
+        skipND: int,
+) -> rdflib.Graph:
+    graph = Graph()
+    graph.bind("hdf", HDF)
+
+    file_node = _get_file_node(h5_file, file_uri=file_uri)
+    graph.add((file_node, RDF.type, HDF.File))
+
+    root_group = h5_file["/"]
+    root_group_uri = get_obj_bnode(obj=root_group, blank_node_iri_base=file_uri)
+    graph.add((file_node, HDF5.rootGroup, root_group_uri))
+
+    process_group(root_group, graph, blank_node_iri_base=file_uri, skipND=skipND)
+    return graph
+
+
 def get_ld(source: Union[str, h5py.File],
            file_uri: Optional[str] = None,
            skipND: int = 1) -> rdflib.Graph:
     """Convert an HDF5 file into an RDF graph."""
-
-    if not isinstance(source, h5py.File):
-        with h5py.File(source) as h5f:
-            return get_ld(h5f, file_uri=file_uri, skipND=skipND)
-
-    graph = Graph()
-    graph.bind("hdf", HDF)
-
-    file_frdf_manager = FileRDFManager(source.attrs)
-    if file_frdf_manager.subject:
-        _file_uri = rdflib.URIRef(file_frdf_manager.subject)
-    else:
-        _file_uri = get_file_bnode(source, file_uri=file_uri)
-
-    graph.add((_file_uri, RDF.type, HDF.File))
-
-    root_group_uri = get_obj_bnode(obj=source["/"], blank_node_iri_base=file_uri)
-    graph.add((_file_uri, HDF5.rootGroup, root_group_uri))
-
-    process_group(source["/"], graph, blank_node_iri_base=file_uri, skipND=skipND)
-
-    return graph
+    if isinstance(source, h5py.File):
+        return _build_graph_from_file(source, file_uri=file_uri, skipND=skipND)
+    with h5py.File(source) as h5_file:
+        return _build_graph_from_file(h5_file, file_uri=file_uri, skipND=skipND)
 
 
 def get_serialized_ld(

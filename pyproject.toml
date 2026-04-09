@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "h5rdmtoolbox"
-version = "2.7.3"
+version = "2.7.4"
 description = "Supporting a FAIR Research Data lifecycle using Python and HDF5."
 readme = "README.md"
 requires-python = ">=3.9, <3.14"
@@ -82,8 +82,9 @@ test-core = [
     "scikit-image>=0.21.0",
     "scikit-learn"
 ]
+# Composite extras avoid duplicating dependency pins across multiple lists.
 test = [
-    "h5rdmtoolbox[test-core,database,csv,snt,catalog]"
+    "h5rdmtoolbox[catalog,csv,database,snt,test-core]"
 ]
 docs = [
     "Sphinx==8.0.0",
@@ -94,7 +95,7 @@ docs = [
     "sphinxcontrib_bibtex==2.6.3"
 ]
 complete = [
-    "h5rdmtoolbox[database,layout_validation,csv,snt,catalog,gui,test]"
+    "h5rdmtoolbox[gui,test]"
 ]
 complete-with-docs = [
     "h5rdmtoolbox[complete,docs]"

@@ -1,7 +1,7 @@
 Practical Examples
 ==================
 
-This chapter will provide practical examples and can be expected to grow over time. So stay tuned!
+This section provides practical examples demonstrating h5rdmtoolbox capabilities for real scientific workflows. Examples cover domain standards (NeXus), knowledge graphs, and metadata enrichment to help scientists achieve FAIR data compliance.
 
 
 .. toctree::

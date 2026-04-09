@@ -1,4 +1,5 @@
 """main gui"""
+
 import getpass
 import logging
 import pathlib
@@ -24,7 +25,7 @@ logger.addHandler(logging.StreamHandler())
 for h in logger.handlers:
     h.setLevel(logging.DEBUG)
 
-logger.info('Loading GUI...')
+logger.info("Loading GUI...")
 
 INIT_DIR = pathlib.Path.cwd()
 
@@ -39,21 +40,33 @@ def on_error(func):
         try:
             return func(*args, **kwargs)
         except Exception as e:
-            logger.error(f'Error: {e}')
+            logger.error(f"Error: {e}")
             return None
 
     return wrapper
 
 
 def get_tree_structure(grp: h5py.Group) -> Dict:
-    """Return the tree (attributes, names, shapes) of the group and subgroups"""
-    tree = {}
-    for k, v in grp.items():
-        if isinstance(v, h5py.Dataset):
-            tree[v.name] = v
-        if isinstance(v, h5py.Group):
-            tree[v.name] = get_tree_structure(v)
-    return tree
+    """Return the tree (attributes, names, shapes) of the group and subgroups.
+
+    Delegates to the h5tbx wrapper's get_tree_structure method if available.
+
+    Parameters
+    ----------
+    grp : h5py.Group
+        The HDF5 group to get the tree structure from.
+
+    Returns
+    -------
+    Dict
+        Dictionary with '/' containing root attributes, and other keys for
+        groups/datasets. Groups contain nested dictionaries with the same structure.
+    """
+    if hasattr(grp, "get_tree_structure"):
+        return grp.get_tree_structure()
+    from h5rdmtoolbox.wrapper.core import Group
+
+    return Group.get_tree_structure(grp)
 
 
 class Ui(QtWidgets.QMainWindow, Ui_MainWindow):
@@ -62,8 +75,8 @@ class Ui(QtWidgets.QMainWindow, Ui_MainWindow):
     def __init__(self, grp: h5py.Group):
         super(Ui, self).__init__()
         self.setupUi(self)
-        self.setWindowTitle(f'HDF5 Fairify GUI')
-        self.log_message(f'Hello {USER}!')
+        self.setWindowTitle(f"HDF5 Fairify GUI")
+        self.log_message(f"Hello {USER}!")
         self.grp = grp
         self.populate_tree()
         self.h5TreeWidget.itemSelectionChanged.connect(self.on_selection_changed)
@@ -71,10 +84,22 @@ class Ui(QtWidgets.QMainWindow, Ui_MainWindow):
         self.suffix_dict = {}
         self.namespacelib = {}
 
-        for name, ns in (('M4I', M4I), ('PIVMETA', PIVMETA), ('SCHEMA', SCHEMA), ('OBO', OBO),
-                         ('CODEMETA', CODEMETA), ('QUDT_UNIT', QUDT_UNIT), ('QUDT_KIND', QUDT_KIND), ('SSNO', SSNO),
-                         ('FOAF', rdflib.FOAF), ('RDFS', rdflib.RDFS), ('RDF', rdflib.RDF), ('OWL', rdflib.OWL),
-                         ('SKOS', rdflib.SKOS), ('PROV', rdflib.PROV)):
+        for name, ns in (
+            ("M4I", M4I),
+            ("PIVMETA", PIVMETA),
+            ("SCHEMA", SCHEMA),
+            ("OBO", OBO),
+            ("CODEMETA", CODEMETA),
+            ("QUDT_UNIT", QUDT_UNIT),
+            ("QUDT_KIND", QUDT_KIND),
+            ("SSNO", SSNO),
+            ("FOAF", rdflib.FOAF),
+            ("RDFS", rdflib.RDFS),
+            ("RDF", rdflib.RDF),
+            ("OWL", rdflib.OWL),
+            ("SKOS", rdflib.SKOS),
+            ("PROV", rdflib.PROV),
+        ):
             self.namespacelib[name.lower()] = ns
             self.comboBoxPrefix1.addItem(name.lower())
             self.comboBoxPrefix2.addItem(name.lower())
@@ -100,7 +125,9 @@ class Ui(QtWidgets.QMainWindow, Ui_MainWindow):
 
         self.show()
 
-    def get_curr_obj(self) -> Tuple[Union[h5py.Group, h5py.Dataset, None], Union[str, None]]:
+    def get_curr_obj(
+        self,
+    ) -> Tuple[Union[h5py.Group, h5py.Dataset, None], Union[str, None]]:
         """Return the current HDF object selected in the tree widget"""
         selected_items = self.h5TreeWidget.selectedItems()
         if not selected_items:
@@ -118,14 +145,14 @@ class Ui(QtWidgets.QMainWindow, Ui_MainWindow):
                 self.log_message(f"parent_text: {parent_text}")
 
             if item_text in self.grp:
-                self.log_message(f'Dataset or Group is selected: {item_text}')
+                self.log_message(f"Dataset or Group is selected: {item_text}")
                 hdf_path = item_text
                 attr_name = None
             else:
-                self.log_message(f'Attribute is selected: {item_text}')
+                self.log_message(f"Attribute is selected: {item_text}")
                 hdf_path = parent_text
                 attr_name = item_text
-            self.log_message(f'HDF Obj is selected: {hdf_path}')
+            self.log_message(f"HDF Obj is selected: {hdf_path}")
 
             return self.grp[hdf_path], attr_name
 
@@ -137,27 +164,33 @@ class Ui(QtWidgets.QMainWindow, Ui_MainWindow):
         """
         obj, attr_name = self.get_curr_obj()
         if obj is None:
-            self.log_message('No object selected', 'red')
+            self.log_message("No object selected", "red")
             return
 
         rdf_predicate = self.lineEditIRI1.text()
-        if not rdf_predicate.startswith('http'):
-            self.log_message(f'Not a valid URI: {rdf_predicate}', 'red')
+        if not rdf_predicate.startswith("http"):
+            self.log_message(f"Not a valid URI: {rdf_predicate}", "red")
             return
 
         if attr_name is None:  # dataset or group selected
             try:
                 obj.rdf.predicate = rdf_predicate
-                self.log_message(f'Successfully wrote predicate {rdf_predicate} to HDF obj {obj.basename}', 'green')
+                self.log_message(
+                    f"Successfully wrote predicate {rdf_predicate} to HDF obj {obj.basename}",
+                    "green",
+                )
             except Exception as e:
-                self.log_message(f'Error writing to predicate: {e}', 'red')
+                self.log_message(f"Error writing to predicate: {e}", "red")
         else:
             try:
                 obj.rdf.predicate[attr_name] = rdf_predicate
-                self.log_message(f'Successfully wrote predicate {rdf_predicate} to attribute {attr_name} of '
-                                 f'object {obj.name}', 'green')
+                self.log_message(
+                    f"Successfully wrote predicate {rdf_predicate} to attribute {attr_name} of "
+                    f"object {obj.name}",
+                    "green",
+                )
             except Exception as e:
-                self.log_message(f'Error writing to predicate: {e}', 'red')
+                self.log_message(f"Error writing to predicate: {e}", "red")
 
         self.populate_tree()
 
@@ -169,33 +202,39 @@ class Ui(QtWidgets.QMainWindow, Ui_MainWindow):
         """
         obj, attr_name = self.get_curr_obj()
         if obj is None:
-            self.log_message('No object selected', 'red')
+            self.log_message("No object selected", "red")
             return
 
         if attr_name is None:  # dataset or group selected
             rdf_subject = self.lineEditIRI2.text()
-            if not rdf_subject.startswith('http'):
-                self.log_message(f'Not a valid URI: {rdf_subject}', 'red')
+            if not rdf_subject.startswith("http"):
+                self.log_message(f"Not a valid URI: {rdf_subject}", "red")
                 return
 
             try:
                 obj.rdf.subject = rdf_subject
-                self.log_message(f'Successfully wrote predicate {rdf_subject} to attribute {attr_name} of '
-                                 f'object {obj.name}', 'green')
+                self.log_message(
+                    f"Successfully wrote predicate {rdf_subject} to attribute {attr_name} of "
+                    f"object {obj.name}",
+                    "green",
+                )
             except Exception as e:
-                self.log_message(f'Error writing to predicate: {e}', 'red')
+                self.log_message(f"Error writing to predicate: {e}", "red")
         else:
             rdf_object = self.lineEditIRI2.text()
-            if not rdf_object.startswith('http'):
-                self.log_message(f'Not a valid URI: {rdf_object}', 'red')
+            if not rdf_object.startswith("http"):
+                self.log_message(f"Not a valid URI: {rdf_object}", "red")
                 return
 
             try:
                 obj.rdf.object[attr_name] = rdf_object
-                self.log_message(f'Successfully wrote predicate {rdf_object} to attribute {attr_name} of '
-                                 f'object {obj.name}', 'green')
+                self.log_message(
+                    f"Successfully wrote predicate {rdf_object} to attribute {attr_name} of "
+                    f"object {obj.name}",
+                    "green",
+                )
             except Exception as e:
-                self.log_message(f'Error writing to predicate: {e}', 'red')
+                self.log_message(f"Error writing to predicate: {e}", "red")
 
         self.populate_tree()
 
@@ -203,10 +242,10 @@ class Ui(QtWidgets.QMainWindow, Ui_MainWindow):
         """Update the prefix and suffix from the text box"""
         if pred is None:
             pred = self.lineEditIRI1.text()
-        self.log_message(f'updating prefix and suffix from text: {pred}')
+        self.log_message(f"updating prefix and suffix from text: {pred}")
         ns, key = split_uri(pred)
         if ns is not None:
-            if ns.startswith('http'):
+            if ns.startswith("http"):
                 for name, n in self.namespacelib.items():
                     if str(n._NS) == ns:
                         self.comboBoxPrefix1.setCurrentText(name)
@@ -220,14 +259,14 @@ class Ui(QtWidgets.QMainWindow, Ui_MainWindow):
         """Update the prefix and suffix from the text box"""
         if pred is None:
             pred = self.lineEditIRI2.text()
-        self.log_message(f'updating prefix and suffix from text: {pred}')
+        self.log_message(f"updating prefix and suffix from text: {pred}")
         ns, key = split_uri(pred)
-        self.log_message(f'Try to update combo boxes with ns={ns} and key={key}')
+        self.log_message(f"Try to update combo boxes with ns={ns} and key={key}")
         if ns is not None:
-            if ns.startswith('http'):
+            if ns.startswith("http"):
                 for name, n in self.namespacelib.items():
                     if str(n._NS) == ns:
-                        self.log_message(f'Found ns={ns} in {name}')
+                        self.log_message(f"Found ns={ns} in {name}")
                         self.comboBoxPrefix2.setCurrentText(name)
                         self.comboBoxSuffix2.setCurrentText(key)
                         break
@@ -237,33 +276,33 @@ class Ui(QtWidgets.QMainWindow, Ui_MainWindow):
 
     def update_prefix1(self, update_lineedit=True):
         """Update the line edit for prefix 1"""
-        self.log_message('Clearing combo box...')
+        self.log_message("Clearing combo box...")
         self.comboBoxSuffix1.clear()
         current_prefix = self.comboBoxPrefix1.currentText()
 
-        self.log_message(f'Updating combo box with data: {current_prefix}...')
+        self.log_message(f"Updating combo box with data: {current_prefix}...")
         self.comboBoxSuffix1.addItems(self.suffix_dict[current_prefix])
         ns, key = split_uri(self.lineEditIRI1.text())
 
         ns_uri = self.namespacelib[current_prefix]._NS
 
         if update_lineedit:
-            self.lineEditIRI1.setText(f'{ns_uri}{key}')
+            self.lineEditIRI1.setText(f"{ns_uri}{key}")
 
     def update_prefix2(self, update_lineedit=True):
         """Update the line edit for prefix 1"""
-        self.log_message('Clearing combo box...')
+        self.log_message("Clearing combo box...")
         self.comboBoxSuffix2.clear()
         current_prefix = self.comboBoxPrefix2.currentText()
 
-        self.log_message(f'Updating combo box with data: {current_prefix}...')
+        self.log_message(f"Updating combo box with data: {current_prefix}...")
         self.comboBoxSuffix2.addItems(self.suffix_dict[current_prefix])
         ns, key = split_uri(self.lineEditIRI2.text())
 
         ns_uri = self.namespacelib[current_prefix]._NS
 
         if update_lineedit:
-            self.lineEditIRI2.setText(f'{ns_uri}{key}')
+            self.lineEditIRI2.setText(f"{ns_uri}{key}")
 
     def update_suffix1(self, update_lineedit=True):
         """Update the line edit for suffix 1"""
@@ -271,7 +310,7 @@ class Ui(QtWidgets.QMainWindow, Ui_MainWindow):
         ns_uri = self.namespacelib[current_prefix]._NS
         current_suffix = self.comboBoxSuffix1.currentText()
         if update_lineedit:
-            self.lineEditIRI1.setText(f'{ns_uri}{current_suffix}')
+            self.lineEditIRI1.setText(f"{ns_uri}{current_suffix}")
 
     def update_suffix2(self, update_lineedit=True):
         """Update the line edit for suffix 1"""
@@ -279,24 +318,24 @@ class Ui(QtWidgets.QMainWindow, Ui_MainWindow):
         ns_uri = self.namespacelib[current_prefix]._NS
         current_suffix = self.comboBoxSuffix2.currentText()
         if update_lineedit:
-            self.lineEditIRI2.setText(f'{ns_uri}{current_suffix}')
+            self.lineEditIRI2.setText(f"{ns_uri}{current_suffix}")
 
     def on_selection_changed(self):
         """Update call if selection in tree view changes"""
 
-        self.lineEditIRI1.setText('')
-        self.lineEditIRI1.setToolTip('')
-        self.lineEditIRI2.setText('')
-        self.lineEditIRI2.setToolTip('')
+        self.lineEditIRI1.setText("")
+        self.lineEditIRI1.setToolTip("")
+        self.lineEditIRI2.setText("")
+        self.lineEditIRI2.setToolTip("")
 
         obj, attr_display_name = self.get_curr_obj()
         if attr_display_name:
-            attr_name = attr_display_name.split('=', 1)[0]
+            attr_name = attr_display_name.split("=", 1)[0]
         else:
             attr_name = attr_display_name
         if obj is None:
-            self.groupBox1.setTitle(f'nothing selected')
-            self.groupBox2.setTitle(f'nothing selected')
+            self.groupBox1.setTitle(f"nothing selected")
+            self.groupBox2.setTitle(f"nothing selected")
             self.groupBox1.setEnabled(False)
             self.groupBox2.setEnabled(False)
             return
@@ -318,7 +357,7 @@ class Ui(QtWidgets.QMainWindow, Ui_MainWindow):
                 self.lineEditIRI1.setText(subj)
                 self.groupBox1.setToolTip(f'"{obj.basename}" is entity <{subj}>')
             else:
-                self.lineEditIRI1.setText('')
+                self.lineEditIRI1.setText("")
                 self.groupBox1.setToolTip(f'no subject found for "{obj.basename}"')
 
             subj = obj.rdf.type
@@ -326,7 +365,7 @@ class Ui(QtWidgets.QMainWindow, Ui_MainWindow):
                 self.lineEditIRI1.setText(subj)
                 self.groupBox1.setToolTip(f'"{obj.basename}" is of type <{subj}>')
             else:
-                self.lineEditIRI1.setText('')
+                self.lineEditIRI1.setText("")
                 self.groupBox1.setToolTip(f'no type found for "{obj.basename}"')
         else:
             self.comboBoxPrefix1.setEnabled(True)
@@ -335,20 +374,22 @@ class Ui(QtWidgets.QMainWindow, Ui_MainWindow):
             self.comboBoxSuffix2.setEnabled(False)
 
             self.groupBox1.setTitle(f'RDF predicate for attr. name "{attr_name}"')
-            self.groupBox2.setTitle(f'RDF object for attr. value "{obj.attrs[attr_name]}"')
-            pred = obj.rdf.predicate.get(attr_name, '')
+            self.groupBox2.setTitle(
+                f'RDF object for attr. value "{obj.attrs[attr_name]}"'
+            )
+            pred = obj.rdf.predicate.get(attr_name, "")
             self.lineEditIRI1.setText(pred)
-            if pred != '':
+            if pred != "":
                 self.update_presuf1_from_text(pred=pred)
 
-            rdf_object = obj.rdf.object.get(attr_name, '')
+            rdf_object = obj.rdf.object.get(attr_name, "")
             self.lineEditIRI2.setText(rdf_object)
-            if rdf_object != '':
+            if rdf_object != "":
                 self.update_presuf2_from_text(pred=rdf_object)
 
     def populate_tree(self):
         """Populate the tree widget with data from the HDF5 file"""
-        self.log_message('Populating tree widget with data...')
+        self.log_message("Populating tree widget with data...")
         self.h5TreeWidget.setHeaderHidden(True)  # Hide the header
         self.h5TreeWidget.clear()  # Clear existing items
         self._add_items_recursive(self.grp, self.h5TreeWidget)
@@ -358,7 +399,7 @@ class Ui(QtWidgets.QMainWindow, Ui_MainWindow):
     def _add_items_recursive(self, grp, parent_item):
         """Add items to the tree widget recursively"""
         grp_item = QtWidgets.QTreeWidgetItem(parent_item, [grp.name])
-        grp_item.setFont(0, QFont('Arial', -1, QFont.Bold))
+        grp_item.setFont(0, QFont("Arial", -1, QFont.Bold))
 
         # get subject, predicate and object RDF for current selected item
         item_name = grp.name
@@ -366,14 +407,18 @@ class Ui(QtWidgets.QMainWindow, Ui_MainWindow):
         def _build_tooltip(attr_name, s=None, p=None, o=None) -> str:
             tt: str = attr_name
             if s:
-                tt += f'\n\tRDF subject:   {s}'
+                tt += f"\n\tRDF subject:   {s}"
             if p:
-                tt += f'\n\tRDF predicate: {p}'
+                tt += f"\n\tRDF predicate: {p}"
             if o:
-                tt += f'\n\tRDF object:    {o}'
+                tt += f"\n\tRDF object:    {o}"
             return tt
 
-        s, p, o = grp.rdf.subject, grp.rdf.predicate.get(item_name, None), grp.rdf.object.get(item_name, None)
+        s, p, o = (
+            grp.rdf.subject,
+            grp.rdf.predicate.get(item_name, None),
+            grp.rdf.object.get(item_name, None),
+        )
         grp_item.setToolTip(0, _build_tooltip(item_name, s=s, p=p, o=o))
         if any((s, p, o)):
             font = grp_item.font(0)
@@ -384,7 +429,11 @@ class Ui(QtWidgets.QMainWindow, Ui_MainWindow):
         for ak, av in grp.attrs.items():
             if not ak.isupper():
                 attr_item = QtWidgets.QTreeWidgetItem(grp_item, [f"{ak}={av}"])
-                s, p, o = None, grp.rdf.predicate.get(ak, None), grp.rdf.object.get(ak, None)
+                s, p, o = (
+                    None,
+                    grp.rdf.predicate.get(ak, None),
+                    grp.rdf.object.get(ak, None),
+                )
                 if any((s, p, o)):
                     font = attr_item.font(0)
                     font.setUnderline(True)
@@ -396,46 +445,70 @@ class Ui(QtWidgets.QMainWindow, Ui_MainWindow):
             for name, obj in grp.items():
                 self._add_items_recursive(obj, grp_item)
 
-    def log_message(self, message, color='k'):
+    def log_message(self, message, color="k"):
         """Write a message to the plain text edit box"""
-        logger.debug(f'log_message: {message}')
-        if color in ('k', 'black'):
+        logger.debug(f"log_message: {message}")
+        if color in ("k", "black"):
             self.messageTextEdit.appendPlainText(str(message))
-        elif color in ('r', 'red'):
+        elif color in ("r", "red"):
             self.messageTextEdit.appendHtml(f'<font color="red">{message}</font><br>')
-        elif color in ('g', 'green'):
+        elif color in ("g", "green"):
             self.messageTextEdit.appendHtml(f'<font color="green">{message}</font><br>')
         else:
-            logger.critical(f'Unknown color: {color}')
-            raise ValueError(f'Unknown color: {color}')
+            logger.critical(f"Unknown color: {color}")
+            raise ValueError(f"Unknown color: {color}")
 
 
 def start(*args, filename=None, wd=None, console: bool = True):
     """call the gui"""
     if console:
-        logger.debug('Initializing gui from console...')
-        app = QtWidgets.QApplication([*args, ])
+        logger.debug("Initializing gui from console...")
+        app = QtWidgets.QApplication(
+            [
+                *args,
+            ]
+        )
     else:
-        logger.debug('Initializing gui from python script...')
+        logger.debug("Initializing gui from python script...")
         app = QtWidgets.QApplication(*args)
 
     if filename is not None and not filename.exists():
-        raise FileNotFoundError(f'File not found: {filename}')
+        raise FileNotFoundError(f"File not found: {filename}")
 
     use_test_file = False
     if filename is None:
         use_test_file = True
-        filename = __this_dir__ / 'test.hdf5'
-        with h5tbx.File(filename, 'w') as h5:
-            h5.attrs['rootattr'] = 2
-            ds = h5.create_dataset('ds1', data=[1, 2, 3, 4, 5, 6, ])
-            ds.attrs['attr1'] = 'value1'
-            ds = h5.create_dataset('grp/ds2', data=[1, 2, 3, 4, 5, 6, ])
-            ds.attrs['attr2'] = 'value2'
+        filename = __this_dir__ / "test.hdf5"
+        with h5tbx.File(filename, "w") as h5:
+            h5.attrs["rootattr"] = 2
+            ds = h5.create_dataset(
+                "ds1",
+                data=[
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                ],
+            )
+            ds.attrs["attr1"] = "value1"
+            ds = h5.create_dataset(
+                "grp/ds2",
+                data=[
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                ],
+            )
+            ds.attrs["attr2"] = "value2"
 
-    with h5tbx.File(filename, 'r+') as h5:
+    with h5tbx.File(filename, "r+") as h5:
         _ = Ui(h5)
-        print('Starting gui ...')
+        print("Starting gui ...")
         app.exec_()
 
     if use_test_file:

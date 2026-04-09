@@ -2,7 +2,6 @@
 
 import logging
 import pathlib
-import warnings
 from logging.handlers import RotatingFileHandler
 from typing import Optional, Dict
 
@@ -136,13 +135,24 @@ def get_ld(
         context: Optional[Dict] = None
 ) -> rdflib.Graph:
     """Return the HDF file content as a rdflib.Graph object."""
-    from h5rdmtoolbox.ld import get_ld
-    return get_ld(hdf_filename,
-                  structural=structural,
-                  contextual=contextual,
-                  skipND=skipND,
-                  file_uri=file_uri,
-                  context=context)
+    from . import ld
+    return ld.get_ld(
+        hdf_filename,
+        structural=structural,
+        contextual=contextual,
+        skipND=skipND,
+        file_uri=file_uri,
+        context=context,
+    )
+
+
+def _optimize_ld_context(graph: rdflib.Graph, context: Optional[Dict]) -> Dict:
+    from .ld import optimize_context
+    return optimize_context(graph, context or {})
+
+
+def _resolve_serialize_format(fmt: str, kwargs: Dict) -> str:
+    return kwargs.pop("format", fmt)
 
 
 def dump_jsonld(
@@ -155,19 +165,16 @@ def dump_jsonld(
         file_uri: Optional[str] = None
 ):
     """Return the file content as a JSON-LD string."""
-    from .ld import optimize_context
-    context = context or {}
     graph = get_ld(hdf_filename,
                    structural=structural,
                    contextual=contextual,
                    file_uri=file_uri,
                    skipND=skipND)
-    context = optimize_context(graph, context)
     return graph.serialize(
         format="json-ld",
         indent=indent,
         auto_compact=True,
-        context=context
+        context=_optimize_ld_context(graph, context)
     )
 
 
@@ -286,7 +293,7 @@ def serialize(hdf_filename,
               rdf_mappings: Dict[str, RDFMappingEntry] = None,
               **kwargs):
     """Alternative to json-ld but allows multiple serialization options"""
-    fmt = kwargs.pop("format", fmt)
+    fmt = _resolve_serialize_format(fmt, kwargs)
     with File(hdf_filename) as h5:
         return h5.serialize(fmt=fmt,
                             skipND=skipND,
@@ -294,6 +301,32 @@ def serialize(hdf_filename,
                             contextual=contextual,
                             file_uri=file_uri,
                             rdf_mappings=rdf_mappings)
+
+
+def sparql(
+        hdf_filename: Union[str, pathlib.Path],
+        query: str,
+        structural: bool = True,
+        contextual: bool = True,
+        skipND: int = 1,
+        file_uri: Optional[Union[str, Dict[str, str]]] = None,
+        rdf_mappings: Dict[str, RDFMappingEntry] = None,
+        as_dataframe: bool = False,
+        **kwargs
+) -> rdflib.query.Result:
+    """Run a SPARQL query on the HDF5 file content. Returns a rdflib.query.Result object."""
+    from .ld import sparql
+    return sparql(
+        source=hdf_filename,
+        query=query,
+        structural=structural,
+        contextual=contextual,
+        skipND=skipND,
+        file_uri=file_uri,
+        rdf_mappings=rdf_mappings,
+        as_dataframe=as_dataframe,
+        **kwargs
+    )
 
 
 def build_pyvis_graph(hdf_filename, output_filename="kg-graph.html", notebook=False,
