@@ -481,13 +481,19 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
             return False, True
         raise HTTPException(status_code=400, detail="mode must be one of: both, structural, contextual")
 
-    def _graph_label(value) -> str:
+    def _graph_label(value, rdf_graph: Optional[rdflib.Graph] = None) -> str:
         if isinstance(value, rdflib.URIRef):
+            namespace_manager = rdf_graph.namespace_manager if rdf_graph is not None else rdflib.Graph().namespace_manager
             try:
-                return str(rdflib.Graph().namespace_manager.normalizeUri(value))
+                return str(namespace_manager.normalizeUri(value))
             except Exception:
-                text = str(value)
-                return text.rsplit("#", 1)[-1].rsplit("/", 1)[-1] or text
+                pass
+            try:
+                return namespace_manager.qname(value)
+            except Exception:
+                pass
+            text = str(value)
+            return text.rsplit("#", 1)[-1].rsplit("/", 1)[-1] or text
         text = str(value)
         return text if len(text) <= 48 else f"{text[:45]}..."
 
@@ -499,18 +505,18 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
             object_id = str(obj)
             nodes.setdefault(subject_id, {
                 "id": subject_id,
-                "label": _graph_label(subject),
+                "label": _graph_label(subject, rdf_graph),
                 "group": "resource" if isinstance(subject, rdflib.URIRef) else "blank",
             })
             nodes.setdefault(object_id, {
                 "id": object_id,
-                "label": _graph_label(obj),
+                "label": _graph_label(obj, rdf_graph),
                 "group": "literal" if isinstance(obj, rdflib.Literal) else "resource" if isinstance(obj, rdflib.URIRef) else "blank",
             })
             edges.append({
                 "from": subject_id,
                 "to": object_id,
-                "label": _graph_label(predicate),
+                "label": _graph_label(predicate, rdf_graph),
                 "arrows": "to",
             })
         return {"nodes": list(nodes.values()), "edges": edges}
@@ -684,8 +690,16 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
 </main>
 <script>
   const graphData = {graph_json};
+  const graphForm = document.getElementById("graph-form");
   const container = document.getElementById("network");
   const emptyGraph = document.getElementById("empty-graph");
+  graphForm.querySelectorAll('input[name="mode"]').forEach((radio) => {{
+    radio.addEventListener("change", () => {{
+      if (radio.checked) {{
+        graphForm.requestSubmit();
+      }}
+    }});
+  }});
   if (graphData.nodes.length === 0) {{
     emptyGraph.style.display = "block";
   }} else if (window.vis) {{

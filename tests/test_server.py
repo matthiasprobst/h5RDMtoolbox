@@ -153,6 +153,8 @@ def test_file_graph_endpoint_returns_interactive_page(hdf_filename):
     assert "height: 100%;" in response.text
     assert '"nodes":' in response.text
     assert '"edges":' in response.text
+    assert '"label": "hdf:File"' in response.text
+    assert '"label": "hdf:rootGroup"' in response.text
     assert 'name="mode" value="both" checked' in response.text
     assert 'name="mode" value="structural"' in response.text
     assert 'name="mode" value="contextual"' in response.text
