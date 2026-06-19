@@ -1,6 +1,7 @@
 import os
 import pathlib
 import shutil
+import tempfile
 import time
 from itertools import count
 from typing import Tuple
@@ -42,17 +43,7 @@ class DirManger:
     def __init__(self):
         toolbox_tmp_folder = USER_DATA_DIR / 'tmp'
         toolbox_tmp_folder.mkdir(parents=True, exist_ok=True)
-
-        i = 0
-        tmp_dir = toolbox_tmp_folder / f'tmp_{i}'
-        while tmp_dir.exists():
-            i += 1
-            tmp_dir = toolbox_tmp_folder / f'tmp_{i}'
-        try:
-            tmp_dir.mkdir()
-        except Exception:
-            i += 1
-            tmp_dir = toolbox_tmp_folder / f'tmp_{i}'
+        tmp_dir = pathlib.Path(tempfile.mkdtemp(prefix='tmp_', dir=toolbox_tmp_folder))
 
         self.user_dirs = {'root': USER_DATA_DIR,
                           'tmp': tmp_dir,

@@ -113,10 +113,11 @@ Repository = "https://github.com/matthiasprobst/h5rdmtoolbox"
 "Bug Tracker" = "https://github.com/matthiasprobst/h5rdmtoolbox/issues"
 
 [project.scripts]
-h5tbx = "h5rdmtoolbox.cli:h5tbx"
+h5tbx = "h5rdmtoolbox_cli:h5tbx"
 
 [tool.setuptools]
 include-package-data = true
+py-modules = ["h5rdmtoolbox_cli"]
 
 [tool.setuptools.packages.find]
 where = ["."]

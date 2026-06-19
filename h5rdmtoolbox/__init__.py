@@ -19,7 +19,7 @@ _stream_handler = logging.StreamHandler()
 _stream_handler.setLevel(DEFAULT_LOGGING_LEVEL)
 _stream_handler.setFormatter(_formatter)
 
-_file_handler = RotatingFileHandler(USER_LOG_DIR / 'h5rdmtoolbox.log')
+_file_handler = RotatingFileHandler(USER_LOG_DIR / 'h5rdmtoolbox.log', delay=True)
 _file_handler.setLevel(logging.DEBUG)  # log everything to file!
 _file_handler.setFormatter(_formatter)
 
