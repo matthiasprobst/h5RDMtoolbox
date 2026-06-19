@@ -17,6 +17,10 @@ Log of changes in the versions
   - adds SPARQL query page with sample queries and tabular SELECT results
   - adds graph metrics page with RDF knowledge-graph size, predicate, class, connectivity, literal, label, quality, and external-linkage metrics
   - adds SHACL validation page for pasted Turtle shapes
+  - dereferences HDF5 object URLs such as `/example.h5/group/dataset` as Turtle RDF subject descriptions
+  - adds content-negotiated RDF resource URLs with browser HTML, `Accept` negotiation, and `?format=ttl|jsonld|nt|xml|html`
+  - adds external RDF subject resolution through local `/resolve?iri=...` URLs, with optional `--local-iri-pattern` graph-link filtering
+  - adds lazy Zenodo DOI/record enrichment that searches attached RDF files for fragment IRIs and merges matching triples
 - add reusable RDF graph metrics API:
   - `h5rdmtoolbox.compute_metrics(filename)`
   - `h5rdmtoolbox.File(...).metrics()`

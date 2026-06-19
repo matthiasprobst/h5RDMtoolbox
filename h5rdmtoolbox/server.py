@@ -1,8 +1,12 @@
 import pathlib
 import re
 import urllib.parse
+import urllib.request
+import urllib.error
 import logging
 import json
+import fnmatch
+import tempfile
 from html import escape
 from typing import Optional, Sequence, Union
 
@@ -23,6 +27,30 @@ RDF_FORMATS = {
     "jsonld": ("json-ld", "application/ld+json; charset=utf-8", "JSON-LD"),
     "nt": ("nt", "application/n-triples; charset=utf-8", "N-Triples"),
     "xml": ("xml", "application/rdf+xml; charset=utf-8", "RDF/XML"),
+}
+RESOURCE_FORMAT_ALIASES = {
+    "html": "html",
+    "ttl": "ttl",
+    "turtle": "ttl",
+    "json": "jsonld",
+    "jsonld": "jsonld",
+    "json-ld": "jsonld",
+    "nt": "nt",
+    "ntriples": "nt",
+    "n-triples": "nt",
+    "xml": "xml",
+    "rdf": "xml",
+    "rdfxml": "xml",
+    "rdf+xml": "xml",
+}
+RDF_FILE_FORMATS = {
+    ".ttl": "turtle",
+    ".turtle": "turtle",
+    ".jsonld": "json-ld",
+    ".json-ld": "json-ld",
+    ".rdf": "xml",
+    ".xml": "xml",
+    ".nt": "nt",
 }
 DEFAULT_SPARQL_QUERY = """SELECT ?subject ?predicate ?object
 WHERE {
@@ -114,7 +142,8 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
                structural: bool = True,
                contextual: bool = True,
                file_uri: Optional[str] = None,
-               list_landing: bool = True):
+               list_landing: bool = True,
+               local_iri_patterns: Optional[Union[str, Sequence[str]]] = None):
     """Create a FastAPI app serving RDF extracted from one or more HDF5 files.
 
     This function intentionally returns a *minimal* ASGI app using FastAPI if available.
@@ -168,9 +197,236 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
 
     file_key = default_hdf_filename.stem if default_hdf_filename is not None else ""
     create_app_file_uri = file_uri
+    if local_iri_patterns is None:
+        local_iri_pattern_list = []
+    elif isinstance(local_iri_patterns, str):
+        local_iri_pattern_list = [local_iri_patterns]
+    else:
+        local_iri_pattern_list = list(local_iri_patterns)
+
+    def _matches_local_iri_pattern(iri: str) -> bool:
+        return any(fnmatch.fnmatchcase(iri, pattern) for pattern in local_iri_pattern_list)
+
+    def _local_iri_href(iri: str) -> str:
+        if not _matches_local_iri_pattern(iri):
+            return ""
+        return f"/resolve?iri={urllib.parse.quote(iri, safe='')}"
+
+    def _subject_subgraph(rdf_graph: rdflib.Graph, subject) -> rdflib.Graph:
+        subgraph = rdflib.Graph()
+        for ns_prefix, namespace in rdf_graph.namespaces():
+            subgraph.bind(ns_prefix, namespace)
+        for triple in rdf_graph.triples((subject, None, None)):
+            subgraph.add(triple)
+        return subgraph
+
+    zenodo_graph_cache: dict[str, list[rdflib.Graph]] = {}
+
+    def _zenodo_record_info(iri: str) -> Optional[tuple[str, str]]:
+        parsed = urllib.parse.urlparse(iri)
+        if not parsed.fragment:
+            return None
+        host = parsed.netloc.lower()
+        path = parsed.path.strip("/")
+        if host == "doi.org":
+            match = re.match(r"(?P<prefix>10\.\d+)/zenodo\.(?P<record_id>\d+)$", path)
+            if not match:
+                return None
+            api_host = "sandbox.zenodo.org" if match.group("prefix") == "10.5072" else "zenodo.org"
+            return api_host, match.group("record_id")
+        if host in {"zenodo.org", "www.zenodo.org", "sandbox.zenodo.org"}:
+            match = re.match(r"(?:records|record)/(?P<record_id>\d+)$", path)
+            if match:
+                api_host = "sandbox.zenodo.org" if "sandbox" in host else "zenodo.org"
+                return api_host, match.group("record_id")
+        return None
+
+    def _rdf_download_format(filename_or_url: str) -> Optional[str]:
+        suffix = pathlib.Path(urllib.parse.urlparse(filename_or_url).path).suffix.lower()
+        return RDF_FILE_FORMATS.get(suffix)
+
+    def _zenodo_download_url(file_record: dict) -> Optional[str]:
+        links = file_record.get("links") or {}
+        return links.get("self") or links.get("download")
+
+    def _load_zenodo_graphs(api_host: str, record_id: str) -> list[rdflib.Graph]:
+        cache_key = f"{api_host}:{record_id}"
+        if cache_key in zenodo_graph_cache:
+            return zenodo_graph_cache[cache_key]
+
+        api_url = f"https://{api_host}/api/records/{record_id}"
+        try:
+            with urllib.request.urlopen(api_url, timeout=10) as response:
+                record = json.loads(response.read().decode("utf-8"))
+        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as e:
+            raise HTTPException(status_code=502, detail=f"Could not load Zenodo record metadata: {e}") from e
+
+        cache_dir = pathlib.Path(tempfile.gettempdir()) / "h5rdmtoolbox-zenodo-rdf" / api_host / record_id
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        graphs = []
+        for index, file_record in enumerate(record.get("files", [])):
+            filename = file_record.get("key") or file_record.get("filename") or f"zenodo-rdf-{index}"
+            download_url = _zenodo_download_url(file_record)
+            rdf_format = _rdf_download_format(filename) or _rdf_download_format(download_url or "")
+            if not download_url or rdf_format is None:
+                continue
+            target = cache_dir / pathlib.Path(filename).name
+            try:
+                if not target.exists():
+                    with urllib.request.urlopen(download_url, timeout=20) as response:
+                        target.write_bytes(response.read())
+                graph_from_file = rdflib.Graph()
+                graph_from_file.parse(target, format=rdf_format)
+            except (urllib.error.URLError, TimeoutError, OSError, Exception) as e:
+                logger.warning("Could not load RDF file %s from Zenodo record %s: %s", filename, record_id, e)
+                continue
+            _bind_standard_prefixes(graph_from_file)
+            graphs.append(graph_from_file)
+        zenodo_graph_cache[cache_key] = graphs
+        return graphs
+
+    def _find_zenodo_subject_graph(iri: str) -> Optional[rdflib.Graph]:
+        record_info = _zenodo_record_info(iri)
+        if record_info is None:
+            return None
+        subject = rdflib.URIRef(iri)
+        api_host, record_id = record_info
+        for candidate_graph in _load_zenodo_graphs(api_host, record_id):
+            if (subject, None, None) in candidate_graph:
+                return _subject_subgraph(candidate_graph, subject)
+        return None
+
+    def _resource_format(request: Request, format: Optional[str] = None) -> str:
+        if format:
+            try:
+                return RESOURCE_FORMAT_ALIASES[format.lower()]
+            except KeyError as e:
+                raise HTTPException(status_code=400, detail="Unknown resource format") from e
+        accept = request.headers.get("accept", "")
+        if "text/turtle" in accept or "application/x-turtle" in accept:
+            return "ttl"
+        if "application/ld+json" in accept:
+            return "jsonld"
+        if "application/n-triples" in accept or "text/plain" in accept:
+            return "nt"
+        if "application/rdf+xml" in accept:
+            return "xml"
+        if "text/html" in accept:
+            return "html"
+        return "html"
+
+    def _resource_format_href(request: Request, format_key: str) -> str:
+        params = dict(request.query_params)
+        params["format"] = format_key
+        return f"{request.url.path}?{urllib.parse.urlencode(params)}"
+
+    def _resource_html(subject, subgraph: rdflib.Graph, request: Request) -> HTMLResponse:
+        rows = []
+        for _, predicate, obj in subgraph:
+            object_label = _graph_label(obj, subgraph) if not isinstance(obj, rdflib.Literal) else str(obj)
+            if isinstance(obj, rdflib.URIRef):
+                object_href = f"/resolve?iri={urllib.parse.quote(str(obj), safe='')}"
+                object_html = f'<a href="{object_href}">{escape(object_label)}</a>'
+            else:
+                object_html = escape(object_label)
+            rows.append(
+                f"<tr><td>{escape(_graph_label(predicate, subgraph))}</td><td>{object_html}</td></tr>"
+            )
+        table = (
+            '<table class="resource-table"><thead><tr><th>Predicate</th><th>Object</th></tr></thead>'
+            f'<tbody>{"".join(rows)}</tbody></table>'
+            if rows
+            else '<p class="empty-result">No triples are available for this subject.</p>'
+        )
+        format_links = "".join(
+            f'<a href="{escape(_resource_format_href(request, key))}">{escape(label)}</a>'
+            for key, (_, _, label) in RDF_FORMATS.items()
+        )
+        page = f"""<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{escape(_graph_label(subject, subgraph))}</title>
+  <style>
+    :root {{ --bg: #f7f8fa; --panel: #fff; --text: #1f2933; --muted: #667085; --border: #d8dee6; --accent: #0b6f85; }}
+    * {{ box-sizing: border-box; }}
+    body {{ margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); }}
+    main {{ width: min(960px, calc(100% - 32px)); margin: 28px auto; display: grid; gap: 14px; }}
+    header, section {{ padding: 16px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; }}
+    nav {{ display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }}
+    nav a, .format-links a {{ color: var(--accent); font-weight: 650; text-decoration: none; }}
+    h1 {{ margin: 0 0 8px; font-size: 1.35rem; overflow-wrap: anywhere; }}
+    code {{ overflow-wrap: anywhere; color: var(--muted); }}
+    .format-links {{ display: flex; flex-wrap: wrap; gap: 10px; }}
+    .resource-table {{ width: 100%; border-collapse: collapse; }}
+    th, td {{ padding: 8px 6px; text-align: left; vertical-align: top; overflow-wrap: anywhere; }}
+    th {{ color: var(--muted); font-size: 0.85rem; }}
+    td:first-child {{ width: 34%; color: var(--muted); }}
+    .empty-result {{ color: var(--muted); }}
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <nav><a href="/">Files</a></nav>
+    <h1>{escape(_graph_label(subject, subgraph))}</h1>
+    <code>{escape(str(subject))}</code>
+  </header>
+  <section class="format-links">{format_links}</section>
+  <section>{table}</section>
+</main>
+</body>
+</html>
+"""
+        return HTMLResponse(page)
+
+    def _resource_response(subject, subgraph: rdflib.Graph, request: Request, format: Optional[str] = None):
+        format_key = _resource_format(request, format)
+        if format_key == "html":
+            return _resource_html(subject, subgraph, request)
+        rdflib_format, media_type, _ = RDF_FORMATS[format_key]
+        return PlainTextResponse(content=subgraph.serialize(format=rdflib_format), media_type=media_type)
+
+    def _resolve_iri_response(iri: str, request: Request, format: Optional[str] = None):
+
+        subject = rdflib.URIRef(iri)
+        merged_subgraph = rdflib.Graph()
+        found_local_subject = False
+        for hdf_file in hdf_files.values():
+            rdf_graph = get_ld(
+                hdf_file,
+                structural=structural,
+                contextual=contextual,
+                file_uri=create_app_file_uri,
+            )
+            _bind_standard_prefixes(rdf_graph)
+            if (subject, None, None) in rdf_graph:
+                subgraph = _subject_subgraph(rdf_graph, subject)
+                for triple in subgraph:
+                    merged_subgraph.add(triple)
+                for ns_prefix, namespace in subgraph.namespaces():
+                    merged_subgraph.bind(ns_prefix, namespace)
+                found_local_subject = True
+        try:
+            external_subgraph = _find_zenodo_subject_graph(iri)
+        except HTTPException:
+            if found_local_subject:
+                return _resource_response(subject, merged_subgraph, request, format=format)
+            raise
+        if external_subgraph is not None:
+            for triple in external_subgraph:
+                merged_subgraph.add(triple)
+            for ns_prefix, namespace in external_subgraph.namespaces():
+                merged_subgraph.bind(ns_prefix, namespace)
+        if found_local_subject or external_subgraph is not None:
+            return _resource_response(subject, merged_subgraph, request, format=format)
+        raise HTTPException(status_code=404, detail="Unknown RDF subject")
 
     @app.get("/", response_class=HTMLResponse)
-    def index(request: Request):
+    def index(request: Request, resolve: Optional[str] = None, format: Optional[str] = None):
+        if resolve:
+            return _resolve_iri_response(resolve, request, format=format)
         if list_landing or len(hdf_files) != 1:
             file_cards = []
             for key in hdf_files:
@@ -395,7 +651,7 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
         if "application/ld+json" in accept or "json" in accept:
             return "json-ld"
         # default
-        return "turtle"
+        return "html"
 
     @app.get("/file/{fk}")
     def get_file(request: Request, fk: str, format: Optional[str] = None):
@@ -575,6 +831,7 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
                 "label": _graph_label(subject, rdf_graph),
                 "group": node_group(subject),
                 "rdf_class": type_by_node.get(subject_id, ""),
+                "local_href": _local_iri_href(subject_id) if isinstance(subject, rdflib.URIRef) else "",
                 "literals": [],
             })
             if isinstance(obj, rdflib.Literal):
@@ -589,6 +846,7 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
                 "label": _graph_label(obj, rdf_graph),
                 "group": node_group(obj),
                 "rdf_class": type_by_node.get(object_id, ""),
+                "local_href": _local_iri_href(object_id) if isinstance(obj, rdflib.URIRef) else "",
                 "literals": [],
             })
             edges.append({
@@ -840,6 +1098,14 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
       margin: 0;
       color: var(--muted);
     }}
+    .node-link {{
+      display: inline-flex;
+      margin: 0 0 10px;
+      color: var(--accent);
+      font-size: 0.875rem;
+      font-weight: 650;
+      text-decoration: none;
+    }}
     .graph-panel {{
       position: relative;
     }}
@@ -923,7 +1189,10 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
     const literalRows = literals.length
       ? `<dl>${{literals.map((literal) => `<dt>${{escapeHtml(literal.predicate)}}</dt><dd>${{escapeHtml(literal.value)}}</dd>`).join("")}}</dl>`
       : '<p class="no-literals">No literal values are available for this node.</p>';
-    nodeDetails.innerHTML = `<div class="node-details-header"><h2>${{escapeHtml(node.label)}}</h2><button type="button" class="hide-node-button">Hide</button></div>${{literalRows}}`;
+    const localLink = node.local_href
+      ? `<a class="node-link" href="${{escapeHtml(node.local_href)}}" target="_blank" rel="noopener">Open local TTL</a>`
+      : "";
+    nodeDetails.innerHTML = `<div class="node-details-header"><h2>${{escapeHtml(node.label)}}</h2><button type="button" class="hide-node-button">Hide</button></div>${{localLink}}${{literalRows}}`;
     nodeDetails.querySelector(".hide-node-button").addEventListener("click", () => {{
       hideNode(node.id);
     }});
@@ -1742,6 +2011,54 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
             prefix=prefix,
         )
 
+    def _subject_response(filename: pathlib.Path,
+                          resource_path: str,
+                          request: Request,
+                          structural: bool = True,
+                          contextual: bool = True,
+                          file_uri: Optional[str] = None,
+                          prefix: Optional[str] = None,
+                          format: Optional[str] = None):
+        if not structural and not contextual:
+            raise HTTPException(
+                status_code=400,
+                detail="At least one of structural or contextual must be True.",
+            )
+        graph_file_uri = file_uri if file_uri is not None else create_app_file_uri
+        try:
+            graph_prefix = _validate_prefix(prefix)
+            rdf_graph = get_ld(
+                filename,
+                structural=structural,
+                contextual=contextual,
+                file_uri=graph_file_uri,
+            )
+            _bind_standard_prefixes(rdf_graph)
+            if graph_prefix and graph_file_uri:
+                rdf_graph.bind(graph_prefix, rdflib.URIRef(graph_file_uri), override=True, replace=True)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e)) from e
+
+        decoded_path = urllib.parse.unquote(resource_path).strip("/")
+        subject_suffix = f"{filename.name}/{decoded_path}" if decoded_path else filename.name
+        candidates = [
+            rdflib.BNode(subject_suffix),
+            rdflib.URIRef(subject_suffix),
+        ]
+        if graph_file_uri:
+            base = str(graph_file_uri)
+            candidates.extend([
+                rdflib.URIRef(f"{base}{subject_suffix}"),
+                rdflib.URIRef(f"{base}{decoded_path}" if decoded_path else base.rstrip("#/")),
+            ])
+
+        subject = next((candidate for candidate in candidates if (candidate, None, None) in rdf_graph), None)
+        if subject is None:
+            raise HTTPException(status_code=404, detail="Unknown RDF subject")
+
+        subgraph = _subject_subgraph(rdf_graph, subject)
+        return _resource_response(subject, subgraph, request, format=format)
+
     @app.get("/{filename}/ttl")
     def get_file_ttl(filename: str,
                      structural: bool = True,
@@ -1873,6 +2190,44 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
         ttl = subg.serialize(format="turtle")
         return HTMLResponse(tmpl.render(iri=iri, turtle=ttl, file_key=file_key))
 
+    @app.get("/resolve")
+    def resolve_iri_query(request: Request,
+                          iri: Optional[str] = None,
+                          resolve: Optional[str] = None,
+                          format: Optional[str] = None):
+        target_iri = iri or resolve
+        if not target_iri:
+            raise HTTPException(status_code=400, detail="Provide an IRI with ?iri=... or ?resolve=...")
+        return _resolve_iri_response(target_iri, request, format=format)
+
+    @app.get("/resolve/{encoded_iri:path}")
+    def resolve_iri(request: Request, encoded_iri: str, format: Optional[str] = None):
+        iri = urllib.parse.unquote(encoded_iri)
+        return _resolve_iri_response(iri, request, format=format)
+
+    @app.get("/{filename}/{resource_path:path}")
+    def get_file_subject(request: Request,
+                         filename: str,
+                         resource_path: str,
+                         structural: bool = True,
+                         contextual: bool = True,
+                         file_uri: Optional[str] = None,
+                         prefix: Optional[str] = None,
+                         format: Optional[str] = None):
+        hdf_file = hdf_files.get(filename)
+        if hdf_file is None:
+            raise HTTPException(status_code=404, detail="Unknown HDF5 file")
+        return _subject_response(
+            hdf_file,
+            resource_path,
+            request,
+            structural=structural,
+            contextual=contextual,
+            file_uri=file_uri,
+            prefix=prefix,
+            format=format,
+        )
+
     @app.post("/sparql")
     async def sparql(request: Request):
         # robust parsing of body according to content-type
@@ -1968,13 +2323,20 @@ def run_server(host: str = "127.0.0.1",
                filenames: Optional[Sequence[Union[str, pathlib.Path]]] = None,
                structural: bool = True,
                contextual: bool = True,
-               file_uri: Optional[str] = None):
+               file_uri: Optional[str] = None,
+               local_iri_patterns: Optional[Sequence[str]] = None):
     """Run a FastAPI/uvicorn server exposing RDF for HDF5 files."""
     if filenames is None:
         filenames = [filename] if filename is not None else None
     import uvicorn
 
-    app = create_app(filenames, structural=structural, contextual=contextual, file_uri=file_uri)
+    app = create_app(
+        filenames,
+        structural=structural,
+        contextual=contextual,
+        file_uri=file_uri,
+        local_iri_patterns=local_iri_patterns,
+    )
     url = f"http://{host}:{port}/"
     logger.info("Starting h5rdmtoolbox RDF server at %s serving files %s", url, app.state.hdf_files)
     uvicorn.run(app, host=host, port=port)

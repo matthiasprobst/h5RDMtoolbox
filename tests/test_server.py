@@ -1,5 +1,7 @@
 import pathlib
 import tempfile
+import urllib.parse
+import json
 
 import h5py
 import pytest
@@ -77,6 +79,318 @@ def test_file_ttl_endpoint_returns_raw_turtle(hdf_filename):
     assert "text/turtle" in response.headers["content-type"]
     assert "@prefix hdf:" in response.text
     assert "hdf:File" in response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_file_subject_endpoint_returns_turtle_for_hdf5_object(hdf_filename):
+    from h5rdmtoolbox.server import create_app
+
+    client = TestClient(create_app(hdf_filename))
+    response = client.get("/server_test.h5/grp?format=ttl")
+
+    assert response.status_code == 200
+    assert "text/turtle" in response.headers["content-type"]
+    assert "hdf:Group" in response.text
+    assert 'hdf:name "/grp"' in response.text
+    assert "hdf:File" not in response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_file_subject_endpoint_returns_html_by_default(hdf_filename):
+    from h5rdmtoolbox.server import create_app
+
+    client = TestClient(create_app(hdf_filename))
+    response = client.get("/server_test.h5/grp")
+
+    assert response.status_code == 200
+    assert "text/html" in response.headers["content-type"]
+    assert "<h1" in response.text
+    assert "hdf:name" in response.text
+    assert "/server_test.h5/grp?format=ttl" in response.text
+    assert "/server_test.h5/grp?format=jsonld" in response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_file_subject_endpoint_uses_accept_header(hdf_filename):
+    from h5rdmtoolbox.server import create_app
+
+    client = TestClient(create_app(hdf_filename))
+    response = client.get("/server_test.h5/grp", headers={"accept": "application/ld+json"})
+
+    assert response.status_code == 200
+    assert "application/ld+json" in response.headers["content-type"]
+    assert '"@id"' in response.text
+    assert "server_test.h5/grp" in response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_file_subject_endpoint_format_overrides_accept_header(hdf_filename):
+    from h5rdmtoolbox.server import create_app
+
+    client = TestClient(create_app(hdf_filename))
+    response = client.get("/server_test.h5/grp?format=ttl", headers={"accept": "text/html"})
+
+    assert response.status_code == 200
+    assert "text/turtle" in response.headers["content-type"]
+    assert "hdf:Group" in response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_file_subject_endpoint_resolves_file_uri_subject(hdf_filename):
+    from h5rdmtoolbox.server import create_app
+
+    client = TestClient(create_app(hdf_filename, file_uri="https://example.org#"))
+    response = client.get("/server_test.h5/grp?prefix=ex&format=ttl")
+
+    assert response.status_code == 200
+    assert "text/turtle" in response.headers["content-type"]
+    assert "<https://example.org#server_test.h5/grp>" in response.text
+    assert "hdf:Group" in response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_file_subject_endpoint_resolves_encoded_file_uri_query(hdf_filename):
+    from h5rdmtoolbox.server import create_app
+
+    client = TestClient(create_app(hdf_filename))
+    response = client.get("/server_test.h5/grp?file_uri=https://example.org%23&prefix=ex&format=ttl")
+
+    assert response.status_code == 200
+    assert "<https://example.org#server_test.h5/grp>" in response.text
+    assert "hdf:Group" in response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_file_subject_endpoint_returns_404_for_unknown_subject(hdf_filename):
+    from h5rdmtoolbox.server import create_app
+
+    client = TestClient(create_app(hdf_filename))
+    response = client.get("/server_test.h5/missing")
+
+    assert response.status_code == 404
+    assert "Unknown RDF subject" in response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_resolve_endpoint_returns_turtle_for_matching_external_iri(hdf_filename):
+    from h5rdmtoolbox.server import create_app
+
+    iri = "https://doi.org/10.5281/zenodo.17572275#server_test.h5/grp"
+    client = TestClient(create_app(
+        hdf_filename,
+        file_uri="https://doi.org/10.5281/zenodo.17572275#",
+        local_iri_patterns=["https://doi.org/10.5281/zenodo.*"],
+    ))
+    response = client.get(f"/resolve/{urllib.parse.quote(iri, safe='')}?format=ttl")
+
+    assert response.status_code == 200
+    assert "text/turtle" in response.headers["content-type"]
+    assert "<https://doi.org/10.5281/zenodo.17572275#server_test.h5/grp>" in response.text
+    assert "hdf:Group" in response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+@pytest.mark.parametrize("path", ["/", "/resolve"])
+def test_resolve_query_parameter_returns_turtle_for_matching_external_iri(hdf_filename, path):
+    from h5rdmtoolbox.server import create_app
+
+    iri = "https://doi.org/10.5281/zenodo.17572275#server_test.h5/grp"
+    parameter = "resolve" if path == "/" else "iri"
+    client = TestClient(create_app(
+        hdf_filename,
+        file_uri="https://doi.org/10.5281/zenodo.17572275#",
+        local_iri_patterns=["https://doi.org/10.5281/zenodo.*"],
+    ))
+    response = client.get(path, params={parameter: iri, "format": "ttl"})
+
+    assert response.status_code == 200
+    assert "text/turtle" in response.headers["content-type"]
+    assert "<https://doi.org/10.5281/zenodo.17572275#server_test.h5/grp>" in response.text
+    assert "hdf:Group" in response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_resolve_query_parameter_does_not_require_local_iri_pattern(hdf_filename):
+    from h5rdmtoolbox.server import create_app
+
+    iri = "https://doi.org/10.5281/zenodo.17572275#server_test.h5/grp"
+    client = TestClient(create_app(
+        hdf_filename,
+        file_uri="https://doi.org/10.5281/zenodo.17572275#",
+    ))
+    response = client.get("/", params={"resolve": iri, "format": "ttl"})
+
+    assert response.status_code == 200
+    assert "text/turtle" in response.headers["content-type"]
+    assert "<https://doi.org/10.5281/zenodo.17572275#server_test.h5/grp>" in response.text
+    assert "hdf:Group" in response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_resolve_query_parameter_supports_jsonld_format(hdf_filename):
+    from h5rdmtoolbox.server import create_app
+
+    iri = "https://doi.org/10.5281/zenodo.17572275#server_test.h5/grp"
+    client = TestClient(create_app(
+        hdf_filename,
+        file_uri="https://doi.org/10.5281/zenodo.17572275#",
+    ))
+    response = client.get("/resolve", params={"iri": iri, "format": "jsonld"})
+
+    assert response.status_code == 200
+    assert "application/ld+json" in response.headers["content-type"]
+    assert '"@id"' in response.text
+    assert "https://doi.org/10.5281/zenodo.17572275#server_test.h5/grp" in response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_resolve_endpoint_rejects_non_matching_external_iri(hdf_filename):
+    from h5rdmtoolbox.server import create_app
+
+    iri = "https://example.org/server_test.h5/grp"
+    client = TestClient(create_app(
+        hdf_filename,
+        file_uri="https://doi.org/10.5281/zenodo.17572275#",
+        local_iri_patterns=["https://doi.org/10.5281/zenodo.*"],
+    ))
+    response = client.get(f"/resolve/{urllib.parse.quote(iri, safe='')}")
+
+    assert response.status_code == 404
+    assert "Unknown RDF subject" in response.text
+
+
+class _FakeHTTPResponse:
+    def __init__(self, data: bytes):
+        self.data = data
+
+    def read(self):
+        return self.data
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, traceback):
+        return False
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_resolve_uses_zenodo_doi_fallback_for_fragment_iri(monkeypatch, hdf_filename):
+    import h5rdmtoolbox.server as server
+
+    iri = "https://doi.org/10.5072/zenodo.987654321#observable_property/T1"
+    calls = []
+    record = {
+        "files": [
+            {"key": "ignored.txt", "links": {"self": "https://sandbox.zenodo.org/api/records/987654321/files/ignored/content"}},
+            {"key": "metadata.ttl", "links": {"self": "https://sandbox.zenodo.org/api/records/987654321/files/metadata/content"}},
+        ]
+    }
+    ttl = f"""@prefix ex: <https://example.org/> .
+<{iri}> a ex:Observable ;
+  ex:name "T1" .
+"""
+
+    def fake_urlopen(url, timeout=0):
+        calls.append(url)
+        if url == "https://sandbox.zenodo.org/api/records/987654321":
+            return _FakeHTTPResponse(json.dumps(record).encode("utf-8"))
+        if url.endswith("/metadata/content"):
+            return _FakeHTTPResponse(ttl.encode("utf-8"))
+        raise AssertionError(f"Unexpected download: {url}")
+
+    monkeypatch.setattr(server.urllib.request, "urlopen", fake_urlopen)
+    client = TestClient(server.create_app(hdf_filename, file_uri="https://example.org/not-this#"))
+    response = client.get("/resolve", params={"iri": iri, "format": "ttl"})
+
+    assert response.status_code == 200
+    assert "text/turtle" in response.headers["content-type"]
+    assert "ex:Observable" in response.text
+    assert "T1" in response.text
+    assert calls[0] == "https://sandbox.zenodo.org/api/records/987654321"
+    assert not any(call.endswith("/ignored/content") for call in calls)
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_resolve_uses_zenodo_record_url_fallback(monkeypatch, hdf_filename):
+    import h5rdmtoolbox.server as server
+
+    iri = "https://zenodo.org/records/987654322#observable_property/T1"
+    record = {
+        "files": [
+            {"key": "metadata.ttl", "links": {"self": "https://zenodo.org/api/records/987654322/files/metadata/content"}},
+        ]
+    }
+    ttl = f"""@prefix ex: <https://example.org/> .
+<{iri}> ex:name "T1" .
+"""
+
+    def fake_urlopen(url, timeout=0):
+        if url == "https://zenodo.org/api/records/987654322":
+            return _FakeHTTPResponse(json.dumps(record).encode("utf-8"))
+        if url.endswith("/metadata/content"):
+            return _FakeHTTPResponse(ttl.encode("utf-8"))
+        raise AssertionError(f"Unexpected download: {url}")
+
+    monkeypatch.setattr(server.urllib.request, "urlopen", fake_urlopen)
+    client = TestClient(server.create_app(hdf_filename, file_uri="https://example.org/not-this#"))
+    response = client.get("/resolve", params={"iri": iri, "format": "jsonld"})
+
+    assert response.status_code == 200
+    assert "application/ld+json" in response.headers["content-type"]
+    assert "https://zenodo.org/records/987654322#observable_property/T1" in response.text
+    assert "T1" in response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_resolve_merges_local_and_zenodo_fragment_data(monkeypatch, hdf_filename):
+    import h5rdmtoolbox.server as server
+
+    iri = "https://doi.org/10.5072/zenodo.987654324#server_test.h5/grp"
+    record = {
+        "files": [
+            {"key": "metadata.ttl", "links": {"self": "https://sandbox.zenodo.org/api/records/987654324/files/metadata/content"}},
+        ]
+    }
+    ttl = f"""@prefix ex: <https://example.org/> .
+<{iri}> ex:source "zenodo" .
+"""
+
+    def fake_urlopen(url, timeout=0):
+        if url == "https://sandbox.zenodo.org/api/records/987654324":
+            return _FakeHTTPResponse(json.dumps(record).encode("utf-8"))
+        if url.endswith("/metadata/content"):
+            return _FakeHTTPResponse(ttl.encode("utf-8"))
+        raise AssertionError(f"Unexpected download: {url}")
+
+    monkeypatch.setattr(server.urllib.request, "urlopen", fake_urlopen)
+    client = TestClient(server.create_app(
+        hdf_filename,
+        file_uri="https://doi.org/10.5072/zenodo.987654324#",
+    ))
+    response = client.get("/resolve", params={"iri": iri, "format": "ttl"})
+
+    assert response.status_code == 200
+    assert "hdf:Group" in response.text
+    assert 'hdf:name "/grp"' in response.text
+    assert 'ex:source "zenodo"' in response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_resolve_does_not_use_zenodo_fallback_without_fragment(monkeypatch, hdf_filename):
+    import h5rdmtoolbox.server as server
+
+    def fake_urlopen(url, timeout=0):
+        raise AssertionError(f"Unexpected download: {url}")
+
+    monkeypatch.setattr(server.urllib.request, "urlopen", fake_urlopen)
+    client = TestClient(server.create_app(hdf_filename, file_uri="https://example.org/not-this#"))
+    response = client.get(
+        "/resolve",
+        params={"iri": "https://doi.org/10.5072/zenodo.987654323", "format": "ttl"},
+    )
+
+    assert response.status_code == 404
+    assert "Unknown RDF subject" in response.text
 
 
 @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
@@ -196,6 +510,23 @@ def test_file_graph_endpoint_accepts_mode_and_prefix_options(hdf_filename):
     assert 'name="mode" value="structural" checked' in response.text
     assert 'value="https://example.org/data/"' in response.text
     assert 'value="ex"' in response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_file_graph_endpoint_links_matching_external_iris_to_local_resolver(hdf_filename):
+    from h5rdmtoolbox.server import create_app
+
+    iri = "https://doi.org/10.5281/zenodo.17572275#server_test.h5/grp"
+    client = TestClient(create_app(
+        hdf_filename,
+        file_uri="https://doi.org/10.5281/zenodo.17572275#",
+        local_iri_patterns=["https://doi.org/10.5281/zenodo.*"],
+    ))
+    response = client.get("/server_test.h5/graph")
+
+    assert response.status_code == 200
+    assert "Open local TTL" in response.text
+    assert f"/resolve?iri={urllib.parse.quote(iri, safe='')}" in response.text
 
 
 @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")

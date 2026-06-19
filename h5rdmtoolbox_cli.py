@@ -129,7 +129,9 @@ def _serialize(filename, fmt, structural=True, contextual=True, file_uri=None):
 @click.option('--no-structural', is_flag=True, default=False, help='Do not include structural RDF')
 @click.option('--no-contextual', is_flag=True, default=False, help='Do not include contextual RDF')
 @click.option('--file-uri', type=str, default=None, help='Base file URI to use for RDF subjects (must end with # or /)')
-def serve(filenames, host, port, no_structural, no_contextual, file_uri):
+@click.option('--local-iri-pattern', multiple=True,
+              help='External IRI pattern to resolve locally, e.g. "https://doi.org/10.5281/zenodo.*". Can be used multiple times.')
+def serve(filenames, host, port, no_structural, no_contextual, file_uri, local_iri_pattern):
     """Serve HDF5 file RDF data over HTTP (FastAPI/uvicorn)."""
     structural = not no_structural
     contextual = not no_contextual
@@ -137,7 +139,8 @@ def serve(filenames, host, port, no_structural, no_contextual, file_uri):
     selected_filenames = [str(filename) for filename in filenames] if filenames else None
     run_server(host=host, port=port, filenames=selected_filenames,
                structural=structural, contextual=contextual,
-               file_uri=file_uri)
+               file_uri=file_uri,
+               local_iri_patterns=list(local_iri_pattern))
 
 
 @h5tbx.command()

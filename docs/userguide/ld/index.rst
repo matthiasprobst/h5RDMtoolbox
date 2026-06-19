@@ -65,6 +65,7 @@ For interactive inspection, start the local web viewer:
 .. code-block:: bash
 
    h5tbx serve example.h5
+   h5tbx serve example.h5 --file-uri https://doi.org/10.5281/zenodo.17572275# --local-iri-pattern "https://doi.org/10.5281/zenodo.*"
 
 If no filename is provided, ``h5tbx serve`` lists all ``.h5``, ``.hdf``, and
 ``.hdf5`` files in the current directory. Each file page links to:
@@ -80,7 +81,27 @@ If no filename is provided, ``h5tbx serve`` lists all ``.h5``, ``.hdf``, and
   against the currently loaded RDF graph.
 
 All web views are generated from the currently loaded HDF5 file and support the
-same structural/contextual RDF model used by ``ld dump``.
+same structural/contextual RDF model used by ``ld dump``. HDF5 object URLs such
+as ``/example.h5/group/dataset`` are dereferenceable RDF resources. Browsers get
+an HTML representation by default; clients can request RDF with ``Accept:
+text/turtle`` or ``Accept: application/ld+json``. The ``format`` query parameter
+overrides content negotiation, for example ``?format=ttl``, ``?format=jsonld``,
+``?format=nt``, ``?format=xml``, or ``?format=html``.
+
+Manual resolver URLs can use ``/resolve?iri=https://doi.org/...%23path`` and do
+not require ``--local-iri-pattern``. If the requested IRI is a Zenodo DOI or
+Zenodo record URL with a fragment, the server lazily downloads RDF-like files
+attached to that Zenodo record into a temporary cache and merges the first
+matching subject with the served graph data. Use
+``--local-iri-pattern`` only when graph nodes should show local resolver links
+for selected external IRI patterns, for example Zenodo DOI IRIs. If a fragment
+identifier (``#...``) is passed in a URL, encode it as ``%23`` because browsers
+do not send raw fragments to the server.
+
+.. code-block:: bash
+
+   curl -H "Accept: text/turtle" http://localhost:8000/example.h5/observable_property/T1
+   curl -H "Accept: application/ld+json" "http://localhost:8000/resolve?iri=https://doi.org/10.5072/zenodo.403669%23observable_property/T1"
 
 Graph Metrics from Python
 -------------------------
