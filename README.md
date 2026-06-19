@@ -151,18 +151,16 @@ hdf:H5T_INTEL_I64 a hdf:Datatype .
     hdf:size 4 .
 ```
 
-[//]: # (The "HDF5 Research Data Management Toolbox" &#40;h5RDMtoolbox&#41; is a Python package supporting everybody who is working with)
+## Command Line Interface
 
-[//]: # (HDF5 to achieve a sustainable data lifecycle which follows)
+The `h5tbx` command provides quick access to linked-data serialization from the shell.
 
-[//]: # (the [FAIR &#40;Findable, Accessible, Interoperable, Reusable&#41;]&#40;https://www.nature.com/articles/sdata201618&#41;)
+Use `h5tbx ld dump example.h5` to print Turtle RDF, or write a specific format with
 
-[//]: # (principles. It specifically supports the five main steps of *planning*, *collecting*, *analyzing*, *sharing* and)
-
-[//]: # (*reusing* data. Please visit the [documentation]&#40;https://h5rdmtoolbox.readthedocs.io/en/latest/&#41; for detailed)
-
-[//]: # (information of try the [quickstart using colab]&#40;#quickstart&#41;.)
-
+```
+h5tbx ld dump example.h5 -o example.jsonld
+```
+The dump command accepts `--format`, `--file-uri`, `--structural=false`, and `--contextual=false`, so you can choose Turtle or JSON-LD output, assign stable RDF subject URIs, and include only structural or user-provided contextual metadata when needed.
 
 ## 🚀 Key Features
 
