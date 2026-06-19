@@ -49,7 +49,10 @@ def test_file_ttl_endpoint_returns_form_and_dump(hdf_filename):
     assert '<select name="structural">' in response.text
     assert '<select name="contextual">' in response.text
     assert 'name="file_uri"' in response.text
+    assert 'name="prefix"' in response.text
     assert "raw=true" in response.text
+    assert "Copy to clipboard" in response.text
+    assert 'id="serialization-output"' in response.text
     assert "@prefix hdf:" in response.text
     assert "hdf:File" in response.text
 
@@ -76,6 +79,29 @@ def test_ttl_endpoint_accepts_query_options(hdf_filename):
 
     assert response.status_code == 200
     assert "&lt;https://example.org/data/server_test.h5&gt;" in response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_ttl_endpoint_binds_file_uri_prefix(hdf_filename):
+    from h5rdmtoolbox.server import create_app
+
+    client = TestClient(create_app(hdf_filename))
+    response = client.get("/server_test.h5/ttl?raw=true&file_uri=https://example.org/data/&prefix=ex")
+
+    assert response.status_code == 200
+    assert "@prefix ex: <https://example.org/data/> ." in response.text
+    assert "ex:server_test.h5" in response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_ttl_endpoint_rejects_invalid_prefix(hdf_filename):
+    from h5rdmtoolbox.server import create_app
+
+    client = TestClient(create_app(hdf_filename))
+    response = client.get("/server_test.h5/ttl?file_uri=https://example.org/data/&prefix=1bad")
+
+    assert response.status_code == 400
+    assert "prefix must start" in response.text
 
 
 @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")

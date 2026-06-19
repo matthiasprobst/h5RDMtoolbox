@@ -1,6 +1,8 @@
 import pathlib
+import re
 import urllib.parse
 import logging
+import json
 from html import escape
 from typing import Optional, Sequence, Union
 
@@ -10,6 +12,7 @@ from h5rdmtoolbox.ld import get_ld
 
 logger = logging.getLogger(__name__)
 HDF5_SUFFIXES = {".h5", ".hdf", ".hdf5"}
+PREFIX_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_.-]*$")
 RDF_FORMATS = {
     "ttl": ("turtle", "text/turtle; charset=utf-8", "Turtle"),
     "jsonld": ("json-ld", "application/ld+json; charset=utf-8", "JSON-LD"),
@@ -49,6 +52,14 @@ def _file_registry(hdf_filenames: Optional[Union[str, pathlib.Path, Sequence[Uni
 
 def _bool_str(value: bool) -> str:
     return "true" if value else "false"
+
+
+def _validate_prefix(prefix: Optional[str]) -> Optional[str]:
+    if prefix in (None, ""):
+        return None
+    if not PREFIX_RE.match(prefix):
+        raise ValueError("prefix must start with a letter or underscore and contain only letters, digits, '_', '.', or '-'")
+    return prefix
 
 
 def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[str, pathlib.Path]]]] = None,
@@ -119,12 +130,13 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
                     f'<a class="format-link" href="/{encoded_key}/{format_key}">{escape(label)}</a>'
                     for format_key, (_, _, label) in RDF_FORMATS.items()
                 )
+                graph_link = f'<a class="format-link graph-link" href="/{encoded_key}/graph">Graph</a>'
                 file_cards.append(f"""<article class="file-card">
   <div>
     <h2>{escape(key)}</h2>
     <p>{escape(str(hdf_files[key]))}</p>
   </div>
-  <div class="format-actions">{format_links}</div>
+  <div class="format-actions">{format_links}{graph_link}</div>
 </article>""")
             body = (
                 '<section class="empty">No HDF5 files found in this directory.</section>'
@@ -354,7 +366,8 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
                          serialized: str,
                          structural: bool,
                          contextual: bool,
-                         file_uri: Optional[str]) -> HTMLResponse:
+                         file_uri: Optional[str],
+                         prefix: Optional[str]) -> HTMLResponse:
         encoded_filename = urllib.parse.quote(filename)
         format_links = " ".join(
             f'<a href="/{encoded_filename}/{key}">{escape(label)}</a>'
@@ -369,6 +382,8 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
         )
         if file_uri:
             raw_href += f"&file_uri={urllib.parse.quote(file_uri, safe=':/')}"
+        if prefix:
+            raw_href += f"&prefix={urllib.parse.quote(prefix)}"
         page = f"""<!doctype html>
 <html>
 <head>
@@ -379,6 +394,19 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
     form {{ display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: end; margin: 1rem 0; }}
     label {{ display: grid; gap: 0.25rem; }}
     input[type="text"] {{ min-width: 24rem; }}
+    .toolbar {{ display: flex; gap: 0.75rem; align-items: center; margin: 1rem 0; }}
+    .copy-button {{
+      min-height: 34px;
+      padding: 0 12px;
+      border: 0;
+      border-radius: 6px;
+      background: #0b6f85;
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+    }}
+    .copy-button:hover {{ background: #084f5f; }}
+    .copy-status {{ color: #667085; font-size: 0.875rem; }}
     pre {{ padding: 1rem; background: #f6f8fa; overflow: auto; }}
   </style>
 </head>
@@ -401,10 +429,44 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
   <label>File URI
     <input type="text" name="file_uri" value="{escaped_file_uri}" placeholder="https://example.org/data/">
   </label>
+  <label>Prefix
+    <input type="text" name="prefix" value="{escape(prefix or "")}" placeholder="ex">
+  </label>
   <button type="submit">Update</button>
   <a href="{raw_href}">Raw</a>
 </form>
-<pre>{escape(serialized)}</pre>
+<div class="toolbar">
+  <button class="copy-button" type="button" data-copy-target="serialization-output">Copy to clipboard</button>
+  <span class="copy-status" id="copy-status" role="status" aria-live="polite"></span>
+</div>
+<pre id="serialization-output">{escape(serialized)}</pre>
+<script>
+  const copyButton = document.querySelector("[data-copy-target]");
+  const copyStatus = document.getElementById("copy-status");
+  copyButton.addEventListener("click", async () => {{
+    const target = document.getElementById(copyButton.dataset.copyTarget);
+    const text = target.innerText;
+    try {{
+      if (navigator.clipboard && window.isSecureContext) {{
+        await navigator.clipboard.writeText(text);
+      }} else {{
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.style.position = "fixed";
+        textarea.style.left = "-9999px";
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        document.execCommand("copy");
+        textarea.remove();
+      }}
+      copyStatus.textContent = "Copied";
+    }} catch (error) {{
+      copyStatus.textContent = "Copy failed";
+    }}
+    window.setTimeout(() => {{ copyStatus.textContent = ""; }}, 1800);
+  }});
+</script>
 </body>
 </html>
 """
@@ -415,6 +477,7 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
                             structural: bool = True,
                             contextual: bool = True,
                             file_uri: Optional[str] = None,
+                            prefix: Optional[str] = None,
                             raw: bool = False):
         """Return the HDF5 file RDF dump in the requested format."""
         if not structural and not contextual:
@@ -426,12 +489,15 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
             raise HTTPException(status_code=404, detail="Unknown RDF format")
         graph_file_uri = file_uri if file_uri is not None else create_app_file_uri
         try:
+            graph_prefix = _validate_prefix(prefix)
             rdf_graph = get_ld(
                 filename,
                 structural=structural,
                 contextual=contextual,
                 file_uri=graph_file_uri,
             )
+            if graph_prefix and graph_file_uri:
+                rdf_graph.bind(graph_prefix, rdflib.URIRef(graph_file_uri), override=True, replace=True)
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e)) from e
         rdflib_format, media_type, _ = RDF_FORMATS[format_key]
@@ -445,6 +511,7 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
             structural=structural,
             contextual=contextual,
             file_uri=graph_file_uri,
+            prefix=prefix,
         )
 
     @app.get("/{filename}/ttl")
@@ -452,58 +519,63 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
                      structural: bool = True,
                      contextual: bool = True,
                      file_uri: Optional[str] = None,
+                     prefix: Optional[str] = None,
                      raw: bool = False):
         hdf_file = hdf_files.get(filename)
         if hdf_file is None:
             raise HTTPException(status_code=404, detail="Unknown HDF5 file")
         return _formatted_response(hdf_file, "ttl", structural=structural, contextual=contextual,
-                                   file_uri=file_uri, raw=raw)
+                                   file_uri=file_uri, prefix=prefix, raw=raw)
 
     @app.get("/{filename}/jsonld")
     def get_file_jsonld(filename: str,
                         structural: bool = True,
                         contextual: bool = True,
                         file_uri: Optional[str] = None,
+                        prefix: Optional[str] = None,
                         raw: bool = False):
         hdf_file = hdf_files.get(filename)
         if hdf_file is None:
             raise HTTPException(status_code=404, detail="Unknown HDF5 file")
         return _formatted_response(hdf_file, "jsonld", structural=structural, contextual=contextual,
-                                   file_uri=file_uri, raw=raw)
+                                   file_uri=file_uri, prefix=prefix, raw=raw)
 
     @app.get("/{filename}/nt")
     def get_file_nt(filename: str,
                     structural: bool = True,
                     contextual: bool = True,
                     file_uri: Optional[str] = None,
+                    prefix: Optional[str] = None,
                     raw: bool = False):
         hdf_file = hdf_files.get(filename)
         if hdf_file is None:
             raise HTTPException(status_code=404, detail="Unknown HDF5 file")
         return _formatted_response(hdf_file, "nt", structural=structural, contextual=contextual,
-                                   file_uri=file_uri, raw=raw)
+                                   file_uri=file_uri, prefix=prefix, raw=raw)
 
     @app.get("/{filename}/xml")
     def get_file_xml(filename: str,
                      structural: bool = True,
                      contextual: bool = True,
                      file_uri: Optional[str] = None,
+                     prefix: Optional[str] = None,
                      raw: bool = False):
         hdf_file = hdf_files.get(filename)
         if hdf_file is None:
             raise HTTPException(status_code=404, detail="Unknown HDF5 file")
         return _formatted_response(hdf_file, "xml", structural=structural, contextual=contextual,
-                                   file_uri=file_uri, raw=raw)
+                                   file_uri=file_uri, prefix=prefix, raw=raw)
 
     @app.get("/ttl")
     def get_ttl(structural: bool = True,
                 contextual: bool = True,
                 file_uri: Optional[str] = None,
+                prefix: Optional[str] = None,
                 raw: bool = False):
         if default_hdf_filename is None:
             raise HTTPException(status_code=404, detail="No HDF5 file available")
         return _formatted_response(default_hdf_filename, "ttl", structural=structural, contextual=contextual,
-                                   file_uri=file_uri, raw=raw)
+                                   file_uri=file_uri, prefix=prefix, raw=raw)
 
     @app.get("/resource/{encoded_iri:path}")
     def get_resource(request: Request, encoded_iri: str, format: Optional[str] = None):
