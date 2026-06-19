@@ -35,6 +35,8 @@ def test_landing_page_lists_hdf5_files(hdf_filename):
     assert "/server_test.h5/jsonld" in response.text
     assert "/server_test.h5/nt" in response.text
     assert "/server_test.h5/xml" in response.text
+    assert "/server_test.h5/graph" in response.text
+    assert ">Graph<" in response.text
 
 
 @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
@@ -133,6 +135,51 @@ def test_file_format_endpoints_return_raw_formats(hdf_filename, path, content_ty
     assert response.status_code == 200
     assert content_type in response.headers["content-type"]
     assert expected in response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_file_graph_endpoint_returns_interactive_page(hdf_filename):
+    from h5rdmtoolbox.server import create_app
+
+    client = TestClient(create_app(hdf_filename))
+    response = client.get("/server_test.h5/graph")
+
+    assert response.status_code == 200
+    assert "text/html" in response.headers["content-type"]
+    assert "vis-network" in response.text
+    assert "new vis.Network" in response.text
+    assert '<section class="graph-panel">' in response.text
+    assert "height: 100dvh;" in response.text
+    assert "height: 100%;" in response.text
+    assert '"nodes":' in response.text
+    assert '"edges":' in response.text
+    assert 'name="mode" value="both" checked' in response.text
+    assert 'name="mode" value="structural"' in response.text
+    assert 'name="mode" value="contextual"' in response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_file_graph_endpoint_accepts_mode_and_prefix_options(hdf_filename):
+    from h5rdmtoolbox.server import create_app
+
+    client = TestClient(create_app(hdf_filename))
+    response = client.get("/server_test.h5/graph?mode=structural&file_uri=https://example.org/data/&prefix=ex")
+
+    assert response.status_code == 200
+    assert 'name="mode" value="structural" checked' in response.text
+    assert 'value="https://example.org/data/"' in response.text
+    assert 'value="ex"' in response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_file_graph_endpoint_rejects_invalid_mode(hdf_filename):
+    from h5rdmtoolbox.server import create_app
+
+    client = TestClient(create_app(hdf_filename))
+    response = client.get("/server_test.h5/graph?mode=none")
+
+    assert response.status_code == 400
+    assert "mode must be one of" in response.text
 
 
 @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")

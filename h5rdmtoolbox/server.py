@@ -472,6 +472,270 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
 """
         return HTMLResponse(page)
 
+    def _graph_mode_flags(mode: str) -> tuple[bool, bool]:
+        if mode == "both":
+            return True, True
+        if mode == "structural":
+            return True, False
+        if mode == "contextual":
+            return False, True
+        raise HTTPException(status_code=400, detail="mode must be one of: both, structural, contextual")
+
+    def _graph_label(value) -> str:
+        if isinstance(value, rdflib.URIRef):
+            try:
+                return str(rdflib.Graph().namespace_manager.normalizeUri(value))
+            except Exception:
+                text = str(value)
+                return text.rsplit("#", 1)[-1].rsplit("/", 1)[-1] or text
+        text = str(value)
+        return text if len(text) <= 48 else f"{text[:45]}..."
+
+    def _graph_data(rdf_graph: rdflib.Graph) -> dict[str, list[dict[str, str]]]:
+        nodes = {}
+        edges = []
+        for subject, predicate, obj in rdf_graph:
+            subject_id = str(subject)
+            object_id = str(obj)
+            nodes.setdefault(subject_id, {
+                "id": subject_id,
+                "label": _graph_label(subject),
+                "group": "resource" if isinstance(subject, rdflib.URIRef) else "blank",
+            })
+            nodes.setdefault(object_id, {
+                "id": object_id,
+                "label": _graph_label(obj),
+                "group": "literal" if isinstance(obj, rdflib.Literal) else "resource" if isinstance(obj, rdflib.URIRef) else "blank",
+            })
+            edges.append({
+                "from": subject_id,
+                "to": object_id,
+                "label": _graph_label(predicate),
+                "arrows": "to",
+            })
+        return {"nodes": list(nodes.values()), "edges": edges}
+
+    def _graph_page(filename: pathlib.Path,
+                    mode: str = "both",
+                    file_uri: Optional[str] = None,
+                    prefix: Optional[str] = None) -> HTMLResponse:
+        structural_graph, contextual_graph = _graph_mode_flags(mode)
+        graph_file_uri = file_uri if file_uri is not None else create_app_file_uri
+        try:
+            graph_prefix = _validate_prefix(prefix)
+            rdf_graph = get_ld(
+                filename,
+                structural=structural_graph,
+                contextual=contextual_graph,
+                file_uri=graph_file_uri,
+            )
+            if graph_prefix and graph_file_uri:
+                rdf_graph.bind(graph_prefix, rdflib.URIRef(graph_file_uri), override=True, replace=True)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e)) from e
+
+        encoded_filename = urllib.parse.quote(filename.name)
+        graph_json = json.dumps(_graph_data(rdf_graph)).replace("</", "<\\/")
+        escaped_file_uri = escape(graph_file_uri or "")
+        graph_nav = " ".join(
+            f'<a href="/{encoded_filename}/{key}">{escape(label)}</a>'
+            for key, (_, _, label) in RDF_FORMATS.items()
+        )
+        checked = {
+            "both": "checked" if mode == "both" else "",
+            "structural": "checked" if mode == "structural" else "",
+            "contextual": "checked" if mode == "contextual" else "",
+        }
+        page = f"""<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{escape(filename.name)} Graph</title>
+  <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+  <style>
+    :root {{
+      --bg: #f7f8fa;
+      --panel: #ffffff;
+      --text: #1f2933;
+      --muted: #667085;
+      --border: #d8dee6;
+      --accent: #0b6f85;
+    }}
+    * {{ box-sizing: border-box; }}
+    html, body {{
+      height: 100%;
+    }}
+    body {{
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+    }}
+    main {{
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      height: 100dvh;
+      min-height: 520px;
+      gap: 12px;
+      padding: 18px;
+    }}
+    header {{
+      display: grid;
+      gap: 12px;
+      padding: 16px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }}
+    nav {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      color: var(--muted);
+    }}
+    nav a {{ color: var(--accent); font-weight: 600; text-decoration: none; }}
+    h1 {{ margin: 0; font-size: 1.35rem; }}
+    form {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      align-items: end;
+    }}
+    fieldset {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin: 0;
+      padding: 0;
+      border: 0;
+    }}
+    legend {{
+      width: 100%;
+      margin-bottom: 2px;
+      color: var(--muted);
+      font-size: 0.875rem;
+    }}
+    label {{ display: grid; gap: 4px; color: var(--muted); font-size: 0.875rem; }}
+    .radio-label {{ display: inline-flex; align-items: center; gap: 6px; color: var(--text); }}
+    input[type="text"] {{
+      min-width: min(28rem, 80vw);
+      min-height: 34px;
+      padding: 0 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }}
+    button {{
+      min-height: 34px;
+      padding: 0 14px;
+      border: 0;
+      border-radius: 6px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 650;
+      cursor: pointer;
+    }}
+    .graph-panel {{
+      min-height: 0;
+      height: 100%;
+      display: grid;
+    }}
+    #network {{
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--panel);
+    }}
+    .empty-graph {{
+      display: none;
+      color: var(--muted);
+      padding: 12px;
+    }}
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <nav><a href="/">Files</a> {graph_nav}</nav>
+    <h1>{escape(filename.name)} - Graph</h1>
+    <form method="get" action="/{encoded_filename}/graph">
+      <fieldset>
+        <legend>RDF content</legend>
+        <label class="radio-label"><input type="radio" name="mode" value="both" {checked["both"]}> Structural + contextual</label>
+        <label class="radio-label"><input type="radio" name="mode" value="structural" {checked["structural"]}> Structural only</label>
+        <label class="radio-label"><input type="radio" name="mode" value="contextual" {checked["contextual"]}> Contextual only</label>
+      </fieldset>
+      <label>File URI
+        <input type="text" name="file_uri" value="{escaped_file_uri}" placeholder="https://example.org/data/">
+      </label>
+      <label>Prefix
+        <input type="text" name="prefix" value="{escape(prefix or "")}" placeholder="ex">
+      </label>
+      <button type="submit">Update</button>
+    </form>
+  </header>
+  <section class="graph-panel">
+    <div id="network"></div>
+    <p class="empty-graph" id="empty-graph">No RDF triples are available for this selection.</p>
+  </section>
+</main>
+<script>
+  const graphData = {graph_json};
+  const container = document.getElementById("network");
+  const emptyGraph = document.getElementById("empty-graph");
+  if (graphData.nodes.length === 0) {{
+    emptyGraph.style.display = "block";
+  }} else if (window.vis) {{
+    const nodes = new vis.DataSet(graphData.nodes);
+    const edges = new vis.DataSet(graphData.edges);
+    new vis.Network(container, {{ nodes, edges }}, {{
+      nodes: {{
+        shape: "dot",
+        size: 14,
+        font: {{ size: 13, face: "Segoe UI" }},
+        borderWidth: 1
+      }},
+      edges: {{
+        arrows: "to",
+        color: {{ color: "#9aa4b2", highlight: "#0b6f85" }},
+        font: {{ align: "middle", size: 11, face: "Segoe UI" }},
+        smooth: {{ type: "dynamic" }}
+      }},
+      groups: {{
+        resource: {{ color: {{ background: "#d8eef2", border: "#0b6f85" }} }},
+        literal: {{ shape: "box", color: {{ background: "#fff4d6", border: "#b58105" }} }},
+        blank: {{ color: {{ background: "#eceff3", border: "#667085" }} }}
+      }},
+      interaction: {{
+        dragNodes: true,
+        hover: true,
+        navigationButtons: true
+      }},
+      physics: {{
+        enabled: true,
+        solver: "forceAtlas2Based",
+        forceAtlas2Based: {{
+          gravitationalConstant: -55,
+          centralGravity: 0.015,
+          springLength: 125,
+          springConstant: 0.08
+        }},
+        stabilization: {{ iterations: 180 }}
+      }}
+    }});
+  }} else {{
+    emptyGraph.textContent = "The graph library could not be loaded.";
+    emptyGraph.style.display = "block";
+  }}
+</script>
+</body>
+</html>
+"""
+        return HTMLResponse(page)
+
     def _formatted_response(filename: pathlib.Path,
                             format_key: str,
                             structural: bool = True,
@@ -565,6 +829,16 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
             raise HTTPException(status_code=404, detail="Unknown HDF5 file")
         return _formatted_response(hdf_file, "xml", structural=structural, contextual=contextual,
                                    file_uri=file_uri, prefix=prefix, raw=raw)
+
+    @app.get("/{filename}/graph")
+    def get_file_graph(filename: str,
+                       mode: str = "both",
+                       file_uri: Optional[str] = None,
+                       prefix: Optional[str] = None):
+        hdf_file = hdf_files.get(filename)
+        if hdf_file is None:
+            raise HTTPException(status_code=404, detail="Unknown HDF5 file")
+        return _graph_page(hdf_file, mode=mode, file_uri=file_uri, prefix=prefix)
 
     @app.get("/ttl")
     def get_ttl(structural: bool = True,
