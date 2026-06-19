@@ -1,7 +1,6 @@
 import os
 import pathlib
 import shutil
-import tempfile
 import time
 from itertools import count
 from typing import Tuple
@@ -25,6 +24,20 @@ _dircounter = count()
 _now = time.time()
 
 
+def _create_session_tmp_dir(tmp_root: pathlib.Path) -> pathlib.Path:
+    tmp_root.mkdir(parents=True, exist_ok=True)
+    for i in range(1000):
+        tmp_dir = tmp_root / f'tmp_{os.getpid()}_{i}'
+        try:
+            tmp_dir.mkdir()
+        except FileExistsError:
+            continue
+        except PermissionError:
+            continue
+        return tmp_dir
+    raise PermissionError(f'Could not create a temporary directory in "{tmp_root}"')
+
+
 def default_cache_dir(__version__: str) -> pathlib.Path:
     # Your current approach
     return USER_DATA_DIR / "cache"
@@ -42,8 +55,11 @@ class DirManger:
 
     def __init__(self):
         toolbox_tmp_folder = USER_DATA_DIR / 'tmp'
-        toolbox_tmp_folder.mkdir(parents=True, exist_ok=True)
-        tmp_dir = pathlib.Path(tempfile.mkdtemp(prefix='tmp_', dir=toolbox_tmp_folder))
+        try:
+            tmp_dir = _create_session_tmp_dir(toolbox_tmp_folder)
+        except PermissionError:
+            fallback_root = pathlib.Path(os.environ.get("TMP") or os.environ.get("TEMP") or ".")
+            tmp_dir = _create_session_tmp_dir(fallback_root / 'h5rdmtoolbox' / __version__ / 'tmp')
 
         self.user_dirs = {'root': USER_DATA_DIR,
                           'tmp': tmp_dir,

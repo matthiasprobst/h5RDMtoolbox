@@ -3,6 +3,55 @@ import pathlib
 import click
 
 
+_FORMAT_ALIASES = {
+    "ttl": "ttl",
+    "turtle": "ttl",
+    "json": "json-ld",
+    "jsonld": "json-ld",
+    "json-ld": "json-ld",
+}
+_VALID_OUTPUT_EXTENSIONS = {
+    ".jsonld": "json-ld",
+    ".json-ld": "json-ld",
+    ".ttl": "ttl",
+    ".turtle": "ttl",
+}
+
+
+def _normalize_format(fmt):
+    try:
+        return _FORMAT_ALIASES[fmt.lower()]
+    except KeyError as exc:
+        valid_formats = ", ".join(sorted(_FORMAT_ALIASES))
+        raise click.BadParameter(f"Use one of: {valid_formats}") from exc
+
+
+def _resolve_format(fmt, output):
+    if fmt is not None:
+        return _normalize_format(fmt)
+    if output is not None:
+        output_suffix = pathlib.Path(output).suffix.lower()
+        if output_suffix in _VALID_OUTPUT_EXTENSIONS:
+            return _VALID_OUTPUT_EXTENSIONS[output_suffix]
+    return "ttl"
+
+
+def _graph_output_filename(filename):
+    path = pathlib.Path(filename)
+    return path.with_name(f"{path.stem}-graph.html")
+
+
+class LegacyLDGroup(click.Group):
+    """Route legacy `h5tbx ld FILE` calls to `h5tbx ld dump FILE`."""
+
+    def resolve_command(self, ctx, args):
+        if args:
+            command_name = click.utils.make_str(args[0])
+            if self.get_command(ctx, command_name) is None:
+                args = ["dump", *args]
+        return super().resolve_command(ctx, args)
+
+
 @click.group(invoke_without_command=True)
 @click.option('--fairify', type=str, help='Starts the app helping you to make the file FAIRer')
 def h5tbx(fairify):
@@ -14,69 +63,63 @@ def h5tbx(fairify):
         print('GUI closed')
 
 
-@h5tbx.group(invoke_without_command=True)
-@click.argument('filename', type=click.Path(exists=True), required=False)
-@click.option(
-    '-o', '--output',
-    type=click.Path(exists=False),
-    help='Filename to write the JSON-LD data to.'
+@h5tbx.group(
+    cls=LegacyLDGroup,
+    invoke_without_command=True,
+    no_args_is_help=True,
+    context_settings={"ignore_unknown_options": True, "allow_extra_args": True},
 )
-@click.option("--format", type=str, help="The output format, e.g. jsonld.",
-              default="ttl")
-@click.option("--graph", is_flag=True,
-              help="Generates a graph and stores it in OUTPUT-graph.html. Uses pyvis and kglab. "
-                   "Please Make sure it is installed")
-@click.pass_context
-def ld(ctx, filename, output, format, graph):
-    """Linked-Data command. If called without subcommand, behaves like the previous `ld` command and
-    serializes the given FILENAME to the requested format or to OUTPUT when provided.
-    """
-    if ctx.invoked_subcommand is not None:
-        return
-
-    if filename is None:
-        raise click.UsageError('FILENAME is required when calling `h5tbx ld` without a subcommand')
-
-    content = None
-
-    def _serialize(filename):
-        from h5rdmtoolbox import serialize
-        return serialize(filename, fmt=format, indent=2)
-
-    if output:
-        output = pathlib.Path(output)
-        if not format:
-            format = output.suffix[1:]
-        valid_extension = (".jsonld", ".json-ld", ".ttl", ".turtle")
-        if output.suffix not in valid_extension:
-            raise ValueError(f"Please use one of the following extensions: {valid_extension}")
-        if not content:
-            content = _serialize(filename)
-        with open(output, "w", encoding="utf-8") as f:
-            f.write(content)
-    else:
-        if not content:
-            content = _serialize(filename)
-        click.echo(content)
-
-    if graph:
-        from h5rdmtoolbox import build_pyvis_graph
-        build_pyvis_graph(filename, output_filename=pathlib.Path(filename).with_suffix("-graph.html"))
+def ld():
+    """Linked-Data commands for serializing HDF5 files."""
 
 
 @ld.command()
 @click.argument('filename', type=click.Path(exists=True))
-@click.option('--format', type=str, default='turtle', help='Output format: turtle (ttl) or json-ld')
-def dump(filename, format):
-    """Dump the HDF5 file as linked-data in the requested format (default: turtle)."""
+@click.option(
+    '-o', '--output',
+    type=click.Path(exists=False),
+    help='Filename to write the serialized linked-data output to.'
+)
+@click.option("--format", type=str, help="Output format: ttl, turtle, jsonld, json-ld, or json.")
+@click.option("--structural", type=bool, default=True, show_default=True,
+              help="Include structural HDF5 RDF data.")
+@click.option("--contextual", type=bool, default=True, show_default=True,
+              help="Include contextual/user RDF data.")
+@click.option("--file-uri", type=str, default=None,
+              help="Base file URI to use for RDF subjects.")
+@click.option("--graph", is_flag=True,
+              help="Generates a graph and stores it in FILENAME-graph.html. Uses pyvis and kglab. "
+                   "Please Make sure it is installed")
+def dump(filename, output, format, structural, contextual, file_uri, graph):
+    """Dump an HDF5 file as linked data."""
+    if not structural and not contextual:
+        raise click.ClickException("At least one of structural or contextual must be True.")
+
+    fmt = _resolve_format(format, output)
+
+    if output:
+        output = pathlib.Path(output)
+        if output.suffix.lower() not in _VALID_OUTPUT_EXTENSIONS:
+            valid_extensions = ", ".join(sorted(_VALID_OUTPUT_EXTENSIONS))
+            raise click.BadParameter(
+                f"Output filename must use one of: {valid_extensions}",
+                param_hint="'--output'",
+            )
+        content = _serialize(filename, fmt, structural=structural, contextual=contextual, file_uri=file_uri)
+        with open(output, "w", encoding="utf-8") as f:
+            f.write(content)
+    else:
+        content = _serialize(filename, fmt, structural=structural, contextual=contextual, file_uri=file_uri)
+        click.echo(content)
+
+    if graph:
+        from h5rdmtoolbox import build_pyvis_graph
+        build_pyvis_graph(filename, output_filename=_graph_output_filename(filename))
+
+
+def _serialize(filename, fmt, structural=True, contextual=True, file_uri=None):
     from h5rdmtoolbox import serialize
-    fmt = format
-    if fmt in ('ttl', 'turtle'):
-        fmt = 'ttl'
-    elif fmt in ('jsonld', 'json-ld', 'json'):
-        fmt = 'json-ld'
-    content = serialize(filename, fmt=fmt, indent=2)
-    click.echo(content)
+    return serialize(filename, fmt=fmt, indent=2, structural=structural, contextual=contextual, file_uri=file_uri)
 
 
 @h5tbx.command()
