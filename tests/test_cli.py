@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch
 
 from click.testing import CliRunner
 
@@ -24,7 +25,7 @@ class TestCLI(unittest.TestCase):
         self.assertIn("--fairify TEXT", result.output)
         self.assertIn("ld", result.output)
         self.assertIn("metrics", result.output)
-        self.assertIn("server", result.output)
+        self.assertIn("serve", result.output)
 
     def test_command_ld(self):
         runner = CliRunner()
@@ -99,6 +100,27 @@ class TestCLI(unittest.TestCase):
 
         self.assertIsNone(result.exception)
         self.assertIn("<https://example.org/data#tmp", result.output)
+
+    def test_serve_without_filenames_discovers_files(self):
+        runner = CliRunner()
+        with patch("h5rdmtoolbox.server.run_server") as run_server:
+            result = runner.invoke(h5tbx, ["serve"])
+
+        self.assertIsNone(result.exception)
+        run_server.assert_called_once()
+        self.assertIsNone(run_server.call_args.kwargs["filenames"])
+
+    def test_serve_with_filenames(self):
+        runner = CliRunner()
+        with runner.isolated_filesystem():
+            open("a.h5", "w").close()
+            open("b.hdf5", "w").close()
+            with patch("h5rdmtoolbox.server.run_server") as run_server:
+                result = runner.invoke(h5tbx, ["serve", "a.h5", "b.hdf5"])
+
+        self.assertIsNone(result.exception)
+        run_server.assert_called_once()
+        self.assertEqual(run_server.call_args.kwargs["filenames"], ["a.h5", "b.hdf5"])
 
     # def test_fairify(self):
     #     with File() as h5:

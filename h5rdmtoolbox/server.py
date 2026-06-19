@@ -1,20 +1,52 @@
 import pathlib
 import urllib.parse
 import logging
-from typing import Optional
+from html import escape
+from typing import Optional, Sequence, Union
 
 import rdflib
 
 from h5rdmtoolbox.ld import get_ld
 
 logger = logging.getLogger(__name__)
+HDF5_SUFFIXES = {".h5", ".hdf", ".hdf5"}
 
 
-def create_app(hdf_filename: pathlib.Path,
+def discover_hdf_files(directory: Union[str, pathlib.Path] = ".") -> list[pathlib.Path]:
+    """Return HDF5 files in *directory* sorted by filename."""
+    root = pathlib.Path(directory)
+    return sorted(
+        (path for path in root.iterdir() if path.is_file() and path.suffix.lower() in HDF5_SUFFIXES),
+        key=lambda path: path.name.lower(),
+    )
+
+
+def _as_file_list(hdf_filenames: Optional[Union[str, pathlib.Path, Sequence[Union[str, pathlib.Path]]]]) -> list[pathlib.Path]:
+    if hdf_filenames is None:
+        return discover_hdf_files()
+    if isinstance(hdf_filenames, (str, pathlib.Path)):
+        filenames = [hdf_filenames]
+    else:
+        filenames = list(hdf_filenames)
+    return [pathlib.Path(filename) for filename in filenames]
+
+
+def _file_registry(hdf_filenames: Optional[Union[str, pathlib.Path, Sequence[Union[str, pathlib.Path]]]]) -> dict[str, pathlib.Path]:
+    registry = {}
+    for filename in _as_file_list(hdf_filenames):
+        key = filename.name
+        if key in registry:
+            raise ValueError(f'Duplicate HDF5 filename "{key}" cannot be served twice')
+        registry[key] = filename
+    return registry
+
+
+def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[str, pathlib.Path]]]] = None,
                structural: bool = True,
                contextual: bool = True,
-               file_uri: Optional[str] = None):
-    """Create a FastAPI app serving RDF extracted from a single HDF5 file.
+               file_uri: Optional[str] = None,
+               list_landing: bool = True):
+    """Create a FastAPI app serving RDF extracted from one or more HDF5 files.
 
     This function intentionally returns a *minimal* ASGI app using FastAPI if available.
     """
@@ -29,9 +61,13 @@ def create_app(hdf_filename: pathlib.Path,
                            "Install with: pip install 'h5rdmtoolbox[server]'\n") from e
 
     app = FastAPI(title="h5rdmtoolbox RDF server")
+    hdf_files = _file_registry(hdf_filename)
+    default_hdf_filename = next(iter(hdf_files.values()), None)
 
     # Load graph once at startup
-    graph = get_ld(hdf_filename, structural=structural, contextual=contextual, file_uri=file_uri)
+    graph = rdflib.Graph()
+    if default_hdf_filename is not None:
+        graph = get_ld(default_hdf_filename, structural=structural, contextual=contextual, file_uri=file_uri)
 
     # Jinja2 environment
     try:
@@ -60,11 +96,30 @@ def create_app(hdf_filename: pathlib.Path,
         # best-effort; package data should include static files
         pass
 
-    file_key = pathlib.Path(hdf_filename).stem
+    file_key = default_hdf_filename.stem if default_hdf_filename is not None else ""
     create_app_file_uri = file_uri
 
     @app.get("/", response_class=HTMLResponse)
     def index(request: Request):
+        if list_landing or len(hdf_files) != 1:
+            links = []
+            for key in hdf_files:
+                href = f"/{urllib.parse.quote(key)}/ttl"
+                links.append(f'<li><a href="{href}">{escape(key)}</a></li>')
+            body = "<p>No HDF5 files found.</p>" if not links else f"<ul>{''.join(links)}</ul>"
+            return HTMLResponse(f"""<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>h5RDMtoolbox HDF5 files</title>
+</head>
+<body>
+<h1>HDF5 files</h1>
+{body}
+</body>
+</html>
+""")
+
         # Render an HTML skeleton of the HDF5 file using get_tree_structure()
         try:
             from h5rdmtoolbox import File as H5File
@@ -105,7 +160,7 @@ def create_app(hdf_filename: pathlib.Path,
                     html += f"<li>{name}: {node}</li>"
                 return html
 
-            with H5File(hdf_filename, mode='r') as fh:
+            with H5File(default_hdf_filename, mode='r') as fh:
                 tree = fh.get_tree_structure(recursive=True)
             body = "<ul>"
             for key, node in tree.items():
@@ -115,7 +170,7 @@ def create_app(hdf_filename: pathlib.Path,
 <html>
 <head>
   <meta charset=\"utf-8\"> 
-  <title>h5RDMtoolbox — {pathlib.Path(hdf_filename).name}</title>
+  <title>h5RDMtoolbox — {default_hdf_filename.name}</title>
   <link rel=\"stylesheet\" href=\"/static/style.css\"> 
   <style>details summary {{ cursor: pointer; padding: 0.2rem 0.2rem; }}</style>
 </head>
@@ -128,7 +183,7 @@ def create_app(hdf_filename: pathlib.Path,
         except Exception:
             # fallback to simple index template
             tmpl = jenv.get_template("index.html")
-            return HTMLResponse(tmpl.render(file_key=file_key, filename=str(hdf_filename)))
+            return HTMLResponse(tmpl.render(file_key=file_key, filename=str(default_hdf_filename)))
 
     def negotiate_format(request: Request, override: Optional[str] = None) -> str:
         # override by query param
@@ -164,12 +219,12 @@ def create_app(hdf_filename: pathlib.Path,
         # html
         tmpl = jenv.get_template("file.html")
         ttl = graph.serialize(format="turtle")
-        return HTMLResponse(tmpl.render(filename=str(hdf_filename), file_key=file_key, turtle=ttl))
+        return HTMLResponse(tmpl.render(filename=str(default_hdf_filename), file_key=file_key, turtle=ttl))
 
-    @app.get("/ttl")
-    def get_ttl(structural: bool = True,
-                contextual: bool = True,
-                file_uri: Optional[str] = None):
+    def _ttl_response(filename: pathlib.Path,
+                      structural: bool = True,
+                      contextual: bool = True,
+                      file_uri: Optional[str] = None):
         """Return the HDF5 file RDF dump as Turtle."""
         if not structural and not contextual:
             raise HTTPException(
@@ -179,7 +234,7 @@ def create_app(hdf_filename: pathlib.Path,
         graph_file_uri = file_uri if file_uri is not None else create_app_file_uri
         try:
             ttl_graph = get_ld(
-                hdf_filename,
+                filename,
                 structural=structural,
                 contextual=contextual,
                 file_uri=graph_file_uri,
@@ -190,6 +245,24 @@ def create_app(hdf_filename: pathlib.Path,
             content=ttl_graph.serialize(format="turtle"),
             media_type="text/turtle; charset=utf-8",
         )
+
+    @app.get("/{filename}/ttl")
+    def get_file_ttl(filename: str,
+                     structural: bool = True,
+                     contextual: bool = True,
+                     file_uri: Optional[str] = None):
+        hdf_file = hdf_files.get(filename)
+        if hdf_file is None:
+            raise HTTPException(status_code=404, detail="Unknown HDF5 file")
+        return _ttl_response(hdf_file, structural=structural, contextual=contextual, file_uri=file_uri)
+
+    @app.get("/ttl")
+    def get_ttl(structural: bool = True,
+                contextual: bool = True,
+                file_uri: Optional[str] = None):
+        if default_hdf_filename is None:
+            raise HTTPException(status_code=404, detail="No HDF5 file available")
+        return _ttl_response(default_hdf_filename, structural=structural, contextual=contextual, file_uri=file_uri)
 
     @app.get("/resource/{encoded_iri:path}")
     def get_resource(request: Request, encoded_iri: str, format: Optional[str] = None):
@@ -310,7 +383,8 @@ def create_app(hdf_filename: pathlib.Path,
 
     # attach graph to app state for potential external use
     app.state.hdf_graph = graph
-    app.state.hdf_filename = str(hdf_filename)
+    app.state.hdf_filename = str(default_hdf_filename) if default_hdf_filename is not None else None
+    app.state.hdf_files = {key: str(value) for key, value in hdf_files.items()}
     app.state.file_key = file_key
 
     return app
@@ -319,15 +393,16 @@ def create_app(hdf_filename: pathlib.Path,
 def run_server(host: str = "127.0.0.1",
                port: int = 8000,
                filename: Optional[str] = None,
+               filenames: Optional[Sequence[Union[str, pathlib.Path]]] = None,
                structural: bool = True,
                contextual: bool = True,
                file_uri: Optional[str] = None):
-    """Run a FastAPI/uvicorn server exposing RDF for the given file."""
-    if filename is None:
-        raise ValueError("filename must be provided to run the server")
+    """Run a FastAPI/uvicorn server exposing RDF for HDF5 files."""
+    if filenames is None:
+        filenames = [filename] if filename is not None else None
     import uvicorn
 
-    app = create_app(pathlib.Path(filename), structural=structural, contextual=contextual, file_uri=file_uri)
+    app = create_app(filenames, structural=structural, contextual=contextual, file_uri=file_uri)
     url = f"http://{host}:{port}/"
-    logger.info("Starting h5rdmtoolbox RDF server at %s serving file %s", url, filename)
+    logger.info("Starting h5rdmtoolbox RDF server at %s serving files %s", url, app.state.hdf_files)
     uvicorn.run(app, host=host, port=port)

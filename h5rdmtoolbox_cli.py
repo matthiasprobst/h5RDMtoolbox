@@ -123,19 +123,20 @@ def _serialize(filename, fmt, structural=True, contextual=True, file_uri=None):
 
 
 @h5tbx.command()
-@click.argument('filename', type=click.Path(exists=True))
+@click.argument('filenames', nargs=-1, type=click.Path(exists=True))
 @click.option('--host', type=str, default='127.0.0.1', help='Host interface to bind the server to')
 @click.option('--port', type=int, default=8000, help='Port to run the server on')
 @click.option('--no-structural', is_flag=True, default=False, help='Do not include structural RDF')
 @click.option('--no-contextual', is_flag=True, default=False, help='Do not include contextual RDF')
 @click.option('--file-uri', type=str, default=None, help='Base file URI to use for RDF subjects (must end with # or /)')
-def server(filename, host, port, no_structural, no_contextual, file_uri):
-    """Start a small RDF HTTP server exposing the file's RDF (FastAPI/uvicorn)."""
+def serve(filenames, host, port, no_structural, no_contextual, file_uri):
+    """Serve HDF5 file RDF data over HTTP (FastAPI/uvicorn)."""
     structural = not no_structural
     contextual = not no_contextual
-    filename = pathlib.Path(filename)
     from h5rdmtoolbox.server import run_server
-    run_server(host=host, port=port, filename=str(filename), structural=structural, contextual=contextual,
+    selected_filenames = [str(filename) for filename in filenames] if filenames else None
+    run_server(host=host, port=port, filenames=selected_filenames,
+               structural=structural, contextual=contextual,
                file_uri=file_uri)
 
 
