@@ -153,14 +153,23 @@ hdf:H5T_INTEL_I64 a hdf:Datatype .
 
 ## Command Line Interface
 
-The `h5tbx` command provides quick access to linked-data serialization from the shell.
+The `h5tbx` command provides quick access to linked-data serialization and local inspection from the shell.
 
-Use `h5tbx ld dump example.h5` to print Turtle RDF, or write a specific format with
+Use `h5tbx ld dump example.h5` to print Turtle RDF, or write a specific format with:
 
-```
+```bash
 h5tbx ld dump example.h5 -o example.jsonld
 ```
-The dump command accepts `--format`, `--file-uri`, `--structural=false`, and `--contextual=false`, so you can choose Turtle or JSON-LD output, assign stable RDF subject URIs, and include only structural or user-provided contextual metadata when needed.
+
+The dump command accepts `--format`, `--file-uri`, `--prefix`, `--structural=false`, and `--contextual=false`, so you can choose RDF output, assign stable RDF subject URIs, bind a compact prefix, and include only structural or user-provided contextual metadata when needed.
+
+To inspect files in a browser, run:
+
+```bash
+h5tbx serve example.h5
+```
+
+The local web app links to Turtle, JSON-LD, N-Triples, RDF/XML, an interactive graph view, SPARQL query editor, graph metrics, and SHACL validation. If no filename is provided, `h5tbx serve` lists all `.h5`, `.hdf`, and `.hdf5` files in the current directory.
 
 ## 🚀 Key Features
 

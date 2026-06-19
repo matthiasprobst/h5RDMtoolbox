@@ -42,6 +42,46 @@ Key Concepts
 **SHACL Shapes**
    RDF shapes that HDF5 metadata must conform to.
 
+Command Line and Web Viewer
+---------------------------
+
+The ``h5tbx`` command exposes the linked-data tools without writing Python code.
+Use ``ld dump`` to serialize a file directly from the shell:
+
+.. code-block:: bash
+
+   h5tbx ld dump example.h5
+   h5tbx ld dump example.h5 --format json-ld --file-uri https://example.org/data/ --prefix ex
+   h5tbx ld dump example.h5 --structural=false
+   h5tbx ld dump example.h5 --contextual=false
+
+By default, structural and contextual RDF are both included. Use
+``--structural=false`` or ``--contextual=false`` to restrict the output. The
+``--file-uri`` option defines stable subject IRIs; ``--prefix`` binds a compact
+prefix for that URI in serializations that support prefixes.
+
+For interactive inspection, start the local web viewer:
+
+.. code-block:: bash
+
+   h5tbx serve example.h5
+
+If no filename is provided, ``h5tbx serve`` lists all ``.h5``, ``.hdf``, and
+``.hdf5`` files in the current directory. Each file page links to:
+
+- RDF serializations: Turtle, JSON-LD, N-Triples, and RDF/XML.
+- ``Graph``: an interactive RDF graph view with class-based colors, draggable
+  nodes, literal popovers, and hide/unhide controls.
+- ``Query``: a SPARQL editor with sample queries and tabular SELECT results.
+- ``Metrics``: RDF knowledge-graph metrics, including graph size, predicate and
+  class usage, connectivity, datatype distribution, label coverage, and external
+  namespace usage.
+- ``SHACL``: a SHACL validation page where Turtle shapes can be pasted and run
+  against the currently loaded RDF graph.
+
+All web views are generated from the currently loaded HDF5 file and support the
+same structural/contextual RDF model used by ``ld dump``.
+
 
 .. toctree::
     :titlesonly:
