@@ -61,6 +61,7 @@ def create_app(hdf_filename: pathlib.Path,
         pass
 
     file_key = pathlib.Path(hdf_filename).stem
+    create_app_file_uri = file_uri
 
     @app.get("/", response_class=HTMLResponse)
     def index(request: Request):
@@ -164,6 +165,31 @@ def create_app(hdf_filename: pathlib.Path,
         tmpl = jenv.get_template("file.html")
         ttl = graph.serialize(format="turtle")
         return HTMLResponse(tmpl.render(filename=str(hdf_filename), file_key=file_key, turtle=ttl))
+
+    @app.get("/ttl")
+    def get_ttl(structural: bool = True,
+                contextual: bool = True,
+                file_uri: Optional[str] = None):
+        """Return the HDF5 file RDF dump as Turtle."""
+        if not structural and not contextual:
+            raise HTTPException(
+                status_code=400,
+                detail="At least one of structural or contextual must be True.",
+            )
+        graph_file_uri = file_uri if file_uri is not None else create_app_file_uri
+        try:
+            ttl_graph = get_ld(
+                hdf_filename,
+                structural=structural,
+                contextual=contextual,
+                file_uri=graph_file_uri,
+            )
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e)) from e
+        return PlainTextResponse(
+            content=ttl_graph.serialize(format="turtle"),
+            media_type="text/turtle; charset=utf-8",
+        )
 
     @app.get("/resource/{encoded_iri:path}")
     def get_resource(request: Request, encoded_iri: str, format: Optional[str] = None):

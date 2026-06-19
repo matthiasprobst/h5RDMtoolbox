@@ -1,61 +1,56 @@
-# import os
-# import pathlib
-# import urllib.parse
-# import tempfile
-# import sys
-# import pytest
-#
-# try:
-#     from fastapi.testclient import TestClient
-#     FASTAPI_AVAILABLE = True
-# except Exception:
-#     FASTAPI_AVAILABLE = False
-#
-# from h5rdmtoolbox import File
-#
-#
-# @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
-# def test_server_file_and_resource_endpoint():
-#     # create a temporary hdf5 file with minimal structure
-#     tmpdir = pathlib.Path(tempfile.mkdtemp())
-#     fname = tmpdir / "test_server.h5"
-#     with File(fname, mode='w') as f:
-#         f.attrs['title'] = 'Test file'
-#         g = f.create_group('grp')
-#         ds = g.create_dataset('data', data=[1, 2, 3])
-#         ds.attrs['units'] = 'm'
-#
-#     from h5rdmtoolbox.server import create_app
-#     app = create_app(fname)
-#     client = TestClient(app)
-#
-#     file_key = pathlib.Path(fname).stem
-#     r = client.get(f"/file/{file_key}", headers={"Accept": "text/turtle"})
-#     assert r.status_code == 200
-#     assert 'text/turtle' in r.headers.get('content-type', '')
-#     assert 'hdf' in r.text or '@prefix' in r.text
-#
-#     # pick a subject IRI that likely exists: try to find an example from graph
-#     g = app.state.hdf_graph
-#     subj = None
-#     for s in g.subjects():
-#         subj = s
-#         break
-#     assert subj is not None
-#     encoded = urllib.parse.quote(str(subj), safe='')
-#     r2 = client.get(f"/resource/{encoded}", headers={"Accept": "text/html"})
-#     assert r2.status_code == 200
-#     assert '<html' in r2.text.lower()
-#
-#     # SPARQL endpoint: basic SELECT
-#     query = 'SELECT ?s ?p ?o WHERE { ?s ?p ?o } LIMIT 5'
-#     r3 = client.post('/sparql', json={'query': query})
-#     assert r3.status_code == 200
-#     assert 'results' in r3.json() or 'head' in r3.json()
-#
-#     # cleanup
-#     try:
-#         os.remove(fname)
-#     except Exception:
-#         pass
-#
+import pathlib
+import tempfile
+
+import h5py
+import pytest
+
+try:
+    from fastapi.testclient import TestClient
+
+    FASTAPI_AVAILABLE = True
+except Exception:
+    FASTAPI_AVAILABLE = False
+
+
+@pytest.fixture()
+def hdf_filename():
+    tmpdir = pathlib.Path(tempfile.mkdtemp())
+    filename = tmpdir / "server_test.h5"
+    with h5py.File(filename, "w") as h5:
+        h5.create_group("grp")
+    return filename
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_ttl_endpoint_returns_turtle(hdf_filename):
+    from h5rdmtoolbox.server import create_app
+
+    client = TestClient(create_app(hdf_filename))
+    response = client.get("/ttl")
+
+    assert response.status_code == 200
+    assert "text/turtle" in response.headers["content-type"]
+    assert "@prefix hdf:" in response.text
+    assert "hdf:File" in response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_ttl_endpoint_accepts_query_options(hdf_filename):
+    from h5rdmtoolbox.server import create_app
+
+    client = TestClient(create_app(hdf_filename))
+    response = client.get("/ttl?contextual=false&file_uri=https://example.org/data/")
+
+    assert response.status_code == 200
+    assert "<https://example.org/data/server_test.h5>" in response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_ttl_endpoint_rejects_empty_selection(hdf_filename):
+    from h5rdmtoolbox.server import create_app
+
+    client = TestClient(create_app(hdf_filename))
+    response = client.get("/ttl?structural=false&contextual=false")
+
+    assert response.status_code == 400
+    assert "At least one of structural or contextual must be True" in response.text
