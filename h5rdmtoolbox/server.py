@@ -40,6 +40,17 @@ WHERE {
   ?subject ?predicate ?object .
 }
 LIMIT 25"""
+DEFAULT_SHACL_SHAPES = """@prefix hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+hdf:FileShape
+  a sh:NodeShape ;
+  sh:targetClass hdf:File ;
+  sh:property [
+    sh:path hdf:rootGroup ;
+    sh:minCount 1 ;
+  ] .
+"""
 SAMPLE_SPARQL_QUERIES = [
     (
         "Standard names",
@@ -188,12 +199,13 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
                 graph_link = f'<a class="format-link graph-link" href="/{encoded_key}/graph">Graph</a>'
                 query_link = f'<a class="format-link query-link" href="/{encoded_key}/query">Query</a>'
                 metrics_link = f'<a class="format-link metrics-link" href="/{encoded_key}/metrics">Metrics</a>'
+                shacl_link = f'<a class="format-link shacl-link" href="/{encoded_key}/shacl">SHACL</a>'
                 file_cards.append(f"""<article class="file-card">
   <div>
     <h2>{escape(key)}</h2>
     <p>{escape(str(hdf_files[key]))}</p>
   </div>
-  <div class="format-actions">{format_links}{graph_link}{query_link}{metrics_link}</div>
+  <div class="format-actions">{format_links}{graph_link}{query_link}{metrics_link}{shacl_link}</div>
 </article>""")
             body = (
                 '<section class="empty">No HDF5 files found in this directory.</section>'
@@ -1293,6 +1305,180 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
 """
         return HTMLResponse(page)
 
+    def _shacl_result(rdf_graph: rdflib.Graph, shapes_text: str) -> tuple[str, str]:
+        try:
+            import pyshacl
+
+            shapes_graph = rdflib.Graph()
+            _bind_standard_prefixes(shapes_graph)
+            shapes_graph.parse(data=shapes_text, format="turtle")
+            conforms, results_graph, results_text = pyshacl.validate(
+                rdf_graph,
+                shacl_graph=shapes_graph,
+                inference="rdfs",
+            )
+            _bind_standard_prefixes(results_graph)
+            status = "Conforms" if conforms else "Does not conform"
+            status_class = "valid" if conforms else "invalid"
+            results_turtle = results_graph.serialize(format="turtle")
+            html = (
+                f'<div class="validation-status {status_class}">{status}</div>'
+                f"<pre>{escape(results_turtle)}</pre>"
+            )
+            return results_text, html
+        except Exception as e:
+            return f"SHACL validation error: {e}", '<div class="validation-status invalid">Validation failed</div>'
+
+    def _shacl_page(filename: pathlib.Path, shapes: Optional[str] = None) -> HTMLResponse:
+        shapes_text = shapes or DEFAULT_SHACL_SHAPES
+        rdf_graph = get_ld(
+            filename,
+            structural=True,
+            contextual=True,
+            file_uri=create_app_file_uri,
+        )
+        _bind_standard_prefixes(rdf_graph)
+        result_text = ""
+        result_html = '<p class="empty-result">Run the default shape or paste your own SHACL Turtle before validating.</p>'
+        if shapes is not None:
+            result_text, result_html = _shacl_result(rdf_graph, shapes_text)
+
+        encoded_filename = urllib.parse.quote(filename.name)
+        page = f"""<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{escape(filename.name)} SHACL</title>
+  <style>
+    :root {{
+      --bg: #f7f8fa;
+      --panel: #ffffff;
+      --text: #1f2933;
+      --muted: #667085;
+      --border: #d8dee6;
+      --accent: #0b6f85;
+    }}
+    * {{ box-sizing: border-box; }}
+    body {{
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }}
+    main {{
+      width: min(1180px, calc(100% - 32px));
+      margin: 24px auto;
+      display: grid;
+      gap: 14px;
+    }}
+    header, .shacl-panel, .result-panel {{
+      padding: 16px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }}
+    nav {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 10px;
+    }}
+    nav a {{ color: var(--accent); font-weight: 650; text-decoration: none; }}
+    h1 {{ margin: 0; font-size: 1.4rem; }}
+    form {{
+      display: grid;
+      gap: 10px;
+    }}
+    label {{
+      display: grid;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      font-weight: 650;
+    }}
+    textarea {{
+      width: 100%;
+      min-height: 240px;
+      resize: vertical;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+      font-size: 0.9rem;
+      line-height: 1.45;
+      color: var(--text);
+      background: #fff;
+    }}
+    textarea[readonly] {{
+      min-height: 140px;
+      background: #f6f8fa;
+    }}
+    button {{
+      justify-self: start;
+      min-height: 36px;
+      padding: 0 14px;
+      border: 0;
+      border-radius: 6px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 650;
+      cursor: pointer;
+    }}
+    .validation-status {{
+      display: inline-flex;
+      min-height: 32px;
+      align-items: center;
+      margin-top: 12px;
+      padding: 0 10px;
+      border-radius: 6px;
+      font-weight: 650;
+    }}
+    .validation-status.valid {{
+      color: #175f2a;
+      background: #dff3df;
+    }}
+    .validation-status.invalid {{
+      color: #8a1f1f;
+      background: #f8dfe1;
+    }}
+    .empty-result {{
+      color: var(--muted);
+      margin: 10px 0 0;
+    }}
+    pre {{
+      padding: 12px;
+      background: #f6f8fa;
+      overflow: auto;
+    }}
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <nav><a href="/">Files</a><a href="/{encoded_filename}/graph">Graph</a><a href="/{encoded_filename}/query">Query</a><a href="/{encoded_filename}/metrics">Metrics</a><a href="/{encoded_filename}/ttl">Turtle</a></nav>
+    <h1>{escape(filename.name)} - SHACL Validation</h1>
+  </header>
+  <section class="shacl-panel">
+    <form method="get" action="/{encoded_filename}/shacl">
+      <label>SHACL shapes
+        <textarea id="shacl-shapes" name="shapes">{escape(shapes_text)}</textarea>
+      </label>
+      <button type="submit">Validate</button>
+    </form>
+  </section>
+  <section class="result-panel">
+    <label>Result
+      <textarea id="shacl-result" readonly>{escape(result_text)}</textarea>
+    </label>
+    {result_html}
+  </section>
+</main>
+</body>
+</html>
+"""
+        return HTMLResponse(page)
+
     def _format_count(value) -> str:
         if isinstance(value, float):
             return f"{value:,.1f}"
@@ -1836,6 +2022,13 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
         if hdf_file is None:
             raise HTTPException(status_code=404, detail="Unknown HDF5 file")
         return _query_page(hdf_file, query=query)
+
+    @app.get("/{filename}/shacl")
+    def get_file_shacl(filename: str, shapes: Optional[str] = None):
+        hdf_file = hdf_files.get(filename)
+        if hdf_file is None:
+            raise HTTPException(status_code=404, detail="Unknown HDF5 file")
+        return _shacl_page(hdf_file, shapes=shapes)
 
     @app.get("/{filename}/metrics")
     def get_file_metrics(filename: str):

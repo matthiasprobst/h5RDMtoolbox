@@ -39,9 +39,11 @@ def test_landing_page_lists_hdf5_files(hdf_filename):
     assert "/server_test.h5/graph" in response.text
     assert "/server_test.h5/query" in response.text
     assert "/server_test.h5/metrics" in response.text
+    assert "/server_test.h5/shacl" in response.text
     assert ">Graph<" in response.text
     assert ">Query<" in response.text
     assert ">Metrics<" in response.text
+    assert ">SHACL<" in response.text
 
 
 @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
@@ -270,6 +272,47 @@ def test_file_query_endpoint_runs_select_query(hdf_filename):
     assert "<th>type</th>" in response.text
     assert "hdf:File" in response.text
     assert "hdf:Group" in response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_file_shacl_endpoint_returns_validation_form(hdf_filename):
+    from h5rdmtoolbox.server import create_app
+
+    client = TestClient(create_app(hdf_filename))
+    response = client.get("/server_test.h5/shacl")
+
+    assert response.status_code == 200
+    assert "text/html" in response.headers["content-type"]
+    assert "SHACL Validation" in response.text
+    assert 'id="shacl-shapes"' in response.text
+    assert 'id="shacl-result"' in response.text
+    assert "hdf:FileShape" in response.text
+    assert "sh:minCount 1" in response.text
+    assert "Run the default shape" in response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_file_shacl_endpoint_runs_validation(hdf_filename):
+    from h5rdmtoolbox.server import create_app
+
+    shapes = """@prefix hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+hdf:FileShape
+  a sh:NodeShape ;
+  sh:targetClass hdf:File ;
+  sh:property [
+    sh:path hdf:rootGroup ;
+    sh:minCount 1 ;
+  ] .
+"""
+    client = TestClient(create_app(hdf_filename))
+    response = client.get("/server_test.h5/shacl", params={"shapes": shapes})
+
+    assert response.status_code == 200
+    assert "Conforms" in response.text
+    assert "Validation Report" in response.text
+    assert "sh:conforms true" in response.text
 
 
 @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
