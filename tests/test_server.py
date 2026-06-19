@@ -3,6 +3,7 @@ import tempfile
 
 import h5py
 import pytest
+import rdflib
 
 try:
     from fastapi.testclient import TestClient
@@ -152,14 +153,25 @@ def test_file_graph_endpoint_returns_interactive_page(hdf_filename):
     assert "graphForm.requestSubmit();" in response.text
     assert 'id="node-details"' in response.text
     assert 'network.on("click"' in response.text
+    assert 'id="hidden-node-toggle"' in response.text
+    assert 'id="hidden-node-list"' in response.text
+    assert 'class="hide-node-button">Hide</button>' in response.text
+    assert "hiddenNodeIds.add(nodeId);" in response.text
+    assert "hiddenNodeIds.delete(nodeId);" in response.text
+    assert "refreshVisibleGraph();" in response.text
     assert "grid-template-columns: minmax(7rem, max-content) minmax(0, 1fr);" in response.text
     assert '<section class="graph-panel">' in response.text
     assert "height: 100dvh;" in response.text
     assert "height: 100%;" in response.text
     assert '"nodes":' in response.text
     assert '"edges":' in response.text
+    assert '"groups":' in response.text
     assert '"literals":' in response.text
     assert '"group": "literal"' not in response.text
+    assert '"group": "class:hdf:File"' in response.text
+    assert '"group": "class:hdf:Group"' in response.text
+    assert '"class:hdf:File"' in response.text
+    assert '"class:hdf:Group"' in response.text
     assert '"label": "hdf:File"' in response.text
     assert '"label": "hdf:rootGroup"' in response.text
     assert 'name="mode" value="both" checked' in response.text
@@ -189,6 +201,31 @@ def test_file_graph_endpoint_rejects_invalid_mode(hdf_filename):
 
     assert response.status_code == 400
     assert "mode must be one of" in response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_file_graph_uses_standard_prefixes_for_compact_labels(monkeypatch, hdf_filename):
+    import h5rdmtoolbox.server as server
+
+    graph = rdflib.Graph()
+    dataset = rdflib.URIRef("https://doi.org/10.5281/zenodo.12345")
+    graph.add((dataset, rdflib.RDF.type, rdflib.URIRef("http://www.w3.org/ns/dcat#Dataset")))
+    graph.add((dataset, rdflib.URIRef("http://xmlns.com/foaf/0.1/name"), rdflib.Literal("example")))
+    graph.add((dataset, rdflib.URIRef("http://qudt.org/schema/qudt/unit"), rdflib.URIRef("http://qudt.org/vocab/unit/M")))
+    graph.add((dataset, rdflib.URIRef("http://purl.org/dc/terms/identifier"), rdflib.URIRef("https://zenodo.org/records/12345")))
+
+    monkeypatch.setattr(server, "get_ld", lambda *args, **kwargs: graph)
+    client = TestClient(server.create_app(hdf_filename))
+    response = client.get("/server_test.h5/graph")
+
+    assert response.status_code == 200
+    assert '"label": "doi:10.5281/zenodo.12345"' in response.text
+    assert '"label": "dcat:Dataset"' in response.text
+    assert '"predicate": "foaf:name"' in response.text
+    assert '"label": "qudt:unit"' in response.text
+    assert '"label": "unit:M"' in response.text
+    assert '"label": "dcterms:identifier"' in response.text
+    assert '"label": "zenodo:12345"' in response.text
 
 
 @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")

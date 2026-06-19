@@ -13,6 +13,21 @@ from h5rdmtoolbox.ld import get_ld
 logger = logging.getLogger(__name__)
 HDF5_SUFFIXES = {".h5", ".hdf", ".hdf5"}
 PREFIX_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_.-]*$")
+STANDARD_PREFIXES = {
+    "dcat": "http://www.w3.org/ns/dcat#",
+    "dcterms": "http://purl.org/dc/terms/",
+    "doi": "https://doi.org/",
+    "foaf": "http://xmlns.com/foaf/0.1/",
+    "prof": "http://www.w3.org/ns/dx/prof/",
+    "prov": "http://www.w3.org/ns/prov#",
+    "qudt": "http://qudt.org/schema/qudt/",
+    "quantitykind": "http://qudt.org/vocab/quantitykind/",
+    "schema": "https://schema.org/",
+    "skos": "http://www.w3.org/2004/02/skos/core#",
+    "unit": "http://qudt.org/vocab/unit/",
+    "zenodo": "https://zenodo.org/records/",
+    "zenodo_record": "https://zenodo.org/record/",
+}
 RDF_FORMATS = {
     "ttl": ("turtle", "text/turtle; charset=utf-8", "Turtle"),
     "jsonld": ("json-ld", "application/ld+json; charset=utf-8", "JSON-LD"),
@@ -62,6 +77,12 @@ def _validate_prefix(prefix: Optional[str]) -> Optional[str]:
     return prefix
 
 
+def _bind_standard_prefixes(graph: rdflib.Graph) -> None:
+    """Bind common RDF namespaces without replacing prefixes already defined by the graph."""
+    for prefix, namespace in STANDARD_PREFIXES.items():
+        graph.bind(prefix, rdflib.Namespace(namespace), override=False, replace=False)
+
+
 def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[str, pathlib.Path]]]] = None,
                structural: bool = True,
                contextual: bool = True,
@@ -89,6 +110,7 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
     graph = rdflib.Graph()
     if default_hdf_filename is not None:
         graph = get_ld(default_hdf_filename, structural=structural, contextual=contextual, file_uri=file_uri)
+        _bind_standard_prefixes(graph)
 
     # Jinja2 environment
     try:
@@ -484,28 +506,76 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
     def _graph_label(value, rdf_graph: Optional[rdflib.Graph] = None) -> str:
         if isinstance(value, rdflib.URIRef):
             namespace_manager = rdf_graph.namespace_manager if rdf_graph is not None else rdflib.Graph().namespace_manager
+            text = str(value)
             try:
-                return str(namespace_manager.normalizeUri(value))
+                normalized = str(namespace_manager.normalizeUri(value))
+                if not normalized.startswith("<") and not re.match(r"^ns\d+:", normalized):
+                    return normalized
             except Exception:
                 pass
+            for prefix, namespace in STANDARD_PREFIXES.items():
+                if text.startswith(namespace) and text != namespace:
+                    return f"{prefix}:{text[len(namespace):]}"
             try:
                 return namespace_manager.qname(value)
             except Exception:
                 pass
+            if rdf_graph is not None:
+                namespaces = sorted(
+                    ((prefix, str(namespace)) for prefix, namespace in rdf_graph.namespaces() if prefix),
+                    key=lambda item: len(item[1]),
+                    reverse=True,
+                )
+                for prefix, namespace in namespaces:
+                    if text.startswith(namespace) and text != namespace:
+                        return f"{prefix}:{text[len(namespace):]}"
             text = str(value)
             return text.rsplit("#", 1)[-1].rsplit("/", 1)[-1] or text
         text = str(value)
         return text if len(text) <= 48 else f"{text[:45]}..."
 
     def _graph_data(rdf_graph: rdflib.Graph) -> dict[str, list[dict[str, str]]]:
+        class_palette = [
+            ("#d8eef2", "#0b6f85"),
+            ("#e4def8", "#6b4bb3"),
+            ("#dff3df", "#287a3e"),
+            ("#fff0cc", "#a66b00"),
+            ("#f8dfe8", "#b33963"),
+            ("#dbeafe", "#2563eb"),
+            ("#f1e7d0", "#8a5a18"),
+            ("#e0f2fe", "#0369a1"),
+        ]
+        type_by_node = {
+            str(subject): _graph_label(obj, rdf_graph)
+            for subject, obj in rdf_graph.subject_objects(rdflib.RDF.type)
+        }
+        class_groups = {}
+        for index, class_label in enumerate(sorted(set(type_by_node.values()))):
+            background, border = class_palette[index % len(class_palette)]
+            class_groups[f"class:{class_label}"] = {
+                "color": {"background": background, "border": border},
+            }
+        groups = {
+            "resource": {"color": {"background": "#eceff3", "border": "#667085"}},
+            "blank": {"color": {"background": "#eceff3", "border": "#667085"}},
+            **class_groups,
+        }
         nodes = {}
         edges = []
+
+        def node_group(value) -> str:
+            class_label = type_by_node.get(str(value))
+            if class_label:
+                return f"class:{class_label}"
+            return "resource" if isinstance(value, rdflib.URIRef) else "blank"
+
         for subject, predicate, obj in rdf_graph:
             subject_id = str(subject)
             nodes.setdefault(subject_id, {
                 "id": subject_id,
                 "label": _graph_label(subject, rdf_graph),
-                "group": "resource" if isinstance(subject, rdflib.URIRef) else "blank",
+                "group": node_group(subject),
+                "rdf_class": type_by_node.get(subject_id, ""),
                 "literals": [],
             })
             if isinstance(obj, rdflib.Literal):
@@ -518,7 +588,8 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
             nodes.setdefault(object_id, {
                 "id": object_id,
                 "label": _graph_label(obj, rdf_graph),
-                "group": "resource" if isinstance(obj, rdflib.URIRef) else "blank",
+                "group": node_group(obj),
+                "rdf_class": type_by_node.get(object_id, ""),
                 "literals": [],
             })
             edges.append({
@@ -527,7 +598,7 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
                 "label": _graph_label(predicate, rdf_graph),
                 "arrows": "to",
             })
-        return {"nodes": list(nodes.values()), "edges": edges}
+        return {"nodes": list(nodes.values()), "edges": edges, "groups": groups}
 
     def _graph_page(filename: pathlib.Path,
                     mode: str = "both",
@@ -543,6 +614,7 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
                 contextual=contextual_graph,
                 file_uri=graph_file_uri,
             )
+            _bind_standard_prefixes(rdf_graph)
             if graph_prefix and graph_file_uri:
                 rdf_graph.bind(graph_prefix, rdflib.URIRef(graph_file_uri), override=True, replace=True)
         except ValueError as e:
@@ -655,6 +727,51 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
       height: 100%;
       display: grid;
     }}
+    .hidden-node-menu {{
+      position: absolute;
+      left: 14px;
+      top: 14px;
+      z-index: 2;
+    }}
+    .hidden-node-menu button,
+    .hide-node-button {{
+      min-height: 30px;
+      padding: 0 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--text);
+      font-size: 0.85rem;
+      font-weight: 650;
+      cursor: pointer;
+    }}
+    .hidden-node-list {{
+      display: none;
+      width: min(320px, calc(100vw - 64px));
+      max-height: 280px;
+      overflow: auto;
+      margin-top: 8px;
+      padding: 8px;
+      background: rgba(255, 255, 255, 0.96);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: 0 12px 28px rgba(31, 41, 51, 0.16);
+    }}
+    .hidden-node-list.open {{
+      display: grid;
+      gap: 6px;
+    }}
+    .hidden-node-list p {{
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }}
+    .hidden-node-list button {{
+      width: 100%;
+      justify-content: start;
+      text-align: left;
+      overflow-wrap: anywhere;
+    }}
     #network {{
       width: 100%;
       height: 100%;
@@ -681,6 +798,15 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
       margin: 0 0 10px;
       font-size: 1rem;
       overflow-wrap: anywhere;
+    }}
+    .node-details-header {{
+      display: flex;
+      gap: 10px;
+      align-items: start;
+      justify-content: space-between;
+    }}
+    .hide-node-button {{
+      flex: 0 0 auto;
     }}
     .node-details dl {{
       display: grid;
@@ -747,6 +873,10 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
     </form>
   </header>
   <section class="graph-panel">
+    <div class="hidden-node-menu">
+      <button type="button" id="hidden-node-toggle" aria-expanded="false">Hidden nodes (0)</button>
+      <div class="hidden-node-list" id="hidden-node-list"></div>
+    </div>
     <div id="network"></div>
     <aside class="node-details" id="node-details" aria-live="polite"></aside>
     <p class="empty-graph" id="empty-graph">No RDF triples are available for this selection.</p>
@@ -758,21 +888,59 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
   const container = document.getElementById("network");
   const emptyGraph = document.getElementById("empty-graph");
   const nodeDetails = document.getElementById("node-details");
-  const nodeById = new Map(graphData.nodes.map((node) => [node.id, node]));
+  const hiddenNodeToggle = document.getElementById("hidden-node-toggle");
+  const hiddenNodeList = document.getElementById("hidden-node-list");
+  const allNodes = graphData.nodes;
+  const allEdges = graphData.edges;
+  const hiddenNodeIds = new Set();
+  const nodeById = new Map(allNodes.map((node) => [node.id, node]));
+  let hideNode = () => {{}};
+  let unhideNode = () => {{}};
   const escapeHtml = (value) => String(value)
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+  const updateHiddenNodeMenu = () => {{
+    const hiddenNodes = Array.from(hiddenNodeIds)
+      .map((nodeId) => nodeById.get(nodeId))
+      .filter(Boolean)
+      .sort((left, right) => left.label.localeCompare(right.label));
+    hiddenNodeToggle.textContent = `Hidden nodes (${{hiddenNodes.length}})`;
+    hiddenNodeToggle.disabled = hiddenNodes.length === 0;
+    if (hiddenNodes.length === 0) {{
+      hiddenNodeList.innerHTML = '<p>No hidden nodes.</p>';
+      hiddenNodeList.classList.remove("open");
+      hiddenNodeToggle.setAttribute("aria-expanded", "false");
+      return;
+    }}
+    hiddenNodeList.innerHTML = hiddenNodes
+      .map((node) => `<button type="button" data-node-id="${{escapeHtml(node.id)}}">${{escapeHtml(node.label)}}</button>`)
+      .join("");
+  }};
   const showNodeDetails = (node) => {{
     const literals = node.literals || [];
     const literalRows = literals.length
       ? `<dl>${{literals.map((literal) => `<dt>${{escapeHtml(literal.predicate)}}</dt><dd>${{escapeHtml(literal.value)}}</dd>`).join("")}}</dl>`
       : '<p class="no-literals">No literal values are available for this node.</p>';
-    nodeDetails.innerHTML = `<h2>${{escapeHtml(node.label)}}</h2>${{literalRows}}`;
+    nodeDetails.innerHTML = `<div class="node-details-header"><h2>${{escapeHtml(node.label)}}</h2><button type="button" class="hide-node-button">Hide</button></div>${{literalRows}}`;
+    nodeDetails.querySelector(".hide-node-button").addEventListener("click", () => {{
+      hideNode(node.id);
+    }});
     nodeDetails.style.display = "block";
   }};
+  hiddenNodeToggle.addEventListener("click", () => {{
+    const isOpen = hiddenNodeList.classList.toggle("open");
+    hiddenNodeToggle.setAttribute("aria-expanded", String(isOpen));
+  }});
+  hiddenNodeList.addEventListener("click", (event) => {{
+    const button = event.target.closest("button[data-node-id]");
+    if (!button) {{
+      return;
+    }}
+    unhideNode(button.dataset.nodeId);
+  }});
   graphForm.querySelectorAll('input[name="mode"]').forEach((radio) => {{
     radio.addEventListener("change", () => {{
       if (radio.checked) {{
@@ -783,8 +951,25 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
   if (graphData.nodes.length === 0) {{
     emptyGraph.style.display = "block";
   }} else if (window.vis) {{
-    const nodes = new vis.DataSet(graphData.nodes);
-    const edges = new vis.DataSet(graphData.edges);
+    const nodes = new vis.DataSet(allNodes);
+    const edges = new vis.DataSet(allEdges);
+    const groups = graphData.groups || {{}};
+    const refreshVisibleGraph = () => {{
+      nodes.clear();
+      nodes.add(allNodes.filter((node) => !hiddenNodeIds.has(node.id)));
+      edges.clear();
+      edges.add(allEdges.filter((edge) => !hiddenNodeIds.has(edge.from) && !hiddenNodeIds.has(edge.to)));
+      updateHiddenNodeMenu();
+    }};
+    hideNode = (nodeId) => {{
+      hiddenNodeIds.add(nodeId);
+      nodeDetails.style.display = "none";
+      refreshVisibleGraph();
+    }};
+    unhideNode = (nodeId) => {{
+      hiddenNodeIds.delete(nodeId);
+      refreshVisibleGraph();
+    }};
     const network = new vis.Network(container, {{ nodes, edges }}, {{
       nodes: {{
         shape: "dot",
@@ -798,11 +983,7 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
         font: {{ align: "middle", size: 11, face: "Segoe UI" }},
         smooth: {{ type: "dynamic" }}
       }},
-      groups: {{
-        resource: {{ color: {{ background: "#d8eef2", border: "#0b6f85" }} }},
-        literal: {{ shape: "box", color: {{ background: "#fff4d6", border: "#b58105" }} }},
-        blank: {{ color: {{ background: "#eceff3", border: "#667085" }} }}
-      }},
+      groups,
       interaction: {{
         dragNodes: true,
         hover: true,
@@ -830,6 +1011,7 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
         showNodeDetails(node);
       }}
     }});
+    updateHiddenNodeMenu();
   }} else {{
     emptyGraph.textContent = "The graph library could not be loaded.";
     emptyGraph.style.display = "block";
@@ -864,6 +1046,7 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
                 contextual=contextual,
                 file_uri=graph_file_uri,
             )
+            _bind_standard_prefixes(rdf_graph)
             if graph_prefix and graph_file_uri:
                 rdf_graph.bind(graph_prefix, rdflib.URIRef(graph_file_uri), override=True, replace=True)
         except ValueError as e:
