@@ -148,6 +148,8 @@ def test_file_graph_endpoint_returns_interactive_page(hdf_filename):
     assert "text/html" in response.headers["content-type"]
     assert "vis-network" in response.text
     assert "new vis.Network" in response.text
+    assert 'id="graph-form"' in response.text
+    assert "graphForm.requestSubmit();" in response.text
     assert '<section class="graph-panel">' in response.text
     assert "height: 100dvh;" in response.text
     assert "height: 100%;" in response.text

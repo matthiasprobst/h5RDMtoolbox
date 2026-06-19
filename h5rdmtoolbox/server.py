@@ -667,7 +667,7 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
   <header>
     <nav><a href="/">Files</a> {graph_nav}</nav>
     <h1>{escape(filename.name)} - Graph</h1>
-    <form method="get" action="/{encoded_filename}/graph">
+    <form id="graph-form" method="get" action="/{encoded_filename}/graph">
       <fieldset>
         <legend>RDF content</legend>
         <label class="radio-label"><input type="radio" name="mode" value="both" {checked["both"]}> Structural + contextual</label>
