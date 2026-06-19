@@ -502,16 +502,24 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
         edges = []
         for subject, predicate, obj in rdf_graph:
             subject_id = str(subject)
-            object_id = str(obj)
             nodes.setdefault(subject_id, {
                 "id": subject_id,
                 "label": _graph_label(subject, rdf_graph),
                 "group": "resource" if isinstance(subject, rdflib.URIRef) else "blank",
+                "literals": [],
             })
+            if isinstance(obj, rdflib.Literal):
+                nodes[subject_id]["literals"].append({
+                    "predicate": _graph_label(predicate, rdf_graph),
+                    "value": str(obj),
+                })
+                continue
+            object_id = str(obj)
             nodes.setdefault(object_id, {
                 "id": object_id,
                 "label": _graph_label(obj, rdf_graph),
-                "group": "literal" if isinstance(obj, rdflib.Literal) else "resource" if isinstance(obj, rdflib.URIRef) else "blank",
+                "group": "resource" if isinstance(obj, rdflib.URIRef) else "blank",
+                "literals": [],
             })
             edges.append({
                 "from": subject_id,
@@ -655,6 +663,48 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
       border-radius: 8px;
       background: var(--panel);
     }}
+    .node-details {{
+      position: absolute;
+      right: 30px;
+      bottom: 30px;
+      width: min(380px, calc(100% - 60px));
+      max-height: min(420px, calc(100% - 60px));
+      overflow: auto;
+      display: none;
+      padding: 14px;
+      background: rgba(255, 255, 255, 0.96);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: 0 12px 28px rgba(31, 41, 51, 0.16);
+    }}
+    .node-details h2 {{
+      margin: 0 0 10px;
+      font-size: 1rem;
+      overflow-wrap: anywhere;
+    }}
+    .node-details dl {{
+      display: grid;
+      gap: 8px;
+      margin: 0;
+    }}
+    .node-details dt {{
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-weight: 650;
+    }}
+    .node-details dd {{
+      margin: 0;
+      overflow-wrap: anywhere;
+      font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+      font-size: 0.85rem;
+    }}
+    .node-details .no-literals {{
+      margin: 0;
+      color: var(--muted);
+    }}
+    .graph-panel {{
+      position: relative;
+    }}
     .empty-graph {{
       display: none;
       color: var(--muted);
@@ -685,6 +735,7 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
   </header>
   <section class="graph-panel">
     <div id="network"></div>
+    <aside class="node-details" id="node-details" aria-live="polite"></aside>
     <p class="empty-graph" id="empty-graph">No RDF triples are available for this selection.</p>
   </section>
 </main>
@@ -693,6 +744,22 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
   const graphForm = document.getElementById("graph-form");
   const container = document.getElementById("network");
   const emptyGraph = document.getElementById("empty-graph");
+  const nodeDetails = document.getElementById("node-details");
+  const nodeById = new Map(graphData.nodes.map((node) => [node.id, node]));
+  const escapeHtml = (value) => String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+  const showNodeDetails = (node) => {{
+    const literals = node.literals || [];
+    const literalRows = literals.length
+      ? `<dl>${{literals.map((literal) => `<dt>${{escapeHtml(literal.predicate)}}</dt><dd>${{escapeHtml(literal.value)}}</dd>`).join("")}}</dl>`
+      : '<p class="no-literals">No literal values are available for this node.</p>';
+    nodeDetails.innerHTML = `<h2>${{escapeHtml(node.label)}}</h2>${{literalRows}}`;
+    nodeDetails.style.display = "block";
+  }};
   graphForm.querySelectorAll('input[name="mode"]').forEach((radio) => {{
     radio.addEventListener("change", () => {{
       if (radio.checked) {{
@@ -705,7 +772,7 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
   }} else if (window.vis) {{
     const nodes = new vis.DataSet(graphData.nodes);
     const edges = new vis.DataSet(graphData.edges);
-    new vis.Network(container, {{ nodes, edges }}, {{
+    const network = new vis.Network(container, {{ nodes, edges }}, {{
       nodes: {{
         shape: "dot",
         size: 14,
@@ -738,6 +805,16 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
           springConstant: 0.08
         }},
         stabilization: {{ iterations: 180 }}
+      }}
+    }});
+    network.on("click", (params) => {{
+      if (params.nodes.length === 0) {{
+        nodeDetails.style.display = "none";
+        return;
+      }}
+      const node = nodeById.get(params.nodes[0]);
+      if (node) {{
+        showNodeDetails(node);
       }}
     }});
   }} else {{
