@@ -171,6 +171,17 @@ h5tbx serve example.h5
 
 The local web app links to Turtle, JSON-LD, N-Triples, RDF/XML, an interactive graph view, SPARQL query editor, graph metrics, and SHACL validation. If no filename is provided, `h5tbx serve` lists all `.h5`, `.hdf`, and `.hdf5` files in the current directory.
 
+The same graph metrics are available from Python:
+
+```python
+import h5rdmtoolbox as h5tbx
+
+metrics = h5tbx.compute_metrics("example.h5")
+
+with h5tbx.File("example.h5") as h5:
+    metrics = h5.metrics()
+```
+
 ## 🚀 Key Features
 
 - **🔗 HDF5 + [Xarray](https://docs.xarray.dev/en/stable/) Integration**: Seamless access to metadata during data analysis with native xarray support

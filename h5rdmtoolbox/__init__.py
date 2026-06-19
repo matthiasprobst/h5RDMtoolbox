@@ -146,6 +146,28 @@ def get_ld(
     )
 
 
+def compute_metrics(
+        hdf_filename: Union[str, pathlib.Path],
+        structural: bool = True,
+        contextual: bool = True,
+        skipND: int = 1,
+        file_uri: Optional[str] = None,
+        context: Optional[Dict] = None,
+        rdf_mappings: Dict[str, RDFMappingEntry] = None,
+) -> Dict[str, object]:
+    """Compute RDF knowledge graph metrics for an HDF5 file."""
+    from .ld.metrics import compute_metrics as _compute_metrics
+    return _compute_metrics(
+        hdf_filename,
+        structural=structural,
+        contextual=contextual,
+        skipND=skipND,
+        file_uri=file_uri,
+        context=context,
+        rdf_mappings=rdf_mappings,
+    )
+
+
 def _optimize_ld_context(graph: rdflib.Graph, context: Optional[Dict]) -> Dict:
     from .ld import optimize_context
     return optimize_context(graph, context or {})

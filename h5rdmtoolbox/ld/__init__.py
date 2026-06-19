@@ -12,7 +12,7 @@ from .utils import optimize_context
 
 BINARY_AS_STRING = True
 
-__all__ = ["get_ld", "hdf2jsonld", "hdf2ttl", "sparql"]
+__all__ = ["get_ld", "hdf2jsonld", "hdf2ttl", "sparql", "compute_metrics", "compute_graph_metrics"]
 
 
 def _validate_file_uri(file_uri: Optional[str]) -> None:
@@ -280,3 +280,6 @@ def _hdf2ld(
         f.write(_serialize_graph(graph, fmt=fmt, indent=indent, context=context))
 
     return metadata_filename
+
+
+from .metrics import compute_graph_metrics, compute_metrics  # noqa: E402

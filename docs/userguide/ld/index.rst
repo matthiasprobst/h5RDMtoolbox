@@ -82,6 +82,26 @@ If no filename is provided, ``h5tbx serve`` lists all ``.h5``, ``.hdf``, and
 All web views are generated from the currently loaded HDF5 file and support the
 same structural/contextual RDF model used by ``ld dump``.
 
+Graph Metrics from Python
+-------------------------
+
+The metrics shown in the web viewer are also available from Python. Use
+``h5rdmtoolbox.compute_metrics`` for a filename, or ``File.metrics`` for an
+opened file:
+
+.. code-block:: python
+
+   import h5rdmtoolbox as h5tbx
+
+   metrics = h5tbx.compute_metrics("example.h5")
+
+   with h5tbx.File("example.h5") as h5:
+       metrics = h5.metrics()
+
+The returned dictionary contains the same RDF knowledge-graph metrics as the web
+page, including graph size, predicate and class usage, connectivity, datatype
+distribution, label coverage, and external namespace usage.
+
 
 .. toctree::
     :titlesonly:
