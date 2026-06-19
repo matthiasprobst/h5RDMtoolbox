@@ -1293,50 +1293,113 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
 """
         return HTMLResponse(page)
 
+    def _format_count(value) -> str:
+        if isinstance(value, float):
+            return f"{value:,.1f}"
+        return f"{value:,}"
+
     def _count_table(rows: list[tuple[str, int]], empty_message: str) -> str:
         if not rows:
             return f'<p class="empty-result">{escape(empty_message)}</p>'
         body = "".join(
-            f"<tr><td>{escape(label)}</td><td>{count}</td></tr>"
+            f"<tr><td>{escape(label)}</td><td>{_format_count(count)}</td></tr>"
             for label, count in rows
         )
         return f'<table class="metric-table"><tbody>{body}</tbody></table>'
 
+    def _percent(numerator: int, denominator: int) -> float:
+        return (numerator / denominator * 100.0) if denominator else 0.0
+
+    def _external_namespace(value) -> str:
+        text = str(value)
+        if "#" in text:
+            return text.rsplit("#", 1)[0] + "#"
+        if "/" in text:
+            return text.rsplit("/", 1)[0] + "/"
+        return text
+
+    def _resource_terms(subject, predicate, obj) -> list:
+        terms = []
+        for term in (subject, predicate, obj):
+            if isinstance(term, (rdflib.URIRef, rdflib.BNode)):
+                terms.append(term)
+        return terms
+
     def _graph_metrics(rdf_graph: rdflib.Graph) -> dict[str, object]:
+        triples = list(rdf_graph)
         subjects = set()
         objects = set()
-        resources = set()
+        predicates = set()
+        iris = set()
+        blank_nodes = set()
+        resource_nodes = set()
         literal_count = 0
+        untyped_literal_count = 0
+        empty_literal_count = 0
         predicate_counts = {}
-        class_counts = {}
-        degree_counts = {}
+        subject_triple_counts = {}
+        class_instances = {}
+        datatype_counts = {}
+        language_counts = {}
+        labels = set()
+        typed_subjects = set()
+        same_as_count = 0
+        external_iri_counts = {}
+        out_degree = {}
+        in_degree = {}
         adjacency = {}
 
-        def add_degree(node, amount: int = 1) -> None:
-            degree_counts[node] = degree_counts.get(node, 0) + amount
-
-        for subject, predicate, obj in rdf_graph:
+        base_namespace = create_app_file_uri
+        for subject, predicate, obj in triples:
             subjects.add(subject)
+            predicates.add(predicate)
+            objects.add(obj)
+            subject_triple_counts[subject] = subject_triple_counts.get(subject, 0) + 1
+
+            for term in _resource_terms(subject, predicate, obj):
+                if isinstance(term, rdflib.URIRef):
+                    iris.add(term)
+                    namespace = _external_namespace(term)
+                    if not base_namespace or not str(term).startswith(base_namespace):
+                        external_iri_counts[namespace] = external_iri_counts.get(namespace, 0) + 1
+                elif isinstance(term, rdflib.BNode):
+                    blank_nodes.add(term)
+
             predicate_label = _graph_label(predicate, rdf_graph)
             predicate_counts[predicate_label] = predicate_counts.get(predicate_label, 0) + 1
-            resources.add(subject)
-            add_degree(subject)
 
             if predicate == rdflib.RDF.type:
+                typed_subjects.add(subject)
                 class_label = _graph_label(obj, rdf_graph)
-                class_counts[class_label] = class_counts.get(class_label, 0) + 1
+                class_instances.setdefault(class_label, set()).add(subject)
+
+            if predicate == rdflib.RDFS.label:
+                labels.add(subject)
+
+            if predicate == rdflib.OWL.sameAs:
+                same_as_count += 1
+
+            resource_nodes.add(subject)
 
             if isinstance(obj, rdflib.Literal):
                 literal_count += 1
+                datatype_label = _graph_label(obj.datatype, rdf_graph) if obj.datatype else "None"
+                datatype_counts[datatype_label] = datatype_counts.get(datatype_label, 0) + 1
+                language_label = obj.language or "None"
+                language_counts[language_label] = language_counts.get(language_label, 0) + 1
+                if obj.datatype is None and obj.language is None:
+                    untyped_literal_count += 1
+                if str(obj) == "":
+                    empty_literal_count += 1
                 continue
 
-            objects.add(obj)
-            resources.add(obj)
-            add_degree(obj)
+            resource_nodes.add(obj)
+            out_degree[subject] = out_degree.get(subject, 0) + 1
+            in_degree[obj] = in_degree.get(obj, 0) + 1
             adjacency.setdefault(subject, set()).add(obj)
             adjacency.setdefault(obj, set()).add(subject)
 
-        nodes = set(subjects) | objects
+        nodes = resource_nodes
         seen = set()
         component_sizes = []
         for node in nodes:
@@ -1354,27 +1417,79 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
                         stack.append(neighbor)
             component_sizes.append(size)
 
+        largest_distance = 0
+        for start in nodes:
+            distances = {start: 0}
+            queue = [start]
+            for current in queue:
+                for neighbor in adjacency.get(current, set()):
+                    if neighbor not in distances:
+                        distances[neighbor] = distances[current] + 1
+                        queue.append(neighbor)
+            if distances:
+                largest_distance = max(largest_distance, max(distances.values()))
+
+        resource_count = len(resource_nodes)
+        subjects_without_type = len(subjects - typed_subjects)
+        subjects_with_labels = len(labels)
+        subjects_missing_labels = len(subjects - labels)
+        duplicate_triples = len(triples) - len(set(triples))
+        subjects_with_one_triple = sum(1 for count in subject_triple_counts.values() if count == 1)
+        weakly_connected_nodes = sum(
+            1 for node in resource_nodes
+            if in_degree.get(node, 0) + out_degree.get(node, 0) <= 1
+        )
         top_predicates = sorted(predicate_counts.items(), key=lambda item: (-item[1], item[0]))[:10]
+        rare_predicates = sorted(predicate_counts.items(), key=lambda item: (item[1], item[0]))[:10]
+        predicate_distribution = sorted(predicate_counts.items(), key=lambda item: (-item[1], item[0]))
+        class_counts = {label: len(instances) for label, instances in class_instances.items()}
         top_classes = sorted(class_counts.items(), key=lambda item: (-item[1], item[0]))[:10]
-        top_nodes = [
+        top_out_degree = [
             (_graph_label(node, rdf_graph), count)
-            for node, count in sorted(degree_counts.items(), key=lambda item: (-item[1], _graph_label(item[0], rdf_graph)))[:10]
+            for node, count in sorted(out_degree.items(), key=lambda item: (-item[1], _graph_label(item[0], rdf_graph)))[:10]
+        ]
+        top_in_degree = [
+            (_graph_label(node, rdf_graph), count)
+            for node, count in sorted(in_degree.items(), key=lambda item: (-item[1], _graph_label(item[0], rdf_graph)))[:10]
         ]
 
         return {
-            "triples": len(rdf_graph),
-            "nodes": len(nodes),
+            "triples": len(triples),
             "subjects": len(subjects),
-            "resources": len(resources),
+            "predicates": len(predicates),
+            "objects": len(objects),
+            "iri_count": len(iris),
+            "blank_nodes": len(blank_nodes),
             "literals": literal_count,
-            "predicates": len(predicate_counts),
+            "avg_triples_per_subject": len(triples) / len(subjects) if subjects else 0.0,
             "classes": len(class_counts),
+            "subjects_without_type": subjects_without_type,
+            "resource_nodes": resource_count,
+            "avg_out_degree": sum(out_degree.values()) / resource_count if resource_count else 0.0,
+            "avg_in_degree": sum(in_degree.values()) / resource_count if resource_count else 0.0,
+            "weakly_connected_nodes": weakly_connected_nodes,
             "components": len(component_sizes),
             "largest_component": max(component_sizes, default=0),
-            "isolated_nodes": sum(1 for size in component_sizes if size == 1),
+            "largest_distance": largest_distance,
+            "datatype_distribution": sorted(datatype_counts.items(), key=lambda item: (-item[1], item[0])),
+            "language_distribution": sorted(language_counts.items(), key=lambda item: (-item[1], item[0])),
+            "untyped_literals": untyped_literal_count,
+            "empty_literals": empty_literal_count,
+            "subjects_with_labels": subjects_with_labels,
+            "subjects_missing_labels": subjects_missing_labels,
+            "label_coverage": _percent(subjects_with_labels, len(subjects)),
+            "duplicate_triples": duplicate_triples,
+            "subjects_with_one_triple": subjects_with_one_triple,
+            "blank_node_percentage": _percent(len(blank_nodes), resource_count),
+            "same_as_count": same_as_count,
+            "external_iri_count": sum(external_iri_counts.values()),
+            "top_external_namespaces": sorted(external_iri_counts.items(), key=lambda item: (-item[1], item[0]))[:10],
             "top_predicates": top_predicates,
+            "rare_predicates": rare_predicates,
+            "predicate_distribution": predicate_distribution,
             "top_classes": top_classes,
-            "top_nodes": top_nodes,
+            "top_out_degree": top_out_degree,
+            "top_in_degree": top_in_degree,
         }
 
     def _metrics_page(filename: pathlib.Path) -> HTMLResponse:
@@ -1388,20 +1503,35 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
         metrics = _graph_metrics(rdf_graph)
         encoded_filename = urllib.parse.quote(filename.name)
         cards = [
-            ("Triples", metrics["triples"]),
-            ("Graph nodes", metrics["nodes"]),
-            ("Subjects", metrics["subjects"]),
-            ("Resources", metrics["resources"]),
-            ("Literal values", metrics["literals"]),
-            ("Predicate types", metrics["predicates"]),
-            ("RDF classes", metrics["classes"]),
-            ("Components", metrics["components"]),
-            ("Largest component", metrics["largest_component"]),
-            ("Isolated nodes", metrics["isolated_nodes"]),
+            ("Total triples", metrics["triples"], "Total RDF statements in the graph."),
+            ("Distinct subjects", metrics["subjects"], "Unique resources or blank nodes used as subjects."),
+            ("Distinct predicates", metrics["predicates"], "Unique properties used by triples."),
+            ("Distinct objects", metrics["objects"], "Unique object terms, including literals."),
+            ("IRI count", metrics["iri_count"], "Unique IRI terms in subject, predicate, or object position."),
+            ("Blank node count", metrics["blank_nodes"], "Unique blank nodes used as subject or object terms."),
+            ("Literal count", metrics["literals"], "Triples whose object is a literal value."),
+            ("Avg triples / subject", metrics["avg_triples_per_subject"], "Average description density per subject."),
+            ("Distinct classes", metrics["classes"], "Unique rdf:type object classes."),
+            ("Subjects without type", metrics["subjects_without_type"], "Subjects without an explicit rdf:type."),
+            ("Resource nodes", metrics["resource_nodes"], "Subject and IRI/blank-node object terms used for connectivity."),
+            ("Avg out-degree", metrics["avg_out_degree"], "Average outgoing resource links per resource node."),
+            ("Avg in-degree", metrics["avg_in_degree"], "Average incoming resource links per resource node."),
+            ("Weakly connected nodes", metrics["weakly_connected_nodes"], "Resource nodes with zero or one resource link."),
+            ("Connected components", metrics["components"], "Disconnected resource groups in the graph."),
+            ("Largest component", metrics["largest_component"], "Node count of the largest connected component."),
+            ("Largest distance", metrics["largest_distance"], "Largest shortest-path distance within connected components."),
+            ("Label coverage", f'{metrics["label_coverage"]:.1f}%', "Percentage of subjects with at least one rdfs:label."),
+            ("Blank node percentage", f'{metrics["blank_node_percentage"]:.1f}%', "Blank nodes divided by all unique resource nodes."),
+            ("owl:sameAs links", metrics["same_as_count"], "Explicit identity links to equivalent resources."),
         ]
         card_html = "".join(
-            f'<article class="metric-card"><span>{escape(label)}</span><strong>{value}</strong></article>'
-            for label, value in cards
+            f'<article class="metric-card"><span>{escape(label)}</span><strong>{escape(_format_count(value) if not isinstance(value, str) else value)}</strong><p>{escape(description)}</p></article>'
+            for label, value, description in cards
+        )
+        empty_notice = (
+            '<section><p class="empty-result">No triples are available for this graph.</p></section>'
+            if metrics["triples"] == 0
+            else ""
         )
         page = f"""<!doctype html>
 <html>
@@ -1468,6 +1598,12 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
       font-size: 1.55rem;
       line-height: 1.1;
     }}
+    .metric-card p {{
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.35;
+    }}
     .metric-sections {{
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -1506,20 +1642,81 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
     <h1>{escape(filename.name)} - Graph Metrics</h1>
   </header>
   <section>
+    <h2>Knowledge Graph Metrics</h2>
+    <p class="empty-result">Metrics are computed from the currently loaded RDF graph. Connectivity metrics use subjects and IRI or blank-node objects as graph nodes; literal objects are excluded from the resource network.</p>
+  </section>
+  {empty_notice}
+  <section>
     <div class="metric-grid">{card_html}</div>
   </section>
   <div class="metric-sections">
     <section>
       <h2>Top Predicates</h2>
+      <p class="empty-result">Most frequently used RDF properties.</p>
       {_count_table(metrics["top_predicates"], "No predicates found.")}
     </section>
     <section>
+      <h2>Rare Predicates</h2>
+      <p class="empty-result">Least frequent properties, including one-off predicates.</p>
+      {_count_table(metrics["rare_predicates"], "No predicates found.")}
+    </section>
+    <section>
+      <h2>Predicate Usage Distribution</h2>
+      <p class="empty-result">Triple counts per predicate.</p>
+      {_count_table(metrics["predicate_distribution"], "No predicates found.")}
+    </section>
+    <section>
       <h2>RDF Classes</h2>
+      <p class="empty-result">Instances per rdf:type class.</p>
       {_count_table(metrics["top_classes"], "No RDF classes found.")}
     </section>
     <section>
-      <h2>Most Connected Nodes</h2>
-      {_count_table(metrics["top_nodes"], "No connected nodes found.")}
+      <h2>Top Nodes by Out-Degree</h2>
+      <p class="empty-result">Resources that link to many other resources.</p>
+      {_count_table(metrics["top_out_degree"], "No outgoing resource links found.")}
+    </section>
+    <section>
+      <h2>Top Nodes by In-Degree</h2>
+      <p class="empty-result">Resources that many other resources point to.</p>
+      {_count_table(metrics["top_in_degree"], "No incoming resource links found.")}
+    </section>
+    <section>
+      <h2>Datatype Distribution</h2>
+      <p class="empty-result">Literal datatype usage.</p>
+      {_count_table(metrics["datatype_distribution"], "No literals found.")}
+    </section>
+    <section>
+      <h2>Language Tags</h2>
+      <p class="empty-result">Language-tagged literal distribution.</p>
+      {_count_table(metrics["language_distribution"], "No language-tagged literals found.")}
+    </section>
+    <section>
+      <h2>Literal Quality</h2>
+      {_count_table([
+          ("Untyped literals", metrics["untyped_literals"]),
+          ("Empty string literals", metrics["empty_literals"]),
+      ], "No literals found.")}
+    </section>
+    <section>
+      <h2>Label Readability</h2>
+      {_count_table([
+          ("Subjects with labels", metrics["subjects_with_labels"]),
+          ("Subjects missing labels", metrics["subjects_missing_labels"]),
+      ], "No subjects found.")}
+    </section>
+    <section>
+      <h2>Data Quality</h2>
+      {_count_table([
+          ("Duplicate triples", metrics["duplicate_triples"]),
+          ("Subjects with only one triple", metrics["subjects_with_one_triple"]),
+          ("Missing type count", metrics["subjects_without_type"]),
+          ("Missing label count", metrics["subjects_missing_labels"]),
+      ], "No data quality metrics available.")}
+    </section>
+    <section>
+      <h2>External Namespaces</h2>
+      <p class="empty-result">IRI namespaces outside the configured file URI namespace.</p>
+      {_count_table(metrics["top_external_namespaces"], "No external IRIs found.")}
     </section>
   </div>
 </main>

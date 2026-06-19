@@ -282,13 +282,31 @@ def test_file_metrics_endpoint_returns_graph_metrics(hdf_filename):
     assert response.status_code == 200
     assert "text/html" in response.headers["content-type"]
     assert "Graph Metrics" in response.text
-    assert "Triples" in response.text
-    assert "Graph nodes" in response.text
-    assert "Literal values" in response.text
-    assert "Components" in response.text
+    assert "Knowledge Graph Metrics" in response.text
+    assert "Total triples" in response.text
+    assert "Literal count" in response.text
+    assert "Distinct subjects" in response.text
+    assert "Distinct predicates" in response.text
+    assert "Distinct objects" in response.text
+    assert "IRI count" in response.text
+    assert "Blank node count" in response.text
+    assert "Avg triples / subject" in response.text
+    assert "Connected components" in response.text
+    assert "Largest distance" in response.text
+    assert "Label coverage" in response.text
+    assert "owl:sameAs links" in response.text
     assert "Top Predicates" in response.text
+    assert "Rare Predicates" in response.text
+    assert "Predicate Usage Distribution" in response.text
     assert "RDF Classes" in response.text
-    assert "Most Connected Nodes" in response.text
+    assert "Top Nodes by Out-Degree" in response.text
+    assert "Top Nodes by In-Degree" in response.text
+    assert "Datatype Distribution" in response.text
+    assert "Language Tags" in response.text
+    assert "Literal Quality" in response.text
+    assert "Label Readability" in response.text
+    assert "Data Quality" in response.text
+    assert "External Namespaces" in response.text
     assert "hdf:File" in response.text
     assert "hdf:Group" in response.text
     assert "hdf:rootGroup" in response.text
