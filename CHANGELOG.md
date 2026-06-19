@@ -2,6 +2,27 @@
 
 Log of changes in the versions
 
+## v2.7.5
+
+- improve `h5tbx` CLI startup and linked-data commands
+- add `h5tbx ld dump` options for RDF output control:
+  - `--structural=false`
+  - `--contextual=false`
+  - `--file-uri`
+  - `--prefix`
+- add `h5tbx serve` for local browser-based HDF5/RDF inspection
+  - discovers `.h5`, `.hdf`, and `.hdf5` files when no filename is provided
+  - serves RDF serializations as Turtle, JSON-LD, N-Triples, and RDF/XML
+  - adds interactive graph view with draggable nodes, class-based colors, literal popovers, and hide/unhide controls
+  - adds SPARQL query page with sample queries and tabular SELECT results
+  - adds graph metrics page with RDF knowledge-graph size, predicate, class, connectivity, literal, label, quality, and external-linkage metrics
+  - adds SHACL validation page for pasted Turtle shapes
+- add reusable RDF graph metrics API:
+  - `h5rdmtoolbox.compute_metrics(filename)`
+  - `h5rdmtoolbox.File(...).metrics()`
+  - `h5rdmtoolbox.ld.metrics.compute_graph_metrics(graph)`
+- update README and linked-data documentation for CLI, web viewer, and graph metrics usage
+
 ## v2.7.4
 
 - add `shacl()` as method to query an HDF5 file
