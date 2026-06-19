@@ -24,6 +24,7 @@ STANDARD_PREFIXES = {
     "quantitykind": "http://qudt.org/vocab/quantitykind/",
     "schema": "https://schema.org/",
     "skos": "http://www.w3.org/2004/02/skos/core#",
+    "ssno": "https://matthiasprobst.github.io/ssno#",
     "unit": "http://qudt.org/vocab/unit/",
     "zenodo": "https://zenodo.org/records/",
     "zenodo_record": "https://zenodo.org/record/",
@@ -34,6 +35,38 @@ RDF_FORMATS = {
     "nt": ("nt", "application/n-triples; charset=utf-8", "N-Triples"),
     "xml": ("xml", "application/rdf+xml; charset=utf-8", "RDF/XML"),
 }
+DEFAULT_SPARQL_QUERY = """SELECT ?subject ?predicate ?object
+WHERE {
+  ?subject ?predicate ?object .
+}
+LIMIT 25"""
+SAMPLE_SPARQL_QUERIES = [
+    (
+        "Standard names",
+        """SELECT ?subject ?object
+WHERE {
+  ?subject ssno:standardName ?object .
+  ?subject a ssno:StandardName .
+}
+LIMIT 25""",
+    ),
+    (
+        "RDF types",
+        """SELECT ?subject ?type
+WHERE {
+  ?subject a ?type .
+}
+LIMIT 25""",
+    ),
+    (
+        "Units",
+        """SELECT ?subject ?unit
+WHERE {
+  ?subject qudt:unit ?unit .
+}
+LIMIT 25""",
+    ),
+]
 
 
 def discover_hdf_files(directory: Union[str, pathlib.Path] = ".") -> list[pathlib.Path]:
@@ -153,12 +186,14 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
                     for format_key, (_, _, label) in RDF_FORMATS.items()
                 )
                 graph_link = f'<a class="format-link graph-link" href="/{encoded_key}/graph">Graph</a>'
+                query_link = f'<a class="format-link query-link" href="/{encoded_key}/query">Query</a>'
+                metrics_link = f'<a class="format-link metrics-link" href="/{encoded_key}/metrics">Metrics</a>'
                 file_cards.append(f"""<article class="file-card">
   <div>
     <h2>{escape(key)}</h2>
     <p>{escape(str(hdf_files[key]))}</p>
   </div>
-  <div class="format-actions">{format_links}{graph_link}</div>
+  <div class="format-actions">{format_links}{graph_link}{query_link}{metrics_link}</div>
 </article>""")
             body = (
                 '<section class="empty">No HDF5 files found in this directory.</section>'
@@ -1022,6 +1057,477 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
 """
         return HTMLResponse(page)
 
+    def _query_result(graph: rdflib.Graph, query: str) -> tuple[str, str]:
+        try:
+            result = graph.query(query)
+        except Exception as e:
+            return f"SPARQL error: {e}", '<div class="query-error">SPARQL query failed.</div>'
+
+        result_type = getattr(result, "type", None)
+        if hasattr(result, "vars"):
+            variables = [str(variable) for variable in result.vars]
+            rows = []
+            text_lines = ["\t".join(variables)]
+            for row in result:
+                values = ["" if value is None else _graph_label(value, graph) for value in row]
+                rows.append(values)
+                text_lines.append("\t".join(values))
+            if not rows:
+                return "No rows returned.", '<p class="empty-result">No rows returned.</p>'
+            header = "".join(f"<th>{escape(variable)}</th>" for variable in variables)
+            body = "".join(
+                "<tr>" + "".join(f"<td>{escape(value)}</td>" for value in row) + "</tr>"
+                for row in rows
+            )
+            return "\n".join(text_lines), f'<table class="result-table"><thead><tr>{header}</tr></thead><tbody>{body}</tbody></table>'
+
+        if result_type == "ASK":
+            answer = str(bool(result))
+            return answer, f'<p class="ask-result">{escape(answer)}</p>'
+
+        result_graph = getattr(result, "graph", None)
+        if result_graph is not None:
+            _bind_standard_prefixes(result_graph)
+            turtle = result_graph.serialize(format="turtle")
+            return turtle, f"<pre>{escape(turtle)}</pre>"
+
+        text = str(result)
+        return text, f"<pre>{escape(text)}</pre>"
+
+    def _query_page(filename: pathlib.Path, query: Optional[str] = None) -> HTMLResponse:
+        sparql_query = query or DEFAULT_SPARQL_QUERY
+        rdf_graph = get_ld(
+            filename,
+            structural=True,
+            contextual=True,
+            file_uri=create_app_file_uri,
+        )
+        _bind_standard_prefixes(rdf_graph)
+        result_text = ""
+        result_html = '<p class="empty-result">Run the example query or edit it before submitting.</p>'
+        if query is not None:
+            result_text, result_html = _query_result(rdf_graph, sparql_query)
+
+        encoded_filename = urllib.parse.quote(filename.name)
+        sample_queries_json = json.dumps([query for _, query in SAMPLE_SPARQL_QUERIES]).replace("</", "<\\/")
+        sample_buttons = "".join(
+            f'<button type="button" class="sample-query-button" data-query-index="{index}">{escape(label)}</button>'
+            for index, (label, _) in enumerate(SAMPLE_SPARQL_QUERIES)
+        )
+        page = f"""<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{escape(filename.name)} Query</title>
+  <style>
+    :root {{
+      --bg: #f7f8fa;
+      --panel: #ffffff;
+      --text: #1f2933;
+      --muted: #667085;
+      --border: #d8dee6;
+      --accent: #0b6f85;
+    }}
+    * {{ box-sizing: border-box; }}
+    body {{
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }}
+    main {{
+      width: min(1180px, calc(100% - 32px));
+      margin: 24px auto;
+      display: grid;
+      gap: 14px;
+    }}
+    header, .query-panel, .result-panel {{
+      padding: 16px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }}
+    nav {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 10px;
+    }}
+    nav a {{ color: var(--accent); font-weight: 650; text-decoration: none; }}
+    h1 {{ margin: 0; font-size: 1.4rem; }}
+    form {{
+      display: grid;
+      gap: 10px;
+    }}
+    label {{
+      display: grid;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      font-weight: 650;
+    }}
+    textarea {{
+      width: 100%;
+      min-height: 210px;
+      resize: vertical;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+      font-size: 0.9rem;
+      line-height: 1.45;
+      color: var(--text);
+      background: #fff;
+    }}
+    textarea[readonly] {{
+      min-height: 120px;
+      background: #f6f8fa;
+    }}
+    button {{
+      justify-self: start;
+      min-height: 36px;
+      padding: 0 14px;
+      border: 0;
+      border-radius: 6px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 650;
+      cursor: pointer;
+    }}
+    .sample-query-actions {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }}
+    .sample-query-actions span {{
+      color: var(--muted);
+      font-size: 0.9rem;
+      font-weight: 650;
+    }}
+    .sample-query-button {{
+      min-height: 32px;
+      padding: 0 10px;
+      background: #fff;
+      color: var(--accent);
+      border: 1px solid var(--border);
+    }}
+    .sample-query-button:hover {{
+      border-color: var(--accent);
+    }}
+    .result-table {{
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      font-size: 0.9rem;
+    }}
+    .result-table th {{
+      color: var(--muted);
+      text-align: left;
+      font-weight: 650;
+      padding: 4px 12px 6px 0;
+    }}
+    .result-table td {{
+      padding: 5px 12px 5px 0;
+      vertical-align: top;
+      overflow-wrap: anywhere;
+      font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+    }}
+    .query-error {{
+      color: #a31919;
+      font-weight: 650;
+      margin-top: 10px;
+    }}
+    .empty-result {{
+      color: var(--muted);
+      margin: 10px 0 0;
+    }}
+    pre {{
+      padding: 12px;
+      background: #f6f8fa;
+      overflow: auto;
+    }}
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <nav><a href="/">Files</a><a href="/{encoded_filename}/graph">Graph</a><a href="/{encoded_filename}/ttl">Turtle</a></nav>
+    <h1>{escape(filename.name)} - SPARQL Query</h1>
+  </header>
+  <section class="query-panel">
+    <form method="get" action="/{encoded_filename}/query">
+      <div class="sample-query-actions">
+        <span>Samples</span>
+        {sample_buttons}
+      </div>
+      <label>SPARQL query
+        <textarea id="sparql-query" name="query">{escape(sparql_query)}</textarea>
+      </label>
+      <button type="submit">Run query</button>
+    </form>
+  </section>
+  <section class="result-panel">
+    <label>Result
+      <textarea id="sparql-result" readonly>{escape(result_text)}</textarea>
+    </label>
+    {result_html}
+  </section>
+</main>
+<script>
+  const sampleQueries = {sample_queries_json};
+  const sparqlQueryTextarea = document.getElementById("sparql-query");
+  document.querySelectorAll("[data-query-index]").forEach((button) => {{
+    button.addEventListener("click", () => {{
+      const query = sampleQueries[Number(button.dataset.queryIndex)];
+      if (query) {{
+        sparqlQueryTextarea.value = query;
+        sparqlQueryTextarea.focus();
+      }}
+    }});
+  }});
+</script>
+</body>
+</html>
+"""
+        return HTMLResponse(page)
+
+    def _count_table(rows: list[tuple[str, int]], empty_message: str) -> str:
+        if not rows:
+            return f'<p class="empty-result">{escape(empty_message)}</p>'
+        body = "".join(
+            f"<tr><td>{escape(label)}</td><td>{count}</td></tr>"
+            for label, count in rows
+        )
+        return f'<table class="metric-table"><tbody>{body}</tbody></table>'
+
+    def _graph_metrics(rdf_graph: rdflib.Graph) -> dict[str, object]:
+        subjects = set()
+        objects = set()
+        resources = set()
+        literal_count = 0
+        predicate_counts = {}
+        class_counts = {}
+        degree_counts = {}
+        adjacency = {}
+
+        def add_degree(node, amount: int = 1) -> None:
+            degree_counts[node] = degree_counts.get(node, 0) + amount
+
+        for subject, predicate, obj in rdf_graph:
+            subjects.add(subject)
+            predicate_label = _graph_label(predicate, rdf_graph)
+            predicate_counts[predicate_label] = predicate_counts.get(predicate_label, 0) + 1
+            resources.add(subject)
+            add_degree(subject)
+
+            if predicate == rdflib.RDF.type:
+                class_label = _graph_label(obj, rdf_graph)
+                class_counts[class_label] = class_counts.get(class_label, 0) + 1
+
+            if isinstance(obj, rdflib.Literal):
+                literal_count += 1
+                continue
+
+            objects.add(obj)
+            resources.add(obj)
+            add_degree(obj)
+            adjacency.setdefault(subject, set()).add(obj)
+            adjacency.setdefault(obj, set()).add(subject)
+
+        nodes = set(subjects) | objects
+        seen = set()
+        component_sizes = []
+        for node in nodes:
+            if node in seen:
+                continue
+            stack = [node]
+            seen.add(node)
+            size = 0
+            while stack:
+                current = stack.pop()
+                size += 1
+                for neighbor in adjacency.get(current, set()):
+                    if neighbor not in seen:
+                        seen.add(neighbor)
+                        stack.append(neighbor)
+            component_sizes.append(size)
+
+        top_predicates = sorted(predicate_counts.items(), key=lambda item: (-item[1], item[0]))[:10]
+        top_classes = sorted(class_counts.items(), key=lambda item: (-item[1], item[0]))[:10]
+        top_nodes = [
+            (_graph_label(node, rdf_graph), count)
+            for node, count in sorted(degree_counts.items(), key=lambda item: (-item[1], _graph_label(item[0], rdf_graph)))[:10]
+        ]
+
+        return {
+            "triples": len(rdf_graph),
+            "nodes": len(nodes),
+            "subjects": len(subjects),
+            "resources": len(resources),
+            "literals": literal_count,
+            "predicates": len(predicate_counts),
+            "classes": len(class_counts),
+            "components": len(component_sizes),
+            "largest_component": max(component_sizes, default=0),
+            "isolated_nodes": sum(1 for size in component_sizes if size == 1),
+            "top_predicates": top_predicates,
+            "top_classes": top_classes,
+            "top_nodes": top_nodes,
+        }
+
+    def _metrics_page(filename: pathlib.Path) -> HTMLResponse:
+        rdf_graph = get_ld(
+            filename,
+            structural=True,
+            contextual=True,
+            file_uri=create_app_file_uri,
+        )
+        _bind_standard_prefixes(rdf_graph)
+        metrics = _graph_metrics(rdf_graph)
+        encoded_filename = urllib.parse.quote(filename.name)
+        cards = [
+            ("Triples", metrics["triples"]),
+            ("Graph nodes", metrics["nodes"]),
+            ("Subjects", metrics["subjects"]),
+            ("Resources", metrics["resources"]),
+            ("Literal values", metrics["literals"]),
+            ("Predicate types", metrics["predicates"]),
+            ("RDF classes", metrics["classes"]),
+            ("Components", metrics["components"]),
+            ("Largest component", metrics["largest_component"]),
+            ("Isolated nodes", metrics["isolated_nodes"]),
+        ]
+        card_html = "".join(
+            f'<article class="metric-card"><span>{escape(label)}</span><strong>{value}</strong></article>'
+            for label, value in cards
+        )
+        page = f"""<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{escape(filename.name)} Metrics</title>
+  <style>
+    :root {{
+      --bg: #f7f8fa;
+      --panel: #ffffff;
+      --text: #1f2933;
+      --muted: #667085;
+      --border: #d8dee6;
+      --accent: #0b6f85;
+    }}
+    * {{ box-sizing: border-box; }}
+    body {{
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }}
+    main {{
+      width: min(1180px, calc(100% - 32px));
+      margin: 24px auto;
+      display: grid;
+      gap: 14px;
+    }}
+    header, section {{
+      padding: 16px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }}
+    nav {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 10px;
+    }}
+    nav a {{ color: var(--accent); font-weight: 650; text-decoration: none; }}
+    h1 {{ margin: 0; font-size: 1.4rem; }}
+    h2 {{ margin: 0 0 10px; font-size: 1rem; }}
+    .metric-grid {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+    }}
+    .metric-card {{
+      display: grid;
+      gap: 4px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fff;
+    }}
+    .metric-card span {{
+      color: var(--muted);
+      font-size: 0.85rem;
+      font-weight: 650;
+    }}
+    .metric-card strong {{
+      font-size: 1.55rem;
+      line-height: 1.1;
+    }}
+    .metric-sections {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 14px;
+    }}
+    .metric-table {{
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }}
+    .metric-table td {{
+      padding: 5px 12px 5px 0;
+      vertical-align: top;
+      overflow-wrap: anywhere;
+    }}
+    .metric-table td:first-child {{
+      font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+    }}
+    .metric-table td:last-child {{
+      width: 1%;
+      white-space: nowrap;
+      color: var(--muted);
+      font-weight: 650;
+      text-align: right;
+    }}
+    .empty-result {{
+      margin: 0;
+      color: var(--muted);
+    }}
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <nav><a href="/">Files</a><a href="/{encoded_filename}/graph">Graph</a><a href="/{encoded_filename}/query">Query</a><a href="/{encoded_filename}/ttl">Turtle</a></nav>
+    <h1>{escape(filename.name)} - Graph Metrics</h1>
+  </header>
+  <section>
+    <div class="metric-grid">{card_html}</div>
+  </section>
+  <div class="metric-sections">
+    <section>
+      <h2>Top Predicates</h2>
+      {_count_table(metrics["top_predicates"], "No predicates found.")}
+    </section>
+    <section>
+      <h2>RDF Classes</h2>
+      {_count_table(metrics["top_classes"], "No RDF classes found.")}
+    </section>
+    <section>
+      <h2>Most Connected Nodes</h2>
+      {_count_table(metrics["top_nodes"], "No connected nodes found.")}
+    </section>
+  </div>
+</main>
+</body>
+</html>
+"""
+        return HTMLResponse(page)
+
     def _formatted_response(filename: pathlib.Path,
                             format_key: str,
                             structural: bool = True,
@@ -1126,6 +1632,20 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
         if hdf_file is None:
             raise HTTPException(status_code=404, detail="Unknown HDF5 file")
         return _graph_page(hdf_file, mode=mode, file_uri=file_uri, prefix=prefix)
+
+    @app.get("/{filename}/query")
+    def get_file_query(filename: str, query: Optional[str] = None):
+        hdf_file = hdf_files.get(filename)
+        if hdf_file is None:
+            raise HTTPException(status_code=404, detail="Unknown HDF5 file")
+        return _query_page(hdf_file, query=query)
+
+    @app.get("/{filename}/metrics")
+    def get_file_metrics(filename: str):
+        hdf_file = hdf_files.get(filename)
+        if hdf_file is None:
+            raise HTTPException(status_code=404, detail="Unknown HDF5 file")
+        return _metrics_page(hdf_file)
 
     @app.get("/ttl")
     def get_ttl(structural: bool = True,

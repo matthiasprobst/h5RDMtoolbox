@@ -37,7 +37,11 @@ def test_landing_page_lists_hdf5_files(hdf_filename):
     assert "/server_test.h5/nt" in response.text
     assert "/server_test.h5/xml" in response.text
     assert "/server_test.h5/graph" in response.text
+    assert "/server_test.h5/query" in response.text
+    assert "/server_test.h5/metrics" in response.text
     assert ">Graph<" in response.text
+    assert ">Query<" in response.text
+    assert ">Metrics<" in response.text
 
 
 @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
@@ -226,6 +230,68 @@ def test_file_graph_uses_standard_prefixes_for_compact_labels(monkeypatch, hdf_f
     assert '"label": "unit:M"' in response.text
     assert '"label": "dcterms:identifier"' in response.text
     assert '"label": "zenodo:12345"' in response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_file_query_endpoint_returns_query_form(hdf_filename):
+    from h5rdmtoolbox.server import create_app
+
+    client = TestClient(create_app(hdf_filename))
+    response = client.get("/server_test.h5/query")
+
+    assert response.status_code == 200
+    assert "text/html" in response.headers["content-type"]
+    assert "SPARQL Query" in response.text
+    assert 'id="sparql-query"' in response.text
+    assert 'id="sparql-result"' in response.text
+    assert "sample-query-button" in response.text
+    assert "Standard names" in response.text
+    assert "RDF types" in response.text
+    assert "Units" in response.text
+    assert "ssno:standardName" in response.text
+    assert "ssno:StandardName" in response.text
+    assert "sampleQueries" in response.text
+    assert "SELECT ?subject ?predicate ?object" in response.text
+    assert "Run the example query" in response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_file_query_endpoint_runs_select_query(hdf_filename):
+    from h5rdmtoolbox.server import create_app
+
+    client = TestClient(create_app(hdf_filename))
+    response = client.get(
+        "/server_test.h5/query",
+        params={"query": "SELECT ?type WHERE { ?s a ?type . } LIMIT 5"},
+    )
+
+    assert response.status_code == 200
+    assert 'class="result-table"' in response.text
+    assert "<th>type</th>" in response.text
+    assert "hdf:File" in response.text
+    assert "hdf:Group" in response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_file_metrics_endpoint_returns_graph_metrics(hdf_filename):
+    from h5rdmtoolbox.server import create_app
+
+    client = TestClient(create_app(hdf_filename))
+    response = client.get("/server_test.h5/metrics")
+
+    assert response.status_code == 200
+    assert "text/html" in response.headers["content-type"]
+    assert "Graph Metrics" in response.text
+    assert "Triples" in response.text
+    assert "Graph nodes" in response.text
+    assert "Literal values" in response.text
+    assert "Components" in response.text
+    assert "Top Predicates" in response.text
+    assert "RDF Classes" in response.text
+    assert "Most Connected Nodes" in response.text
+    assert "hdf:File" in response.text
+    assert "hdf:Group" in response.text
+    assert "hdf:rootGroup" in response.text
 
 
 @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
