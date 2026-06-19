@@ -152,6 +152,7 @@ def test_file_graph_endpoint_returns_interactive_page(hdf_filename):
     assert "graphForm.requestSubmit();" in response.text
     assert 'id="node-details"' in response.text
     assert 'network.on("click"' in response.text
+    assert "grid-template-columns: minmax(7rem, max-content) minmax(0, 1fr);" in response.text
     assert '<section class="graph-panel">' in response.text
     assert "height: 100dvh;" in response.text
     assert "height: 100%;" in response.text

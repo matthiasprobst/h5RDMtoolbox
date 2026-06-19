@@ -684,19 +684,32 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
     }}
     .node-details dl {{
       display: grid;
-      gap: 8px;
+      grid-template-columns: minmax(7rem, max-content) minmax(0, 1fr);
+      column-gap: 14px;
+      row-gap: 8px;
       margin: 0;
+      align-items: start;
     }}
     .node-details dt {{
       color: var(--muted);
       font-size: 0.8rem;
       font-weight: 650;
+      overflow-wrap: anywhere;
     }}
     .node-details dd {{
       margin: 0;
       overflow-wrap: anywhere;
       font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
       font-size: 0.85rem;
+    }}
+    @media (max-width: 560px) {{
+      .node-details dl {{
+        grid-template-columns: 1fr;
+        row-gap: 4px;
+      }}
+      .node-details dd {{
+        margin-bottom: 8px;
+      }}
     }}
     .node-details .no-literals {{
       margin: 0;
