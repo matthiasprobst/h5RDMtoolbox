@@ -112,24 +112,138 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
     @app.get("/", response_class=HTMLResponse)
     def index(request: Request):
         if list_landing or len(hdf_files) != 1:
-            links = []
+            file_cards = []
             for key in hdf_files:
                 encoded_key = urllib.parse.quote(key)
-                format_links = " ".join(
-                    f'<a href="/{encoded_key}/{format_key}">{escape(label)}</a>'
+                format_links = "".join(
+                    f'<a class="format-link" href="/{encoded_key}/{format_key}">{escape(label)}</a>'
                     for format_key, (_, _, label) in RDF_FORMATS.items()
                 )
-                links.append(f'<li><strong>{escape(key)}</strong>: {format_links}</li>')
-            body = "<p>No HDF5 files found.</p>" if not links else f"<ul>{''.join(links)}</ul>"
+                file_cards.append(f"""<article class="file-card">
+  <div>
+    <h2>{escape(key)}</h2>
+    <p>{escape(str(hdf_files[key]))}</p>
+  </div>
+  <div class="format-actions">{format_links}</div>
+</article>""")
+            body = (
+                '<section class="empty">No HDF5 files found in this directory.</section>'
+                if not file_cards
+                else f'<section class="file-list">{"".join(file_cards)}</section>'
+            )
             return HTMLResponse(f"""<!doctype html>
 <html>
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>h5RDMtoolbox HDF5 files</title>
+  <style>
+    :root {{
+      color-scheme: light;
+      --bg: #f7f8fa;
+      --panel: #ffffff;
+      --text: #1f2933;
+      --muted: #667085;
+      --border: #d8dee6;
+      --accent: #0b6f85;
+      --accent-hover: #084f5f;
+    }}
+    * {{ box-sizing: border-box; }}
+    body {{
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }}
+    main {{
+      width: min(960px, calc(100% - 32px));
+      margin: 32px auto;
+    }}
+    header {{
+      margin-bottom: 20px;
+    }}
+    h1 {{
+      margin: 0 0 6px;
+      font-size: 1.8rem;
+      font-weight: 650;
+    }}
+    .subtitle {{
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.45;
+    }}
+    .file-list {{
+      display: grid;
+      gap: 12px;
+    }}
+    .file-card {{
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 16px;
+      align-items: center;
+      padding: 16px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }}
+    .file-card h2 {{
+      margin: 0 0 4px;
+      font-size: 1rem;
+      font-weight: 650;
+      overflow-wrap: anywhere;
+    }}
+    .file-card p {{
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.875rem;
+      overflow-wrap: anywhere;
+    }}
+    .format-actions {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+    }}
+    .format-link {{
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 0 12px;
+      border-radius: 6px;
+      background: var(--accent);
+      color: #fff;
+      text-decoration: none;
+      font-size: 0.875rem;
+      font-weight: 600;
+    }}
+    .format-link:hover {{
+      background: var(--accent-hover);
+    }}
+    .empty {{
+      padding: 20px;
+      background: var(--panel);
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+    }}
+    @media (max-width: 680px) {{
+      .file-card {{
+        grid-template-columns: 1fr;
+      }}
+      .format-actions {{
+        justify-content: flex-start;
+      }}
+    }}
+  </style>
 </head>
 <body>
-<h1>HDF5 files</h1>
-{body}
+<main>
+  <header>
+    <h1>HDF5 files</h1>
+    <p class="subtitle">Select a file and RDF serialization format. Each view includes controls for structural data, contextual data, and file URI.</p>
+  </header>
+  {body}
+</main>
 </body>
 </html>
 """)
