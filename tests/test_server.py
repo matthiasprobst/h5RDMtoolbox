@@ -275,6 +275,45 @@ def test_resolve_query_parameter_supports_jsonld_format(hdf_filename):
 
 
 @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_resolve_uses_first_local_subject_occurrence_only(monkeypatch, hdf_filename):
+    import h5rdmtoolbox.server as server
+
+    first = hdf_filename.parent / "first.h5"
+    second = hdf_filename.parent / "second.h5"
+    third = hdf_filename.parent / "third.h5"
+    for filename in [first, second, third]:
+        with h5py.File(filename, "w"):
+            pass
+    iri = "https://example.org/shared"
+    subject = rdflib.URIRef(iri)
+    predicate = rdflib.URIRef("https://example.org/source")
+    first_graph = rdflib.Graph()
+    first_graph.bind("ex", rdflib.Namespace("https://example.org/"))
+    first_graph.add((subject, predicate, rdflib.Literal("first")))
+    second_graph = rdflib.Graph()
+    second_graph.bind("ex", rdflib.Namespace("https://example.org/"))
+    second_graph.add((subject, predicate, rdflib.Literal("second")))
+    calls = []
+
+    def fake_get_ld(filename, **kwargs):
+        calls.append(pathlib.Path(filename).name)
+        if pathlib.Path(filename) == first:
+            return first_graph
+        if pathlib.Path(filename) == second:
+            return second_graph
+        raise AssertionError("Resolver should stop after the first local subject match")
+
+    monkeypatch.setattr(server, "get_ld", fake_get_ld)
+    client = TestClient(server.create_app([first, second, third]))
+    response = client.get("/resolve", params={"iri": iri, "format": "ttl"})
+
+    assert response.status_code == 200
+    assert '"first"' in response.text
+    assert '"second"' not in response.text
+    assert calls == ["first.h5", "first.h5"]
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_resolve_endpoint_rejects_non_matching_external_iri(hdf_filename):
     from h5rdmtoolbox.server import create_app
 

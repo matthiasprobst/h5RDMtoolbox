@@ -808,13 +808,14 @@ LIMIT 100"""
             )
             _bind_standard_prefixes(rdf_graph)
             if (subject, None, None) in rdf_graph:
-                logger.info("Found local subject %s in served file %s", iri, hdf_file)
+                logger.info("Using first local subject occurrence %s in served file %s", iri, hdf_file)
                 subgraph = _subject_subgraph(rdf_graph, subject)
                 for triple in subgraph:
                     merged_subgraph.add(triple)
                 for ns_prefix, namespace in subgraph.namespaces():
                     merged_subgraph.bind(ns_prefix, namespace)
                 found_local_subject = True
+                break
             else:
                 logger.info("Subject %s not found in served file %s", iri, hdf_file)
         try:
