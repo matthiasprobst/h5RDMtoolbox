@@ -77,6 +77,26 @@ KNOWN_ONTOLOGY_SOURCES = {
         "label": "SKOS",
         "ttl": "https://www.w3.org/2009/08/skos-reference/skos.rdf",
     },
+    "https://qudt.org/vocab/unit/": {
+        "label": "QUDT units",
+        "ttl_template": "{iri}.ttl",
+        "scheme_aliases": ["http", "https"],
+    },
+    "http://qudt.org/vocab/unit/": {
+        "label": "QUDT units",
+        "ttl_template": "https://qudt.org/vocab/unit/{suffix}.ttl",
+        "scheme_aliases": ["http", "https"],
+    },
+    "https://qudt.org/vocab/quantitykind/": {
+        "label": "QUDT quantity kinds",
+        "ttl_template": "{iri}.ttl",
+        "scheme_aliases": ["http", "https"],
+    },
+    "http://qudt.org/vocab/quantitykind/": {
+        "label": "QUDT quantity kinds",
+        "ttl_template": "https://qudt.org/vocab/quantitykind/{suffix}.ttl",
+        "scheme_aliases": ["http", "https"],
+    },
 }
 WIKIDATA_SPARQL_URL = "https://query.wikidata.org/sparql"
 DEFAULT_SPARQL_QUERY = """SELECT ?subject ?predicate ?object
@@ -336,15 +356,42 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
                 candidates.append(rdflib.URIRef(alternate_iri))
         return candidates
 
-    def _load_known_ontology_graph(base_iri: str, ontology_info: dict) -> Optional[rdflib.Graph]:
-        if base_iri in known_ontology_graph_cache:
+    def _known_ontology_url(base_iri: str, ontology_info: dict, iri: str) -> str:
+        if "ttl" in ontology_info:
+            return ontology_info["ttl"]
+        suffix = iri[len(base_iri):]
+        return ontology_info["ttl_template"].format(iri=iri, suffix=suffix)
+
+    def _known_ontology_subject_candidates(iri: str, ontology_info: dict) -> list[rdflib.URIRef]:
+        candidates = _subject_candidates(iri)
+        scheme_aliases = ontology_info.get("scheme_aliases", [])
+        if scheme_aliases:
+            for subject in list(candidates):
+                parsed = urllib.parse.urlparse(str(subject))
+                if parsed.scheme not in {"http", "https"}:
+                    continue
+                for scheme in scheme_aliases:
+                    alias = urllib.parse.urlunparse(parsed._replace(scheme=scheme))
+                    candidates.append(rdflib.URIRef(alias))
+        unique_candidates = []
+        seen = set()
+        for candidate in candidates:
+            if str(candidate) in seen:
+                continue
+            seen.add(str(candidate))
+            unique_candidates.append(candidate)
+        return unique_candidates
+
+    def _load_known_ontology_graph(base_iri: str, ontology_info: dict, iri: str) -> Optional[rdflib.Graph]:
+        ttl_url = _known_ontology_url(base_iri, ontology_info, iri)
+        cache_key = f"{base_iri}|{ttl_url}"
+        if cache_key in known_ontology_graph_cache:
             logger.info(
                 "Using cached known ontology %s: %s",
-                base_iri,
-                "hit" if known_ontology_graph_cache[base_iri] is not None else "miss",
+                ttl_url,
+                "hit" if known_ontology_graph_cache[cache_key] is not None else "miss",
             )
-            return known_ontology_graph_cache[base_iri]
-        ttl_url = ontology_info["ttl"]
+            return known_ontology_graph_cache[cache_key]
         logger.info("Loading known ontology %s from %s", ontology_info.get("label", base_iri), ttl_url)
         try:
             with urllib.request.urlopen(ttl_url, timeout=15) as response:
@@ -352,10 +399,10 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
                 response_url = response.geturl() if hasattr(response, "geturl") else ttl_url
         except (urllib.error.URLError, TimeoutError) as e:
             logger.warning("Could not load known ontology %s from %s: %s", base_iri, ttl_url, e)
-            known_ontology_graph_cache[base_iri] = None
+            known_ontology_graph_cache[cache_key] = None
             return None
         graph_from_doc = _parse_rdf_bytes(data, response_url)
-        known_ontology_graph_cache[base_iri] = graph_from_doc
+        known_ontology_graph_cache[cache_key] = graph_from_doc
         return graph_from_doc
 
     def _find_known_ontology_subject_graph(iri: str) -> Optional[rdflib.Graph]:
@@ -366,14 +413,20 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
         ]
         if not matching_sources:
             return None
-        subject_candidates = _subject_candidates(iri)
         logger.info(
             "Known ontology candidates for %s: %s",
             iri,
             [ontology_info.get("label", base_iri) for base_iri, ontology_info in matching_sources],
         )
         for base_iri, ontology_info in matching_sources:
-            graph_from_doc = _load_known_ontology_graph(base_iri, ontology_info)
+            subject_candidates = _known_ontology_subject_candidates(iri, ontology_info)
+            logger.info(
+                "Known ontology subject candidates for %s in %s: %s",
+                iri,
+                ontology_info.get("label", base_iri),
+                [str(subject) for subject in subject_candidates],
+            )
+            graph_from_doc = _load_known_ontology_graph(base_iri, ontology_info, iri)
             if graph_from_doc is None:
                 continue
             for subject in subject_candidates:
@@ -659,6 +712,43 @@ LIMIT 100"""
 """
         return HTMLResponse(page)
 
+    def _external_iri_fallback_html(iri: str) -> HTMLResponse:
+        iri_json = json.dumps(iri)
+        page = f"""<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>External IRI</title>
+  <style>
+    :root {{ --bg: #f7f8fa; --panel: #fff; --text: #1f2933; --muted: #667085; --border: #d8dee6; --accent: #0b6f85; }}
+    * {{ box-sizing: border-box; }}
+    body {{ margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); }}
+    main {{ width: min(760px, calc(100% - 32px)); margin: 40px auto; display: grid; gap: 14px; }}
+    section {{ padding: 18px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; }}
+    h1 {{ margin: 0 0 10px; font-size: 1.35rem; }}
+    p {{ margin: 8px 0; color: var(--muted); line-height: 1.5; }}
+    code {{ display: block; padding: 10px; background: #eef2f6; border-radius: 6px; overflow-wrap: anywhere; color: var(--text); }}
+    a.button {{ display: inline-flex; margin-top: 12px; padding: 9px 12px; border-radius: 6px; background: var(--accent); color: white; font-weight: 650; text-decoration: none; }}
+  </style>
+</head>
+<body>
+<main>
+  <section>
+    <h1>External IRI</h1>
+    <p>No RDF description was found in the served files or configured enrichment sources. The original URL is being opened in a new tab.</p>
+    <code>{escape(iri)}</code>
+    <a class="button" href="{escape(iri)}" target="_blank" rel="noopener noreferrer">Open external URL</a>
+  </section>
+</main>
+<script>
+  window.open({iri_json}, "_blank", "noopener,noreferrer");
+</script>
+</body>
+</html>
+"""
+        return HTMLResponse(page)
+
     def _resource_response(subject, subgraph: rdflib.Graph, request: Request, format: Optional[str] = None):
         format_key = _resource_format(request, format)
         if format_key == "html":
@@ -736,6 +826,9 @@ LIMIT 100"""
             logger.info("Resolved IRI %s with %d triples", iri, len(merged_subgraph))
             return _resource_response(subject, merged_subgraph, request, format=format)
         logger.info("IRI %s could not be resolved from local graph, known ontologies, Zenodo, ontology document, or Wikidata", iri)
+        if _resource_format(request, format) == "html":
+            logger.info("Returning external IRI fallback page for %s", iri)
+            return _external_iri_fallback_html(iri)
         raise HTTPException(status_code=404, detail="Unknown RDF subject")
 
     @app.get("/", response_class=HTMLResponse)

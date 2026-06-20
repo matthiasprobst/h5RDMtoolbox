@@ -257,7 +257,7 @@ def test_resolve_endpoint_rejects_non_matching_external_iri(hdf_filename):
         file_uri="https://doi.org/10.5281/zenodo.17572275#",
         local_iri_patterns=["https://doi.org/10.5281/zenodo.*"],
     ))
-    response = client.get(f"/resolve/{urllib.parse.quote(iri, safe='')}")
+    response = client.get(f"/resolve/{urllib.parse.quote(iri, safe='')}?format=ttl")
 
     assert response.status_code == 404
     assert "Unknown RDF subject" in response.text
@@ -436,6 +436,56 @@ def test_resolve_uses_known_ontology_registry_for_fragment_iri(monkeypatch, capl
         "https://matthiasprobst.github.io/ssno/ssno.ttl",
     ]
     assert "Known ontology candidates for https://matthiasprobst.github.io/ssno#StandardName" in caplog.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_resolve_uses_known_ontology_template_for_qudt_unit(monkeypatch, caplog, hdf_filename):
+    import h5rdmtoolbox.server as server
+
+    caplog.set_level("INFO", logger="h5rdmtoolbox.server")
+    iri = "https://qudt.org/vocab/unit/K"
+    canonical_iri = "http://qudt.org/vocab/unit/K"
+    ttl = f"""@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+<{canonical_iri}> a <http://qudt.org/schema/qudt/Unit> ;
+  rdfs:label "Kelvin" .
+"""
+    calls = []
+
+    class QudtResponse(_FakeHTTPResponse):
+        def geturl(self):
+            return "https://qudt.org/vocab/unit/K.ttl"
+
+    def fake_urlopen(request, timeout=0):
+        calls.append(request.full_url if hasattr(request, "full_url") else request)
+        url = request.full_url if hasattr(request, "full_url") else request
+        if url == "https://qudt.org/vocab/unit/K.ttl":
+            return QudtResponse(ttl.encode("utf-8"))
+        raise AssertionError(f"Unexpected download: {url}")
+
+    monkeypatch.setattr(server.urllib.request, "urlopen", fake_urlopen)
+    client = TestClient(server.create_app(hdf_filename, file_uri="https://example.org/not-this#"))
+    response = client.get("/resolve", params={"iri": iri, "format": "ttl"})
+
+    assert response.status_code == 200
+    assert "text/turtle" in response.headers["content-type"]
+    assert "Kelvin" in response.text
+    assert "unit:K" in response.text
+    assert calls == ["https://qudt.org/vocab/unit/K.ttl"]
+    assert "Known ontology subject candidates for https://qudt.org/vocab/unit/K" in caplog.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_resolve_unknown_iri_returns_external_fallback_for_html(hdf_filename):
+    from h5rdmtoolbox.server import create_app
+
+    iri = "https://example.org/missing"
+    client = TestClient(create_app(hdf_filename, file_uri="https://example.org/not-this#"))
+    response = client.get("/resolve", params={"iri": iri}, headers={"accept": "text/html"})
+
+    assert response.status_code == 200
+    assert "External IRI" in response.text
+    assert f'window.open("{iri}", "_blank", "noopener,noreferrer")' in response.text
+    assert f'href="{iri}" target="_blank"' in response.text
 
 
 @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
