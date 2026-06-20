@@ -744,28 +744,22 @@ def test_file_graph_endpoint_returns_interactive_page(hdf_filename):
     assert response.status_code == 200
     assert "text/html" in response.headers["content-type"]
     assert "vis-network" in response.text
-    assert "new vis.Network" in response.text
+    assert 'href="/static/graph.css"' in response.text
+    assert 'src="/static/graph.js"' in response.text
     assert 'id="graph-form"' in response.text
-    assert "graphForm.requestSubmit();" in response.text
+    assert 'id="graph-data"' in response.text
+    assert "window.h5tbxGraphConfig" in response.text
+    assert '"graphDataUrl": "/server_test.h5/graph-data"' in response.text
     assert 'id="node-details"' in response.text
-    assert 'network.on("click"' in response.text
-    assert 'network.on("doubleClick"' in response.text
+    assert 'id="graph-status"' in response.text
     assert 'id="hidden-node-toggle"' in response.text
     assert 'id="hidden-node-list"' in response.text
     assert 'id="label-mode"' in response.text
+    assert 'id="graph-detail"' in response.text
+    assert 'id="expansion-direction"' in response.text
+    assert 'id="expansion-depth"' in response.text
     assert 'name="labels"' in response.text
-    assert 'const graphDataUrl = "/server_test.h5/graph-data";' in response.text
-    assert 'params.set("focus", nodeId);' in response.text
-    assert "hideEdgesOnDrag: true" in response.text
-    assert "hideEdgesOnZoom: true" in response.text
-    assert 'class="hide-node-button">Hide</button>' in response.text
-    assert "hiddenNodeIds.add(nodeId);" in response.text
-    assert "hiddenNodeIds.delete(nodeId);" in response.text
-    assert "refreshVisibleGraph();" in response.text
-    assert "grid-template-columns: minmax(7rem, max-content) minmax(0, 1fr);" in response.text
     assert '<section class="graph-panel">' in response.text
-    assert "height: 100dvh;" in response.text
-    assert "height: 100%;" in response.text
     assert '"nodes":' in response.text
     assert '"edges":' in response.text
     assert '"groups":' in response.text
@@ -782,6 +776,31 @@ def test_file_graph_endpoint_returns_interactive_page(hdf_filename):
     assert 'name="mode" value="both" checked' in response.text
     assert 'name="mode" value="structural"' in response.text
     assert 'name="mode" value="contextual"' in response.text
+    graph_js = client.get("/static/graph.js")
+    assert graph_js.status_code == 200
+    assert "new vis.Network" in graph_js.text
+    assert "graphForm.requestSubmit();" in graph_js.text
+    assert 'network.on("click"' in graph_js.text
+    assert 'network.on("doubleClick"' in graph_js.text
+    assert 'params.set("focus", nodeId);' in graph_js.text
+    assert 'params.delete("limit_nodes");' in graph_js.text
+    assert 'params.delete("limit_edges");' in graph_js.text
+    assert "hiddenNodeIds.add(nodeId);" in graph_js.text
+    assert "hiddenNodeIds.delete(nodeId);" in graph_js.text
+    assert "nodes.remove(nodeId);" in graph_js.text
+    assert "edges.remove(incidentEdgeIds);" in graph_js.text
+    assert "network.getPositions()" in graph_js.text
+    assert "refreshVisibleGraph();" in graph_js.text
+    assert "hideEdgesOnDrag: true" in graph_js.text
+    assert "hideEdgesOnZoom: true" in graph_js.text
+    assert "setGraphStatus" in graph_js.text
+    assert "expansionLimitNodes" in graph_js.text
+    graph_css = client.get("/static/graph.css")
+    assert graph_css.status_code == 200
+    assert "grid-template-columns: minmax(7rem, max-content) minmax(0, 1fr);" in graph_css.text
+    assert "height: 100dvh;" in graph_css.text
+    assert "height: 100%;" in graph_css.text
+    assert ".graph-status" in graph_css.text
 
 
 @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
@@ -799,6 +818,90 @@ def test_file_graph_data_endpoint_returns_json_with_label_mode(hdf_filename):
     assert "label" in payload["nodes"][0]
     assert "degree" in payload["nodes"][0]
     assert "expandable" in payload["nodes"][0]
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_graph_data_drops_nodes_without_visible_edges_by_default(monkeypatch, hdf_filename):
+    import h5rdmtoolbox.server as server
+
+    graph = rdflib.Graph()
+    predicate = rdflib.URIRef("https://example.org/linksTo")
+    for index in range(6):
+        graph.add((
+            rdflib.URIRef(f"https://example.org/node-{index}"),
+            predicate,
+            rdflib.URIRef(f"https://example.org/node-{index + 1}"),
+        ))
+    monkeypatch.setattr(server, "get_ld", lambda *args, **kwargs: graph)
+    client = TestClient(server.create_app(hdf_filename))
+
+    response = client.get("/server_test.h5/graph-data?limit_nodes=5&limit_edges=1")
+    payload = response.json()
+
+    assert response.status_code == 200
+    assert payload["summary"]["shown_edges"] == 1
+    assert payload["summary"]["shown_nodes"] == 2
+    assert payload["summary"]["dropped_isolated_visible_nodes"] == 3
+    visible_ids = {node["id"] for node in payload["nodes"]}
+    for edge in payload["edges"]:
+        assert edge["from"] in visible_ids
+        assert edge["to"] in visible_ids
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_graph_data_can_include_nodes_without_visible_edges(monkeypatch, hdf_filename):
+    import h5rdmtoolbox.server as server
+
+    graph = rdflib.Graph()
+    predicate = rdflib.URIRef("https://example.org/linksTo")
+    for index in range(6):
+        graph.add((
+            rdflib.URIRef(f"https://example.org/node-{index}"),
+            predicate,
+            rdflib.URIRef(f"https://example.org/node-{index + 1}"),
+        ))
+    monkeypatch.setattr(server, "get_ld", lambda *args, **kwargs: graph)
+    client = TestClient(server.create_app(hdf_filename))
+
+    response = client.get("/server_test.h5/graph-data?limit_nodes=5&limit_edges=1&include_isolated=true")
+    payload = response.json()
+
+    assert response.status_code == 200
+    assert payload["summary"]["shown_edges"] == 1
+    assert payload["summary"]["shown_nodes"] == 5
+    assert payload["summary"]["dropped_isolated_visible_nodes"] == 0
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_graph_detail_presets_select_limits(monkeypatch, hdf_filename):
+    import h5rdmtoolbox.server as server
+
+    monkeypatch.setattr(server, "GRAPH_DETAIL_LIMITS", {
+        "compact": (2, 1),
+        "balanced": (4, 3),
+        "detailed": (6, 5),
+    })
+    graph = rdflib.Graph()
+    predicate = rdflib.URIRef("https://example.org/linksTo")
+    for index in range(8):
+        graph.add((
+            rdflib.URIRef(f"https://example.org/node-{index}"),
+            predicate,
+            rdflib.URIRef(f"https://example.org/node-{index + 1}"),
+        ))
+    monkeypatch.setattr(server, "get_ld", lambda *args, **kwargs: graph)
+    client = TestClient(server.create_app(hdf_filename))
+
+    compact = client.get("/server_test.h5/graph-data?detail=compact").json()
+    detailed = client.get("/server_test.h5/graph-data?detail=detailed").json()
+
+    assert compact["summary"]["detail"] == "compact"
+    assert compact["summary"]["limit_nodes"] == 2
+    assert compact["summary"]["limit_edges"] == 1
+    assert detailed["summary"]["detail"] == "detailed"
+    assert detailed["summary"]["limit_nodes"] == 6
+    assert detailed["summary"]["limit_edges"] == 5
+    assert detailed["summary"]["shown_nodes"] >= compact["summary"]["shown_nodes"]
 
 
 @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
@@ -827,6 +930,38 @@ def test_combined_graph_data_focus_returns_node_neighborhood(monkeypatch, hdf_fi
 
 
 @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_graph_data_focus_respects_direction_depth_and_expansion_caps(monkeypatch, hdf_filename):
+    import h5rdmtoolbox.server as server
+
+    graph = rdflib.Graph()
+    predicate = rdflib.URIRef("https://example.org/linksTo")
+    graph.add((rdflib.URIRef("https://example.org/alpha"), predicate, rdflib.URIRef("https://example.org/beta")))
+    graph.add((rdflib.URIRef("https://example.org/beta"), predicate, rdflib.URIRef("https://example.org/gamma")))
+    graph.add((rdflib.URIRef("https://example.org/gamma"), predicate, rdflib.URIRef("https://example.org/delta")))
+    monkeypatch.setattr(server, "get_ld", lambda *args, **kwargs: graph)
+    client = TestClient(server.create_app(hdf_filename))
+
+    outgoing = client.get("/combined/graph-data?focus=https%3A%2F%2Fexample.org%2Fbeta&direction=out")
+    outgoing_ids = {node["id"] for node in outgoing.json()["nodes"]}
+    assert outgoing_ids == {"https://example.org/beta", "https://example.org/gamma"}
+
+    incoming = client.get("/combined/graph-data?focus=https%3A%2F%2Fexample.org%2Fbeta&direction=in")
+    incoming_ids = {node["id"] for node in incoming.json()["nodes"]}
+    assert incoming_ids == {"https://example.org/alpha", "https://example.org/beta"}
+
+    depth_two = client.get("/combined/graph-data?focus=https%3A%2F%2Fexample.org%2Fbeta&direction=out&depth=2")
+    depth_two_ids = {node["id"] for node in depth_two.json()["nodes"]}
+    assert "https://example.org/delta" in depth_two_ids
+
+    capped = client.get(
+        "/combined/graph-data?focus=https%3A%2F%2Fexample.org%2Fbeta&direction=both&expansion_limit_nodes=2"
+    )
+    capped_payload = capped.json()
+    assert capped_payload["summary"]["shown_nodes"] == 2
+    assert capped_payload["summary"]["truncated"] is True
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_file_graph_endpoint_accepts_mode_and_prefix_options(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
@@ -851,6 +986,28 @@ def test_graph_data_endpoint_rejects_invalid_labels(hdf_filename):
     assert "labels must be one of" in response.text
 
 
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_graph_data_endpoint_rejects_invalid_direction(hdf_filename):
+    from h5rdmtoolbox.server import create_app
+
+    client = TestClient(create_app(hdf_filename))
+    response = client.get("/server_test.h5/graph-data?direction=sideways")
+
+    assert response.status_code == 400
+    assert "direction must be one of" in response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_graph_data_endpoint_rejects_invalid_detail(hdf_filename):
+    from h5rdmtoolbox.server import create_app
+
+    client = TestClient(create_app(hdf_filename))
+    response = client.get("/server_test.h5/graph-data?detail=huge")
+
+    assert response.status_code == 400
+    assert "detail must be one of" in response.text
+
+
 
 @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_file_graph_endpoint_links_matching_external_iris_to_local_resolver(hdf_filename):
@@ -865,8 +1022,9 @@ def test_file_graph_endpoint_links_matching_external_iris_to_local_resolver(hdf_
     response = client.get("/server_test.h5/graph")
 
     assert response.status_code == 200
-    assert "Open local TTL" in response.text
+    assert "local_href" in response.text
     assert f"/resolve?iri={urllib.parse.quote(iri, safe='')}" in response.text
+    assert "Open local TTL" in client.get("/static/graph.js").text
 
 
 @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
@@ -1124,8 +1282,37 @@ def test_combined_graph_endpoint_truncates_large_graph(monkeypatch, hdf_filename
     assert response.status_code == 200
     assert "Showing 5 of" in response.text
     assert "edges. Refine the search or raise limits to see more." in response.text
-    assert 'name="limit_nodes"' in response.text
-    assert 'name="limit_edges"' in response.text
+    assert 'id="graph-detail"' in response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_file_graph_endpoint_uses_large_graph_defaults(monkeypatch, hdf_filename):
+    import h5rdmtoolbox.server as server
+
+    monkeypatch.setattr(server, "GRAPH_NODE_LIMIT", 5)
+    monkeypatch.setattr(server, "GRAPH_EDGE_LIMIT", 4)
+    graph = rdflib.Graph()
+    predicate = rdflib.URIRef("https://example.org/linksTo")
+    for index in range(12):
+        graph.add((
+            rdflib.URIRef(f"https://example.org/node-{index}"),
+            predicate,
+            rdflib.URIRef(f"https://example.org/node-{index + 1}"),
+        ))
+    monkeypatch.setattr(server, "get_ld", lambda *args, **kwargs: graph)
+    client = TestClient(server.create_app(hdf_filename))
+    response = client.get("/server_test.h5/graph")
+
+    assert response.status_code == 200
+    assert "Showing 5 of" in response.text
+    assert "edges. Refine the search or raise limits to see more." in response.text
+    assert 'id="graph-detail"' in response.text
+    data_response = client.get("/server_test.h5/graph-data")
+    payload = data_response.json()
+    assert payload["summary"]["limit_nodes"] == 5
+    assert payload["summary"]["shown_nodes"] <= 5
+    assert payload["summary"]["shown_edges"] <= 4
+    assert payload["summary"]["truncated"] is True
 
 
 @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")

@@ -22,8 +22,17 @@ from h5rdmtoolbox.ld.metrics import (
 logger = logging.getLogger(__name__)
 HDF5_SUFFIXES = {".h5", ".hdf", ".hdf5"}
 COMBINED_METRICS_DISTANCE_NODE_LIMIT = 2000
+GRAPH_NODE_LIMIT = 1000
+GRAPH_EDGE_LIMIT = 2000
+GRAPH_EXPANSION_NODE_LIMIT = 250
+GRAPH_EXPANSION_EDGE_LIMIT = 500
 COMBINED_GRAPH_NODE_LIMIT = 1000
 COMBINED_GRAPH_EDGE_LIMIT = 2000
+GRAPH_DETAIL_LIMITS = {
+    "compact": (250, 750),
+    "balanced": (GRAPH_NODE_LIMIT, GRAPH_EDGE_LIMIT),
+    "detailed": (2500, 8000),
+}
 PREFIX_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_.-]*$")
 RDF_FORMATS = {
     "ttl": ("turtle", "text/turtle; charset=utf-8", "Turtle"),
@@ -1346,6 +1355,21 @@ LIMIT 100"""
             return False, True
         raise HTTPException(status_code=400, detail="mode must be one of: both, structural, contextual")
 
+    def _graph_limits(detail: str,
+                      limit_nodes: Optional[int],
+                      limit_edges: Optional[int],
+                      default_node_limit: int,
+                      default_edge_limit: int) -> tuple[int, int]:
+        if detail not in GRAPH_DETAIL_LIMITS:
+            raise HTTPException(status_code=400, detail="detail must be one of: compact, balanced, detailed")
+        preset_nodes, preset_edges = GRAPH_DETAIL_LIMITS[detail]
+        if detail == "balanced":
+            preset_nodes, preset_edges = default_node_limit, default_edge_limit
+        return (
+            limit_nodes if limit_nodes is not None else preset_nodes,
+            limit_edges if limit_edges is not None else preset_edges,
+        )
+
     def _is_ontology_term(term) -> bool:
         text = str(term)
         ontology_prefixes = (
@@ -1368,9 +1392,17 @@ LIMIT 100"""
                     include_isolated: bool = True,
                     focus: Optional[str] = None,
                     depth: int = 1,
-                    labels: str = "auto") -> dict[str, object]:
+                    labels: str = "auto",
+                    direction: str = "both",
+                    detail: str = "balanced",
+                    expansion_limit_nodes: int = GRAPH_EXPANSION_NODE_LIMIT,
+                    expansion_limit_edges: int = GRAPH_EXPANSION_EDGE_LIMIT) -> dict[str, object]:
         if labels not in {"auto", "on", "off"}:
             raise HTTPException(status_code=400, detail="labels must be one of: auto, on, off")
+        if direction not in {"both", "out", "in"}:
+            raise HTTPException(status_code=400, detail="direction must be one of: both, out, in")
+        if detail not in GRAPH_DETAIL_LIMITS:
+            raise HTTPException(status_code=400, detail="detail must be one of: compact, balanced, detailed")
         depth = max(1, min(int(depth), 2))
         class_palette = [
             ("#d8eef2", "#0b6f85"),
@@ -1403,6 +1435,11 @@ LIMIT 100"""
         degree_counts = {}
         search = (q or "").strip().lower()
         focus = (focus or "").strip()
+        if focus:
+            if limit_nodes is None:
+                limit_nodes = expansion_limit_nodes
+            if limit_edges is None:
+                limit_edges = expansion_limit_edges
 
         for subject, predicate, obj in rdf_graph:
             if not include_ontology and (_is_ontology_term(subject) or _is_ontology_term(obj)):
@@ -1436,9 +1473,9 @@ LIMIT 100"""
                 for _ in range(depth):
                     next_frontier = set()
                     for subject, _, obj in resource_edges:
-                        if subject in frontier:
+                        if direction in {"both", "out"} and subject in frontier:
                             next_frontier.add(obj)
-                        if obj in frontier:
+                        if direction in {"both", "in"} and obj in frontier:
                             next_frontier.add(subject)
                     next_frontier.difference_update(selected_terms)
                     selected_terms.update(next_frontier)
@@ -1466,9 +1503,35 @@ LIMIT 100"""
                 key=lambda term: (-degree_counts.get(term, 0), _graph_label(term, rdf_graph), str(term)),
             )[:limit_nodes])
 
-        nodes = {}
-        edges = []
+        total_edges = 0
         visible_degree_counts = {term: 0 for term in selected_terms}
+        shown_edge_terms = set()
+        edges = []
+        for subject, predicate, obj in resource_edges:
+            if subject not in selected_terms or obj not in selected_terms:
+                continue
+            total_edges += 1
+            if limit_edges is not None and len(edges) >= limit_edges:
+                continue
+            visible_degree_counts[subject] = visible_degree_counts.get(subject, 0) + 1
+            visible_degree_counts[obj] = visible_degree_counts.get(obj, 0) + 1
+            shown_edge_terms.add(subject)
+            shown_edge_terms.add(obj)
+            subject_id = str(subject)
+            object_id = str(obj)
+            edges.append({
+                "from": subject_id,
+                "to": object_id,
+                "label": _graph_label(predicate, rdf_graph),
+                "arrows": "to",
+            })
+
+        node_terms_to_render = set(selected_terms) if include_isolated else set(shown_edge_terms)
+        if focus and focus_term is not None:
+            node_terms_to_render.add(focus_term)
+        dropped_isolated_visible_nodes = len(selected_terms - node_terms_to_render)
+
+        nodes = {}
 
         def node_group(value) -> str:
             class_label = type_by_node.get(str(value))
@@ -1476,7 +1539,7 @@ LIMIT 100"""
                 return f"class:{class_label}"
             return "resource" if isinstance(value, rdflib.URIRef) else "blank"
 
-        for subject in sorted(selected_terms, key=lambda term: _graph_label(term, rdf_graph)):
+        for subject in sorted(node_terms_to_render, key=lambda term: _graph_label(term, rdf_graph)):
             subject_id = str(subject)
             nodes.setdefault(subject_id, {
                 "id": subject_id,
@@ -1495,23 +1558,6 @@ LIMIT 100"""
                     "predicate": _graph_label(predicate, rdf_graph),
                     "value": str(obj),
                 })
-        total_edges = 0
-        for subject, predicate, obj in resource_edges:
-            if subject not in selected_terms or obj not in selected_terms:
-                continue
-            total_edges += 1
-            visible_degree_counts[subject] = visible_degree_counts.get(subject, 0) + 1
-            visible_degree_counts[obj] = visible_degree_counts.get(obj, 0) + 1
-            if limit_edges is not None and len(edges) >= limit_edges:
-                continue
-            subject_id = str(subject)
-            object_id = str(obj)
-            edges.append({
-                "from": subject_id,
-                "to": object_id,
-                "label": _graph_label(predicate, rdf_graph),
-                "arrows": "to",
-            })
         for subject in selected_terms:
             subject_id = str(subject)
             if subject_id not in nodes:
@@ -1538,6 +1584,11 @@ LIMIT 100"""
                 "rendered_labels": rendered_labels,
                 "focus": focus,
                 "depth": depth,
+                "direction": direction,
+                "detail": detail,
+                "limit_nodes": limit_nodes,
+                "limit_edges": limit_edges,
+                "dropped_isolated_visible_nodes": dropped_isolated_visible_nodes,
             },
         }
 
@@ -1553,7 +1604,11 @@ LIMIT 100"""
                         include_isolated: bool = True,
                         focus: Optional[str] = None,
                         depth: int = 1,
-                        labels: str = "auto") -> dict[str, object]:
+                        labels: str = "auto",
+                        direction: str = "both",
+                        detail: str = "balanced",
+                        expansion_limit_nodes: int = GRAPH_EXPANSION_NODE_LIMIT,
+                        expansion_limit_edges: int = GRAPH_EXPANSION_EDGE_LIMIT) -> dict[str, object]:
         graph_file_uri = file_uri if file_uri is not None else create_app_file_uri
         if rdf_graph is None:
             structural_graph, contextual_graph = _graph_mode_flags(mode)
@@ -1587,6 +1642,10 @@ LIMIT 100"""
             focus=focus,
             depth=depth,
             labels=labels,
+            direction=direction,
+            detail=detail,
+            expansion_limit_nodes=expansion_limit_nodes,
+            expansion_limit_edges=expansion_limit_edges,
         )
 
     def _graph_page(filename: pathlib.Path,
@@ -1600,588 +1659,69 @@ LIMIT 100"""
                     limit_edges: Optional[int] = None,
                     q: Optional[str] = None,
                     include_ontology: bool = True,
-                    include_isolated: bool = True,
-                    labels: str = "auto") -> HTMLResponse:
+                    include_isolated: bool = False,
+                    labels: str = "auto",
+                    direction: str = "both",
+                    detail: str = "balanced",
+                    depth: int = 1) -> HTMLResponse:
+        depth = max(1, min(int(depth), 2))
         graph_file_uri = file_uri if file_uri is not None else create_app_file_uri
-
         display_name = page_label or filename.name
         encoded_filename = urllib.parse.quote(route_name or filename.name)
+        default_node_limit = COMBINED_GRAPH_NODE_LIMIT if route_name == "combined" else GRAPH_NODE_LIMIT
+        default_edge_limit = COMBINED_GRAPH_EDGE_LIMIT if route_name == "combined" else GRAPH_EDGE_LIMIT
+        resolved_limit_nodes, resolved_limit_edges = _graph_limits(
+            detail, limit_nodes, limit_edges, default_node_limit, default_edge_limit
+        )
         graph_payload = _graph_response(
             filename,
             mode=mode,
             file_uri=file_uri,
             prefix=prefix,
             rdf_graph=rdf_graph,
-            limit_nodes=limit_nodes,
-            limit_edges=limit_edges,
+            limit_nodes=resolved_limit_nodes,
+            limit_edges=resolved_limit_edges,
             q=q,
             include_ontology=include_ontology,
             include_isolated=include_isolated,
             labels=labels,
+            direction=direction,
+            detail=detail,
+            depth=depth,
         )
         graph_json = json.dumps(graph_payload).replace("</", "<\\/")
-        graph_summary = graph_payload["summary"]
-        truncation_notice = (
-            f'<p class="graph-notice">Showing {graph_summary["shown_nodes"]:,} of {graph_summary["total_nodes"]:,} nodes '
-            f'and {graph_summary["shown_edges"]:,} of {graph_summary["total_edges"]:,} edges. Refine the search or raise limits to see more.</p>'
-            if graph_summary["truncated"]
-            else ""
-        )
-        escaped_file_uri = escape(graph_file_uri or "")
         graph_nav = " ".join(
             f'<a href="/{encoded_filename}/{key}">{escape(label)}</a>'
             for key, (_, _, label) in RDF_FORMATS.items()
         )
-        checked = {
-            "both": "checked" if mode == "both" else "",
-            "structural": "checked" if mode == "structural" else "",
-            "contextual": "checked" if mode == "contextual" else "",
+        graph_config = {
+            "graphDataUrl": f"/{encoded_filename}/graph-data",
+            "expansionLimitNodes": GRAPH_EXPANSION_NODE_LIMIT,
+            "expansionLimitEdges": GRAPH_EXPANSION_EDGE_LIMIT,
         }
-        label_selected = {
-            "auto": "selected" if labels == "auto" else "",
-            "on": "selected" if labels == "on" else "",
-            "off": "selected" if labels == "off" else "",
-        }
-        graph_data_url = f"/{encoded_filename}/graph-data"
-        page = f"""<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{escape(display_name)} Graph</title>
-  <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
-  <style>
-    :root {{
-      --bg: #f7f8fa;
-      --panel: #ffffff;
-      --text: #1f2933;
-      --muted: #667085;
-      --border: #d8dee6;
-      --accent: #0b6f85;
-    }}
-    * {{ box-sizing: border-box; }}
-    html, body {{
-      height: 100%;
-    }}
-    body {{
-      margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      overflow: hidden;
-    }}
-    main {{
-      display: grid;
-      grid-template-rows: auto minmax(0, 1fr);
-      height: 100dvh;
-      min-height: 520px;
-      gap: 12px;
-      padding: 18px;
-    }}
-    header {{
-      display: grid;
-      gap: 12px;
-      padding: 16px;
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-    }}
-    nav {{
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      color: var(--muted);
-    }}
-    nav a {{ color: var(--accent); font-weight: 600; text-decoration: none; }}
-    h1 {{ margin: 0; font-size: 1.35rem; }}
-    form {{
-      display: flex;
-      flex-wrap: wrap;
-      gap: 14px;
-      align-items: end;
-    }}
-    fieldset {{
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      margin: 0;
-      padding: 0;
-      border: 0;
-    }}
-    legend {{
-      width: 100%;
-      margin-bottom: 2px;
-      color: var(--muted);
-      font-size: 0.875rem;
-    }}
-    label {{ display: grid; gap: 4px; color: var(--muted); font-size: 0.875rem; }}
-    .radio-label {{ display: inline-flex; align-items: center; gap: 6px; color: var(--text); }}
-    input[type="text"] {{
-      min-width: min(28rem, 80vw);
-      min-height: 34px;
-      padding: 0 10px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-    }}
-    button {{
-      min-height: 34px;
-      padding: 0 14px;
-      border: 0;
-      border-radius: 6px;
-      background: var(--accent);
-      color: #fff;
-      font-weight: 650;
-      cursor: pointer;
-    }}
-    .graph-panel {{
-      min-height: 0;
-      height: 100%;
-      display: grid;
-    }}
-    .hidden-node-menu {{
-      position: absolute;
-      left: 14px;
-      top: 14px;
-      z-index: 2;
-    }}
-    .hidden-node-menu button,
-    .hide-node-button {{
-      min-height: 30px;
-      padding: 0 10px;
-      border-radius: 6px;
-      border: 1px solid var(--border);
-      background: #fff;
-      color: var(--text);
-      font-size: 0.85rem;
-      font-weight: 650;
-      cursor: pointer;
-    }}
-    .hidden-node-list {{
-      display: none;
-      width: min(320px, calc(100vw - 64px));
-      max-height: 280px;
-      overflow: auto;
-      margin-top: 8px;
-      padding: 8px;
-      background: rgba(255, 255, 255, 0.96);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      box-shadow: 0 12px 28px rgba(31, 41, 51, 0.16);
-    }}
-    .hidden-node-list.open {{
-      display: grid;
-      gap: 6px;
-    }}
-    .hidden-node-list p {{
-      margin: 0;
-      color: var(--muted);
-      font-size: 0.85rem;
-    }}
-    .hidden-node-list button {{
-      width: 100%;
-      justify-content: start;
-      text-align: left;
-      overflow-wrap: anywhere;
-    }}
-    #network {{
-      width: 100%;
-      height: 100%;
-      min-height: 0;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: var(--panel);
-    }}
-    .node-details {{
-      position: absolute;
-      right: 30px;
-      bottom: 30px;
-      width: min(380px, calc(100% - 60px));
-      max-height: min(420px, calc(100% - 60px));
-      overflow: auto;
-      display: none;
-      padding: 14px;
-      background: rgba(255, 255, 255, 0.96);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      box-shadow: 0 12px 28px rgba(31, 41, 51, 0.16);
-    }}
-    .node-details h2 {{
-      margin: 0 0 10px;
-      font-size: 1rem;
-      overflow-wrap: anywhere;
-    }}
-    .node-details-header {{
-      display: flex;
-      gap: 10px;
-      align-items: start;
-      justify-content: space-between;
-    }}
-    .hide-node-button {{
-      flex: 0 0 auto;
-    }}
-    .node-details dl {{
-      display: grid;
-      grid-template-columns: minmax(7rem, max-content) minmax(0, 1fr);
-      column-gap: 14px;
-      row-gap: 8px;
-      margin: 0;
-      align-items: start;
-    }}
-    .node-details dt {{
-      color: var(--muted);
-      font-size: 0.8rem;
-      font-weight: 650;
-      overflow-wrap: anywhere;
-    }}
-    .node-details dd {{
-      margin: 0;
-      overflow-wrap: anywhere;
-      font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
-      font-size: 0.85rem;
-    }}
-    @media (max-width: 560px) {{
-      .node-details dl {{
-        grid-template-columns: 1fr;
-        row-gap: 4px;
-      }}
-      .node-details dd {{
-        margin-bottom: 8px;
-      }}
-    }}
-    .node-details .no-literals {{
-      margin: 0;
-      color: var(--muted);
-    }}
-    .node-link {{
-      display: inline-flex;
-      margin: 0 0 10px;
-      color: var(--accent);
-      font-size: 0.875rem;
-      font-weight: 650;
-      text-decoration: none;
-    }}
-    .graph-panel {{
-      position: relative;
-    }}
-    .empty-graph {{
-      display: none;
-      color: var(--muted);
-      padding: 12px;
-    }}
-    .graph-notice {{
-      margin: 0;
-      color: var(--muted);
-      font-size: 0.875rem;
-    }}
-  </style>
-</head>
-<body>
-<main>
-  <header>
-    <nav><a href="/">Files</a> {graph_nav}</nav>
-    <h1>{escape(display_name)} - Graph</h1>
-    <form id="graph-form" method="get" action="/{encoded_filename}/graph">
-      <fieldset>
-        <legend>RDF content</legend>
-        <label class="radio-label"><input type="radio" name="mode" value="both" {checked["both"]}> Structural + contextual</label>
-        <label class="radio-label"><input type="radio" name="mode" value="structural" {checked["structural"]}> Structural only</label>
-        <label class="radio-label"><input type="radio" name="mode" value="contextual" {checked["contextual"]}> Contextual only</label>
-      </fieldset>
-      <label>File URI
-        <input type="text" name="file_uri" value="{escaped_file_uri}" placeholder="https://example.org/data/">
-      </label>
-      <label>Prefix
-        <input type="text" name="prefix" value="{escape(prefix or "")}" placeholder="ex">
-      </label>
-      <label>Search
-        <input type="text" name="q" value="{escape(q or "")}" placeholder="label or IRI">
-      </label>
-      <label>Node limit
-        <input type="number" name="limit_nodes" min="10" max="10000" value="{escape(str(limit_nodes or ""))}" placeholder="1000">
-      </label>
-      <label>Edge limit
-        <input type="number" name="limit_edges" min="10" max="20000" value="{escape(str(limit_edges or ""))}" placeholder="2000">
-      </label>
-      <label>Labels
-        <select name="labels" id="label-mode">
-          <option value="auto" {label_selected["auto"]}>Auto</option>
-          <option value="on" {label_selected["on"]}>On</option>
-          <option value="off" {label_selected["off"]}>Off</option>
-        </select>
-      </label>
-      <input type="hidden" name="include_ontology" value="false">
-      <label class="radio-label"><input type="checkbox" name="include_ontology" value="true" {"checked" if include_ontology else ""}> Include ontology nodes</label>
-      <input type="hidden" name="include_isolated" value="false">
-      <label class="radio-label"><input type="checkbox" name="include_isolated" value="true" {"checked" if include_isolated else ""}> Include isolated nodes</label>
-      <button type="submit">Update</button>
-    </form>
-    {truncation_notice}
-  </header>
-  <section class="graph-panel">
-    <div class="hidden-node-menu">
-      <button type="button" id="hidden-node-toggle" aria-expanded="false">Hidden nodes (0)</button>
-      <div class="hidden-node-list" id="hidden-node-list"></div>
-    </div>
-    <div id="network"></div>
-    <aside class="node-details" id="node-details" aria-live="polite"></aside>
-    <p class="empty-graph" id="empty-graph">No RDF triples are available for this selection.</p>
-  </section>
-</main>
-<script>
-  const graphData = {graph_json};
-  const graphDataUrl = "{graph_data_url}";
-  const graphForm = document.getElementById("graph-form");
-  const container = document.getElementById("network");
-  const emptyGraph = document.getElementById("empty-graph");
-  const nodeDetails = document.getElementById("node-details");
-  const hiddenNodeToggle = document.getElementById("hidden-node-toggle");
-  const hiddenNodeList = document.getElementById("hidden-node-list");
-  const labelModeInput = document.getElementById("label-mode");
-  const allNodes = new Map();
-  const allEdges = new Map();
-  const nodeSources = new Map();
-  const edgeSources = new Map();
-  const hiddenNodeIds = new Set();
-  const expandedNodeIds = new Set();
-  const nodeById = allNodes;
-  let hideNode = () => {{}};
-  let unhideNode = () => {{}};
-  let refreshVisibleGraph = () => {{}};
-  const escapeHtml = (value) => String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-  const edgeKey = (edge) => `${{edge.from}}\\u0000${{edge.to}}\\u0000${{edge.label}}`;
-  const renderedLabelsEnabled = () => {{
-    if (labelModeInput.value === "on") {{
-      return true;
-    }}
-    if (labelModeInput.value === "off") {{
-      return false;
-    }}
-    return (allNodes.size <= 250 && allEdges.size <= 500);
-  }};
-  const visibleNode = (node) => ({{
-    ...node,
-    label: renderedLabelsEnabled() ? node.label : undefined,
-    title: node.label
-  }});
-  const visibleEdge = (edge) => ({{
-    ...edge,
-    label: renderedLabelsEnabled() ? edge.label : undefined,
-    title: edge.label
-  }});
-  const rememberSource = (sourceMap, id, source) => {{
-    const sources = sourceMap.get(id) || new Set();
-    sources.add(source);
-    sourceMap.set(id, sources);
-  }};
-  const forgetSource = (sourceMap, id, source) => {{
-    const sources = sourceMap.get(id);
-    if (!sources) {{
-      return false;
-    }}
-    sources.delete(source);
-    if (sources.size === 0) {{
-      sourceMap.delete(id);
-      return true;
-    }}
-    return false;
-  }};
-  const addGraphPayload = (payload, source) => {{
-    (payload.nodes || []).forEach((node) => {{
-      allNodes.set(node.id, {{ ...(allNodes.get(node.id) || {{}}), ...node }});
-      rememberSource(nodeSources, node.id, source);
-    }});
-    (payload.edges || []).forEach((edge) => {{
-      const key = edgeKey(edge);
-      allEdges.set(key, {{ ...(allEdges.get(key) || {{}}), ...edge }});
-      rememberSource(edgeSources, key, source);
-    }});
-  }};
-  addGraphPayload(graphData, "base");
-  const updateHiddenNodeMenu = () => {{
-    const hiddenNodes = Array.from(hiddenNodeIds)
-      .map((nodeId) => nodeById.get(nodeId))
-      .filter(Boolean)
-      .sort((left, right) => left.label.localeCompare(right.label));
-    hiddenNodeToggle.textContent = `Hidden nodes (${{hiddenNodes.length}})`;
-    hiddenNodeToggle.disabled = hiddenNodes.length === 0;
-    if (hiddenNodes.length === 0) {{
-      hiddenNodeList.innerHTML = '<p>No hidden nodes.</p>';
-      hiddenNodeList.classList.remove("open");
-      hiddenNodeToggle.setAttribute("aria-expanded", "false");
-      return;
-    }}
-    hiddenNodeList.innerHTML = hiddenNodes
-      .map((node) => `<button type="button" data-node-id="${{escapeHtml(node.id)}}">${{escapeHtml(node.label)}}</button>`)
-      .join("");
-  }};
-  const showNodeDetails = (node) => {{
-    const literals = node.literals || [];
-    const hiddenNeighborText = node.hidden_neighbor_count
-      ? `<p class="no-literals">${{node.hidden_neighbor_count}} more connected node(s). Double-click to expand.</p>`
-      : "";
-    const literalRows = literals.length
-      ? `<dl>${{literals.map((literal) => `<dt>${{escapeHtml(literal.predicate)}}</dt><dd>${{escapeHtml(literal.value)}}</dd>`).join("")}}</dl>`
-      : '<p class="no-literals">No literal values are available for this node.</p>';
-    const localLink = node.local_href
-      ? `<a class="node-link" href="${{escapeHtml(node.local_href)}}" target="_blank" rel="noopener">Open local TTL</a>`
-      : "";
-    nodeDetails.innerHTML = `<div class="node-details-header"><h2>${{escapeHtml(node.label)}}</h2><button type="button" class="hide-node-button">Hide</button></div>${{localLink}}${{hiddenNeighborText}}${{literalRows}}`;
-    nodeDetails.querySelector(".hide-node-button").addEventListener("click", () => {{
-      hideNode(node.id);
-    }});
-    nodeDetails.style.display = "block";
-  }};
-  hiddenNodeToggle.addEventListener("click", () => {{
-    const isOpen = hiddenNodeList.classList.toggle("open");
-    hiddenNodeToggle.setAttribute("aria-expanded", String(isOpen));
-  }});
-  hiddenNodeList.addEventListener("click", (event) => {{
-    const button = event.target.closest("button[data-node-id]");
-    if (!button) {{
-      return;
-    }}
-    unhideNode(button.dataset.nodeId);
-  }});
-  graphForm.querySelectorAll('input[name="mode"]').forEach((radio) => {{
-    radio.addEventListener("change", () => {{
-      if (radio.checked) {{
-        graphForm.requestSubmit();
-      }}
-    }});
-  }});
-  labelModeInput.addEventListener("change", () => {{
-    refreshVisibleGraph();
-  }});
-  if (graphData.nodes.length === 0) {{
-    emptyGraph.style.display = "block";
-  }} else if (window.vis) {{
-    const nodes = new vis.DataSet(Array.from(allNodes.values()).map(visibleNode));
-    const edges = new vis.DataSet(Array.from(allEdges.values()).map(visibleEdge));
-    const groups = graphData.groups || {{}};
-    refreshVisibleGraph = () => {{
-      nodes.clear();
-      nodes.add(Array.from(allNodes.values())
-        .filter((node) => !hiddenNodeIds.has(node.id))
-        .map(visibleNode));
-      edges.clear();
-      edges.add(Array.from(allEdges.values())
-        .filter((edge) => !hiddenNodeIds.has(edge.from) && !hiddenNodeIds.has(edge.to))
-        .map(visibleEdge));
-      updateHiddenNodeMenu();
-    }};
-    hideNode = (nodeId) => {{
-      hiddenNodeIds.add(nodeId);
-      nodeDetails.style.display = "none";
-      refreshVisibleGraph();
-    }};
-    unhideNode = (nodeId) => {{
-      hiddenNodeIds.delete(nodeId);
-      refreshVisibleGraph();
-    }};
-    const collapseNode = (nodeId) => {{
-      const source = `expand:${{nodeId}}`;
-      expandedNodeIds.delete(nodeId);
-      for (const edgeId of Array.from(edgeSources.keys())) {{
-        if (forgetSource(edgeSources, edgeId, source)) {{
-          allEdges.delete(edgeId);
-        }}
-      }}
-      for (const currentNodeId of Array.from(nodeSources.keys())) {{
-        if (currentNodeId === nodeId) {{
-          forgetSource(nodeSources, currentNodeId, source);
-          continue;
-        }}
-        if (forgetSource(nodeSources, currentNodeId, source)) {{
-          allNodes.delete(currentNodeId);
-          hiddenNodeIds.delete(currentNodeId);
-        }}
-      }}
-      refreshVisibleGraph();
-    }};
-    const expandNode = async (nodeId) => {{
-      if (expandedNodeIds.has(nodeId)) {{
-        collapseNode(nodeId);
-        return;
-      }}
-      const params = new URLSearchParams(new FormData(graphForm));
-      params.set("focus", nodeId);
-      params.set("depth", "1");
-      const response = await fetch(`${{graphDataUrl}}?${{params.toString()}}`);
-      if (!response.ok) {{
-        return;
-      }}
-      const payload = await response.json();
-      expandedNodeIds.add(nodeId);
-      addGraphPayload(payload, `expand:${{nodeId}}`);
-      refreshVisibleGraph();
-      network.selectNodes([nodeId]);
-    }};
-    const network = new vis.Network(container, {{ nodes, edges }}, {{
-      nodes: {{
-        shape: "dot",
-        size: 14,
-        font: {{ size: 13, face: "Segoe UI" }},
-        borderWidth: 1
-      }},
-      edges: {{
-        arrows: "to",
-        color: {{ color: "#9aa4b2", highlight: "#0b6f85" }},
-        font: {{ align: "middle", size: 11, face: "Segoe UI" }},
-        smooth: {{ type: "dynamic" }}
-      }},
-      groups,
-      interaction: {{
-        dragNodes: true,
-        hover: true,
-        navigationButtons: true,
-        hideEdgesOnDrag: true,
-        hideEdgesOnZoom: true
-      }},
-      physics: {{
-        enabled: true,
-        solver: "forceAtlas2Based",
-        forceAtlas2Based: {{
-          gravitationalConstant: -55,
-          centralGravity: 0.015,
-          springLength: 125,
-          springConstant: 0.08
-        }},
-        stabilization: {{ iterations: 180 }}
-      }}
-    }});
-    network.once("stabilizationIterationsDone", () => {{
-      network.setOptions({{ physics: {{ enabled: false }} }});
-    }});
-    network.on("click", (params) => {{
-      if (params.nodes.length === 0) {{
-        nodeDetails.style.display = "none";
-        return;
-      }}
-      const node = nodeById.get(params.nodes[0]);
-      if (node) {{
-        showNodeDetails(node);
-      }}
-    }});
-    network.on("doubleClick", (params) => {{
-      if (params.nodes.length > 0) {{
-        expandNode(params.nodes[0]);
-      }}
-    }});
-    updateHiddenNodeMenu();
-  }} else {{
-    emptyGraph.textContent = "The graph library could not be loaded.";
-    emptyGraph.style.display = "block";
-  }}
-</script>
-</body>
-</html>
-"""
-        return HTMLResponse(page)
+        template = jenv.get_template("graph.html")
+        return HTMLResponse(template.render(
+            display_name=display_name,
+            encoded_filename=encoded_filename,
+            graph_nav=graph_nav,
+            graph_file_uri=graph_file_uri or "",
+            prefix=prefix or "",
+            q=q or "",
+            limit_nodes=limit_nodes,
+            limit_edges=limit_edges,
+            resolved_limit_nodes=resolved_limit_nodes,
+            resolved_limit_edges=resolved_limit_edges,
+            include_ontology=include_ontology,
+            include_isolated=include_isolated,
+            labels=labels,
+            direction=direction,
+            detail=detail,
+            depth=depth,
+            mode=mode,
+            graph_summary=graph_payload["summary"],
+            graph_json=graph_json,
+            graph_config_json=json.dumps(graph_config).replace("</", "<\\/"),
+        ))
 
     def _query_result(graph: rdflib.Graph, query: str) -> tuple[str, str]:
         try:
@@ -3024,7 +2564,10 @@ LIMIT 100"""
                            q: Optional[str] = None,
                            include_ontology: bool = False,
                            include_isolated: bool = False,
-                           labels: str = "auto"):
+                           labels: str = "auto",
+                           direction: str = "both",
+                           detail: str = "balanced",
+                           depth: int = 1):
         return _graph_page(
             pathlib.Path("combined"),
             mode=mode,
@@ -3039,34 +2582,48 @@ LIMIT 100"""
             include_ontology=include_ontology,
             include_isolated=include_isolated,
             labels=labels,
+            direction=direction,
+            detail=detail,
+            depth=depth,
         )
 
     @app.get("/combined/graph-data")
     def get_combined_graph_data(mode: str = "both",
                                 file_uri: Optional[str] = None,
                                 prefix: Optional[str] = None,
-                                limit_nodes: int = COMBINED_GRAPH_NODE_LIMIT,
-                                limit_edges: int = COMBINED_GRAPH_EDGE_LIMIT,
+                                limit_nodes: Optional[int] = None,
+                                limit_edges: Optional[int] = None,
                                 q: Optional[str] = None,
                                 include_ontology: bool = False,
                                 include_isolated: bool = False,
                                 focus: Optional[str] = None,
                                 depth: int = 1,
-                                labels: str = "auto"):
+                                labels: str = "auto",
+                                direction: str = "both",
+                                detail: str = "balanced",
+                                expansion_limit_nodes: int = GRAPH_EXPANSION_NODE_LIMIT,
+                                expansion_limit_edges: int = GRAPH_EXPANSION_EDGE_LIMIT):
+        resolved_limit_nodes, resolved_limit_edges = _graph_limits(
+            detail, limit_nodes, limit_edges, COMBINED_GRAPH_NODE_LIMIT, COMBINED_GRAPH_EDGE_LIMIT
+        )
         return JSONResponse(_graph_response(
             pathlib.Path("combined"),
             mode=mode,
             file_uri=file_uri,
             prefix=prefix,
             rdf_graph=server_graph,
-            limit_nodes=limit_nodes,
-            limit_edges=limit_edges,
+            limit_nodes=limit_nodes if limit_nodes is not None else (None if focus else resolved_limit_nodes),
+            limit_edges=limit_edges if limit_edges is not None else (None if focus else resolved_limit_edges),
             q=q,
             include_ontology=include_ontology,
             include_isolated=include_isolated,
             focus=focus,
             depth=depth,
             labels=labels,
+            direction=direction,
+            detail=detail,
+            expansion_limit_nodes=expansion_limit_nodes,
+            expansion_limit_edges=expansion_limit_edges,
         ))
 
     @app.get("/combined/query")
@@ -3160,8 +2717,11 @@ LIMIT 100"""
                        limit_edges: Optional[int] = None,
                        q: Optional[str] = None,
                        include_ontology: bool = True,
-                       include_isolated: bool = True,
-                       labels: str = "auto"):
+                       include_isolated: bool = False,
+                       labels: str = "auto",
+                       direction: str = "both",
+                       detail: str = "balanced",
+                       depth: int = 1):
         hdf_file = hdf_files.get(filename)
         if hdf_file is None:
             raise HTTPException(status_code=404, detail="Unknown HDF5 file")
@@ -3176,6 +2736,9 @@ LIMIT 100"""
             include_ontology=include_ontology,
             include_isolated=include_isolated,
             labels=labels,
+            direction=direction,
+            detail=detail,
+            depth=depth,
         )
 
     @app.get("/{filename}/graph-data")
@@ -3187,26 +2750,37 @@ LIMIT 100"""
                             limit_edges: Optional[int] = None,
                             q: Optional[str] = None,
                             include_ontology: bool = True,
-                            include_isolated: bool = True,
+                            include_isolated: bool = False,
                             focus: Optional[str] = None,
                             depth: int = 1,
-                            labels: str = "auto"):
+                            labels: str = "auto",
+                            direction: str = "both",
+                            detail: str = "balanced",
+                            expansion_limit_nodes: int = GRAPH_EXPANSION_NODE_LIMIT,
+                            expansion_limit_edges: int = GRAPH_EXPANSION_EDGE_LIMIT):
         hdf_file = hdf_files.get(filename)
         if hdf_file is None:
             raise HTTPException(status_code=404, detail="Unknown HDF5 file")
+        resolved_limit_nodes, resolved_limit_edges = _graph_limits(
+            detail, limit_nodes, limit_edges, GRAPH_NODE_LIMIT, GRAPH_EDGE_LIMIT
+        )
         return JSONResponse(_graph_response(
             hdf_file,
             mode=mode,
             file_uri=file_uri,
             prefix=prefix,
-            limit_nodes=limit_nodes,
-            limit_edges=limit_edges,
+            limit_nodes=limit_nodes if limit_nodes is not None else (None if focus else resolved_limit_nodes),
+            limit_edges=limit_edges if limit_edges is not None else (None if focus else resolved_limit_edges),
             q=q,
             include_ontology=include_ontology,
             include_isolated=include_isolated,
             focus=focus,
             depth=depth,
             labels=labels,
+            direction=direction,
+            detail=detail,
+            expansion_limit_nodes=expansion_limit_nodes,
+            expansion_limit_edges=expansion_limit_edges,
         ))
 
     @app.get("/{filename}/query")
