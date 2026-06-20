@@ -101,7 +101,11 @@ claims where applicable. Known ontology sources are checked before the generic
 document fallback, so terms such as SSNO classes and QUDT units can be loaded
 directly from their Turtle definitions. Browser requests that cannot be resolved
 locally return a small fallback page that opens the original IRI in a new tab;
-machine-readable RDF requests still return ``404`` when no triples are found. Use
+machine-readable RDF requests still return ``404`` when no triples are found.
+The server keeps one shared graph for all served files and loaded enrichment
+graphs, so SPARQL queries can run across the whole local view quickly. Entity
+resolution still returns the first matching local HDF5 subject when the same IRI
+appears in multiple served files. Use
 ``--local-iri-pattern`` only when graph nodes should show local resolver links
 for selected external IRI patterns, for example Zenodo DOI IRIs. If a fragment
 identifier (``#...``) is passed in a URL, encode it as ``%23`` because browsers

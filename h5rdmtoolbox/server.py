@@ -235,12 +235,9 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
     app = FastAPI(title="h5rdmtoolbox RDF server")
     hdf_files = _file_registry(hdf_filename, extensions=h5_extensions)
     default_hdf_filename = next(iter(hdf_files.values()), None)
-
-    # Load graph once at startup
-    graph = rdflib.Graph()
-    if default_hdf_filename is not None:
-        graph = get_ld(default_hdf_filename, structural=structural, contextual=contextual, file_uri=file_uri)
-        _bind_standard_prefixes(graph)
+    server_graph = rdflib.Graph()
+    hdf_graph_cache: dict[pathlib.Path, rdflib.Graph] = {}
+    local_subject_index: dict[str, tuple[object, rdflib.Graph]] = {}
 
     # Jinja2 environment
     try:
@@ -293,6 +290,42 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
         for triple in rdf_graph.triples((subject, None, None)):
             subgraph.add(triple)
         return subgraph
+
+    def _merge_graph(target_graph: rdflib.Graph, source_graph: Optional[rdflib.Graph]) -> None:
+        if source_graph is None:
+            return
+        for ns_prefix, namespace in source_graph.namespaces():
+            target_graph.bind(ns_prefix, namespace)
+        for triple in source_graph:
+            target_graph.add(triple)
+
+    def _index_first_local_subjects(rdf_graph: rdflib.Graph) -> None:
+        for subject in rdf_graph.subjects():
+            subject_key = str(subject)
+            if subject_key not in local_subject_index:
+                local_subject_index[subject_key] = (subject, _subject_subgraph(rdf_graph, subject))
+
+    def _load_hdf_graph(filename: pathlib.Path) -> rdflib.Graph:
+        filename = pathlib.Path(filename)
+        if filename in hdf_graph_cache:
+            return hdf_graph_cache[filename]
+        rdf_graph = get_ld(
+            filename,
+            structural=structural,
+            contextual=contextual,
+            file_uri=create_app_file_uri,
+        )
+        _bind_standard_prefixes(rdf_graph)
+        hdf_graph_cache[filename] = rdf_graph
+        _merge_graph(server_graph, rdf_graph)
+        _index_first_local_subjects(rdf_graph)
+        logger.info("Loaded served HDF5 RDF graph %s with %d triples", filename, len(rdf_graph))
+        return rdf_graph
+
+    for hdf_file in hdf_files.values():
+        _load_hdf_graph(hdf_file)
+
+    graph = server_graph
 
     zenodo_graph_cache: dict[str, list[rdflib.Graph]] = {}
     ontology_graph_cache: dict[str, Optional[rdflib.Graph]] = {}
@@ -358,6 +391,7 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
                 logger.warning("Could not load RDF file %s from Zenodo record %s: %s", filename, record_id, e)
                 continue
             _bind_standard_prefixes(graph_from_file)
+            _merge_graph(server_graph, graph_from_file)
             graphs.append(graph_from_file)
         zenodo_graph_cache[cache_key] = graphs
         return graphs
@@ -429,6 +463,7 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
             known_ontology_graph_cache[cache_key] = None
             return None
         graph_from_doc = _parse_rdf_bytes(data, response_url)
+        _merge_graph(server_graph, graph_from_doc)
         known_ontology_graph_cache[cache_key] = graph_from_doc
         return graph_from_doc
 
@@ -558,6 +593,7 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
                     break
         if graph_from_doc is None:
             logger.info("No RDF graph could be extracted from ontology document %s", document_url)
+        _merge_graph(server_graph, graph_from_doc)
         ontology_graph_cache[document_url] = graph_from_doc
         return graph_from_doc
 
@@ -640,6 +676,7 @@ LIMIT 100"""
                 continue
             graph_from_doc.add((subject, rdflib.URIRef(property_iri), _wikidata_value_to_term(value_binding)))
         _bind_standard_prefixes(graph_from_doc)
+        _merge_graph(server_graph, graph_from_doc)
         wikidata_graph_cache[entity_id] = graph_from_doc
         logger.info("Loaded Wikidata entity %s with %d direct claims", entity_id, len(graph_from_doc))
         return graph_from_doc
@@ -799,25 +836,18 @@ LIMIT 100"""
         subject = rdflib.URIRef(iri)
         merged_subgraph = rdflib.Graph()
         found_local_subject = False
-        for hdf_file in hdf_files.values():
-            rdf_graph = get_ld(
-                hdf_file,
-                structural=structural,
-                contextual=contextual,
-                file_uri=create_app_file_uri,
-            )
-            _bind_standard_prefixes(rdf_graph)
-            if (subject, None, None) in rdf_graph:
-                logger.info("Using first local subject occurrence %s in served file %s", iri, hdf_file)
-                subgraph = _subject_subgraph(rdf_graph, subject)
-                for triple in subgraph:
-                    merged_subgraph.add(triple)
-                for ns_prefix, namespace in subgraph.namespaces():
-                    merged_subgraph.bind(ns_prefix, namespace)
-                found_local_subject = True
-                break
-            else:
-                logger.info("Subject %s not found in served file %s", iri, hdf_file)
+        found_cached_subject = False
+        indexed_subject = local_subject_index.get(iri)
+        if indexed_subject is not None:
+            _, subgraph = indexed_subject
+            logger.info("Using first local subject occurrence %s from shared server graph", iri)
+            _merge_graph(merged_subgraph, subgraph)
+            found_local_subject = True
+        elif (subject, None, None) in server_graph:
+            logger.info("Using cached enriched subject %s from shared server graph", iri)
+            subgraph = _subject_subgraph(server_graph, subject)
+            _merge_graph(merged_subgraph, subgraph)
+            found_cached_subject = True
         try:
             known_ontology_subgraph = _find_known_ontology_subject_graph(iri)
         except HTTPException:
@@ -856,6 +886,7 @@ LIMIT 100"""
                 merged_subgraph.bind(ns_prefix, namespace)
         if (
             found_local_subject
+            or found_cached_subject
             or known_ontology_subgraph is not None
             or external_subgraph is not None
             or ontology_subgraph is not None
@@ -1808,13 +1839,7 @@ LIMIT 100"""
 
     def _query_page(filename: pathlib.Path, query: Optional[str] = None) -> HTMLResponse:
         sparql_query = query or DEFAULT_SPARQL_QUERY
-        rdf_graph = get_ld(
-            filename,
-            structural=True,
-            contextual=True,
-            file_uri=create_app_file_uri,
-        )
-        _bind_standard_prefixes(rdf_graph)
+        rdf_graph = server_graph
         result_text = ""
         result_html = '<p class="empty-result">Run the example query or edit it before submitting.</p>'
         if query is not None:

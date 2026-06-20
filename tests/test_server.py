@@ -301,16 +301,18 @@ def test_resolve_uses_first_local_subject_occurrence_only(monkeypatch, hdf_filen
             return first_graph
         if pathlib.Path(filename) == second:
             return second_graph
-        raise AssertionError("Resolver should stop after the first local subject match")
+        return rdflib.Graph()
 
     monkeypatch.setattr(server, "get_ld", fake_get_ld)
     client = TestClient(server.create_app([first, second, third]))
+    assert calls == ["first.h5", "second.h5", "third.h5"]
+    calls.clear()
     response = client.get("/resolve", params={"iri": iri, "format": "ttl"})
 
     assert response.status_code == 200
     assert '"first"' in response.text
     assert '"second"' not in response.text
-    assert calls == ["first.h5", "first.h5"]
+    assert calls == []
 
 
 @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
@@ -498,6 +500,7 @@ def test_resolve_uses_known_ontology_registry_for_fragment_iri(monkeypatch, capl
     assert "text/turtle" in response.headers["content-type"]
     assert "rdfs:Class" in response.text
     assert "Standard name" in response.text
+    assert (rdflib.URIRef(ontology_iri), rdflib.RDFS.label, rdflib.Literal("Standard name")) in client.app.state.hdf_graph
     assert calls == [
         "https://matthiasprobst.github.io/ssno/ssno.ttl",
     ]
@@ -867,6 +870,42 @@ def test_file_query_endpoint_runs_select_query(hdf_filename):
     assert "<th>type</th>" in response.text
     assert "hdf:File" in response.text
     assert "hdf:Group" in response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_file_query_endpoint_uses_combined_server_graph(monkeypatch, hdf_filename):
+    import h5rdmtoolbox.server as server
+
+    first = hdf_filename.parent / "first.h5"
+    second = hdf_filename.parent / "second.h5"
+    for filename in [first, second]:
+        with h5py.File(filename, "w"):
+            pass
+    predicate = rdflib.URIRef("https://example.org/source")
+    first_graph = rdflib.Graph()
+    first_graph.bind("ex", rdflib.Namespace("https://example.org/"))
+    first_graph.add((rdflib.URIRef("https://example.org/first"), predicate, rdflib.Literal("first")))
+    second_graph = rdflib.Graph()
+    second_graph.bind("ex", rdflib.Namespace("https://example.org/"))
+    second_graph.add((rdflib.URIRef("https://example.org/second"), predicate, rdflib.Literal("second")))
+
+    def fake_get_ld(filename, **kwargs):
+        if pathlib.Path(filename) == first:
+            return first_graph
+        if pathlib.Path(filename) == second:
+            return second_graph
+        return rdflib.Graph()
+
+    monkeypatch.setattr(server, "get_ld", fake_get_ld)
+    client = TestClient(server.create_app([first, second]))
+    response = client.get(
+        "/first.h5/query",
+        params={"query": "SELECT ?value WHERE { ?s <https://example.org/source> ?value . } ORDER BY ?value"},
+    )
+
+    assert response.status_code == 200
+    assert "first" in response.text
+    assert "second" in response.text
 
 
 @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
