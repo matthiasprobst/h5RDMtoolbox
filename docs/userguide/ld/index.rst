@@ -89,10 +89,13 @@ overrides content negotiation, for example ``?format=ttl``, ``?format=jsonld``,
 ``?format=nt``, ``?format=xml``, or ``?format=html``.
 
 Manual resolver URLs can use ``/resolve?iri=https://doi.org/...%23path`` and do
-not require ``--local-iri-pattern``. If the requested IRI is a Zenodo DOI or
-Zenodo record URL with a fragment, the server lazily downloads RDF-like files
-attached to that Zenodo record into a temporary cache and merges the first
-matching subject with the served graph data. Use
+not require ``--local-iri-pattern``. Resolver pages keep navigation local: URI
+objects link back to ``/resolve?iri=...`` instead of sending the browser to the
+external page. The resolver merges served graph data with known ontology TTL
+sources, Zenodo RDF attachments, generic ontology documents, and Wikidata direct
+claims where applicable. Known ontology sources are checked before the generic
+document fallback, so terms such as SSNO classes can be loaded directly from
+their Turtle definitions. Use
 ``--local-iri-pattern`` only when graph nodes should show local resolver links
 for selected external IRI patterns, for example Zenodo DOI IRIs. If a fragment
 identifier (``#...``) is passed in a URL, encode it as ``%23`` because browsers
@@ -102,6 +105,8 @@ do not send raw fragments to the server.
 
    curl -H "Accept: text/turtle" http://localhost:8000/example.h5/observable_property/T1
    curl -H "Accept: application/ld+json" "http://localhost:8000/resolve?iri=https://doi.org/10.5072/zenodo.403669%23observable_property/T1"
+   curl -H "Accept: text/turtle" "http://localhost:8000/resolve?iri=https://matthiasprobst.github.io/ssno%23StandardName"
+   curl -H "Accept: text/turtle" "http://localhost:8000/resolve?iri=https://www.wikidata.org/wiki/Q42"
 
 Graph Metrics from Python
 -------------------------

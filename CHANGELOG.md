@@ -21,6 +21,8 @@ Log of changes in the versions
   - adds content-negotiated RDF resource URLs with browser HTML, `Accept` negotiation, and `?format=ttl|jsonld|nt|xml|html`
   - adds external RDF subject resolution through local `/resolve?iri=...` URLs, with optional `--local-iri-pattern` graph-link filtering
   - adds lazy Zenodo DOI/record enrichment that searches attached RDF files for fragment IRIs and merges matching triples
+  - adds generic ontology-document enrichment for fragment IRIs by loading the URL before `#` with RDF `Accept` headers and following linked RDF serializations from HTML pages
+  - adds known ontology TTL registry lookup and Wikidata direct-claim enrichment for local resolver pages
 - add reusable RDF graph metrics API:
   - `h5rdmtoolbox.compute_metrics(filename)`
   - `h5rdmtoolbox.File(...).metrics()`

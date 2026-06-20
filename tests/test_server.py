@@ -42,6 +42,9 @@ def test_landing_page_lists_hdf5_files(hdf_filename):
     assert "/server_test.h5/query" in response.text
     assert "/server_test.h5/metrics" in response.text
     assert "/server_test.h5/shacl" in response.text
+    assert 'action="/resolve"' in response.text
+    assert 'name="iri"' in response.text
+    assert ">Resolve<" in response.text
     assert ">Graph<" in response.text
     assert ">Query<" in response.text
     assert ">Metrics<" in response.text
@@ -108,6 +111,7 @@ def test_file_subject_endpoint_returns_html_by_default(hdf_filename):
     assert "hdf:name" in response.text
     assert "/server_test.h5/grp?format=ttl" in response.text
     assert "/server_test.h5/grp?format=jsonld" in response.text
+    assert "/resolve?iri=http%3A%2F%2Fpurl.allotrope.org%2Fontologies%2Fhdf5%2F1.8%23Group" in response.text
 
 
 @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
@@ -266,6 +270,9 @@ class _FakeHTTPResponse:
     def read(self):
         return self.data
 
+    def geturl(self):
+        return "https://example.org/resource"
+
     def __enter__(self):
         return self
 
@@ -391,6 +398,147 @@ def test_resolve_does_not_use_zenodo_fallback_without_fragment(monkeypatch, hdf_
 
     assert response.status_code == 404
     assert "Unknown RDF subject" in response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_resolve_uses_known_ontology_registry_for_fragment_iri(monkeypatch, caplog, hdf_filename):
+    import h5rdmtoolbox.server as server
+
+    caplog.set_level("INFO", logger="h5rdmtoolbox.server")
+    iri = "https://matthiasprobst.github.io/ssno#StandardName"
+    ontology_iri = "https://matthiasprobst.github.io/ssno/#StandardName"
+    ttl = f"""@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+<{ontology_iri}> a rdfs:Class ;
+  rdfs:label "Standard name" .
+"""
+    calls = []
+
+    class RegistryResponse(_FakeHTTPResponse):
+        def geturl(self):
+            return "https://matthiasprobst.github.io/ssno/ssno.ttl"
+
+    def fake_urlopen(request, timeout=0):
+        calls.append(request.full_url if hasattr(request, "full_url") else request)
+        url = request.full_url if hasattr(request, "full_url") else request
+        if url == "https://matthiasprobst.github.io/ssno/ssno.ttl":
+            return RegistryResponse(ttl.encode("utf-8"))
+        raise AssertionError(f"Unexpected download: {url}")
+
+    monkeypatch.setattr(server.urllib.request, "urlopen", fake_urlopen)
+    client = TestClient(server.create_app(hdf_filename, file_uri="https://example.org/not-this#"))
+    response = client.get("/resolve", params={"iri": iri, "format": "ttl"})
+
+    assert response.status_code == 200
+    assert "text/turtle" in response.headers["content-type"]
+    assert "rdfs:Class" in response.text
+    assert "Standard name" in response.text
+    assert calls == [
+        "https://matthiasprobst.github.io/ssno/ssno.ttl",
+    ]
+    assert "Known ontology candidates for https://matthiasprobst.github.io/ssno#StandardName" in caplog.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_resolve_uses_ontology_document_for_fragment_iri(monkeypatch, caplog, hdf_filename):
+    import h5rdmtoolbox.server as server
+
+    caplog.set_level("INFO", logger="h5rdmtoolbox.server")
+    iri = "https://example.org/ontology#ExampleClass"
+    ontology_iri = "https://example.org/ontology/#ExampleClass"
+    html = b"""<!doctype html>
+<html><body><a href="ontology.ttl">TTL</a></body></html>
+"""
+    ttl = f"""@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+<{ontology_iri}> a rdfs:Class ;
+  rdfs:label "Example class" .
+"""
+    calls = []
+
+    class OntologyResponse(_FakeHTTPResponse):
+        def geturl(self):
+            return "https://example.org/ontology/"
+
+    def fake_urlopen(request, timeout=0):
+        calls.append(request.full_url if hasattr(request, "full_url") else request)
+        url = request.full_url if hasattr(request, "full_url") else request
+        if url == "https://example.org/ontology/":
+            return OntologyResponse(html)
+        if url == "https://example.org/ontology/ontology.ttl":
+            return OntologyResponse(ttl.encode("utf-8"))
+        raise AssertionError(f"Unexpected download: {url}")
+
+    monkeypatch.setattr(server.urllib.request, "urlopen", fake_urlopen)
+    client = TestClient(server.create_app(hdf_filename, file_uri="https://example.org/not-this#"))
+    response = client.get("/resolve", params={"iri": iri, "format": "ttl"})
+
+    assert response.status_code == 200
+    assert "text/turtle" in response.headers["content-type"]
+    assert "rdfs:Class" in response.text
+    assert "Example class" in response.text
+    assert calls == [
+        "https://example.org/ontology/",
+        "https://example.org/ontology/ontology.ttl",
+    ]
+    assert "Ontology subject candidates for https://example.org/ontology#ExampleClass" in caplog.text
+    assert "Loading linked RDF serialization https://example.org/ontology/ontology.ttl" in caplog.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_resolve_does_not_use_ontology_document_without_fragment(monkeypatch, hdf_filename):
+    import h5rdmtoolbox.server as server
+
+    def fake_urlopen(request, timeout=0):
+        raise AssertionError(f"Unexpected download: {request}")
+
+    monkeypatch.setattr(server.urllib.request, "urlopen", fake_urlopen)
+    client = TestClient(server.create_app(hdf_filename, file_uri="https://example.org/not-this#"))
+    response = client.get(
+        "/resolve",
+        params={"iri": "https://matthiasprobst.github.io/ssno/", "format": "ttl"},
+    )
+
+    assert response.status_code == 404
+    assert "Unknown RDF subject" in response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_resolve_uses_wikidata_direct_claims(monkeypatch, hdf_filename):
+    import h5rdmtoolbox.server as server
+
+    iri = "https://www.wikidata.org/wiki/Q42"
+    results = {
+        "results": {
+            "bindings": [
+                {
+                    "property": {"type": "uri", "value": "http://www.wikidata.org/prop/direct/P31"},
+                    "value": {"type": "uri", "value": "http://www.wikidata.org/entity/Q5"},
+                },
+                {
+                    "property": {"type": "uri", "value": "http://www.wikidata.org/prop/direct/P569"},
+                    "value": {
+                        "type": "literal",
+                        "value": "1952-03-11T00:00:00Z",
+                        "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+                    },
+                },
+            ]
+        }
+    }
+
+    def fake_urlopen(request, timeout=0):
+        url = request.full_url if hasattr(request, "full_url") else request
+        assert url.startswith("https://query.wikidata.org/sparql?")
+        return _FakeHTTPResponse(json.dumps(results).encode("utf-8"))
+
+    monkeypatch.setattr(server.urllib.request, "urlopen", fake_urlopen)
+    client = TestClient(server.create_app(hdf_filename, file_uri="https://example.org/not-this#"))
+    response = client.get("/resolve", params={"iri": iri, "format": "ttl"})
+
+    assert response.status_code == 200
+    assert "text/turtle" in response.headers["content-type"]
+    assert "P31" in response.text
+    assert "<http://www.wikidata.org/entity/Q5>" in response.text
+    assert "1952-03-11T00:00:00+00:00" in response.text or "1952-03-11T00:00:00Z" in response.text
 
 
 @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")

@@ -52,6 +52,33 @@ RDF_FILE_FORMATS = {
     ".xml": "xml",
     ".nt": "nt",
 }
+KNOWN_ONTOLOGY_SOURCES = {
+    "https://matthiasprobst.github.io/ssno#": {
+        "label": "Standard Name Ontology",
+        "ttl": "https://matthiasprobst.github.io/ssno/ssno.ttl",
+    },
+    "https://matthiasprobst.github.io/ssno/#": {
+        "label": "Standard Name Ontology",
+        "ttl": "https://matthiasprobst.github.io/ssno/ssno.ttl",
+    },
+    "http://www.w3.org/1999/02/22-rdf-syntax-ns#": {
+        "label": "RDF",
+        "ttl": "https://www.w3.org/1999/02/22-rdf-syntax-ns.ttl",
+    },
+    "http://www.w3.org/2000/01/rdf-schema#": {
+        "label": "RDFS",
+        "ttl": "https://www.w3.org/2000/01/rdf-schema.ttl",
+    },
+    "http://www.w3.org/2002/07/owl#": {
+        "label": "OWL",
+        "ttl": "https://www.w3.org/2002/07/owl.ttl",
+    },
+    "http://www.w3.org/2004/02/skos/core#": {
+        "label": "SKOS",
+        "ttl": "https://www.w3.org/2009/08/skos-reference/skos.rdf",
+    },
+}
+WIKIDATA_SPARQL_URL = "https://query.wikidata.org/sparql"
 DEFAULT_SPARQL_QUERY = """SELECT ?subject ?predicate ?object
 WHERE {
   ?subject ?predicate ?object .
@@ -208,7 +235,7 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
         return any(fnmatch.fnmatchcase(iri, pattern) for pattern in local_iri_pattern_list)
 
     def _local_iri_href(iri: str) -> str:
-        if not _matches_local_iri_pattern(iri):
+        if local_iri_pattern_list and not _matches_local_iri_pattern(iri):
             return ""
         return f"/resolve?iri={urllib.parse.quote(iri, safe='')}"
 
@@ -221,6 +248,9 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
         return subgraph
 
     zenodo_graph_cache: dict[str, list[rdflib.Graph]] = {}
+    ontology_graph_cache: dict[str, Optional[rdflib.Graph]] = {}
+    known_ontology_graph_cache: dict[str, Optional[rdflib.Graph]] = {}
+    wikidata_graph_cache: dict[str, Optional[rdflib.Graph]] = {}
 
     def _zenodo_record_info(iri: str) -> Optional[tuple[str, str]]:
         parsed = urllib.parse.urlparse(iri)
@@ -294,6 +324,254 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
         for candidate_graph in _load_zenodo_graphs(api_host, record_id):
             if (subject, None, None) in candidate_graph:
                 return _subject_subgraph(candidate_graph, subject)
+        return None
+
+    def _subject_candidates(iri: str) -> list[rdflib.URIRef]:
+        parsed = urllib.parse.urlparse(iri)
+        candidates = [rdflib.URIRef(iri)]
+        if parsed.fragment and parsed.path and not pathlib.Path(parsed.path).suffix:
+            alternate_path = parsed.path.rstrip("/") if parsed.path.endswith("/") else f"{parsed.path}/"
+            alternate_iri = urllib.parse.urlunparse(parsed._replace(path=alternate_path))
+            if alternate_iri != iri:
+                candidates.append(rdflib.URIRef(alternate_iri))
+        return candidates
+
+    def _load_known_ontology_graph(base_iri: str, ontology_info: dict) -> Optional[rdflib.Graph]:
+        if base_iri in known_ontology_graph_cache:
+            logger.info(
+                "Using cached known ontology %s: %s",
+                base_iri,
+                "hit" if known_ontology_graph_cache[base_iri] is not None else "miss",
+            )
+            return known_ontology_graph_cache[base_iri]
+        ttl_url = ontology_info["ttl"]
+        logger.info("Loading known ontology %s from %s", ontology_info.get("label", base_iri), ttl_url)
+        try:
+            with urllib.request.urlopen(ttl_url, timeout=15) as response:
+                data = response.read()
+                response_url = response.geturl() if hasattr(response, "geturl") else ttl_url
+        except (urllib.error.URLError, TimeoutError) as e:
+            logger.warning("Could not load known ontology %s from %s: %s", base_iri, ttl_url, e)
+            known_ontology_graph_cache[base_iri] = None
+            return None
+        graph_from_doc = _parse_rdf_bytes(data, response_url)
+        known_ontology_graph_cache[base_iri] = graph_from_doc
+        return graph_from_doc
+
+    def _find_known_ontology_subject_graph(iri: str) -> Optional[rdflib.Graph]:
+        matching_sources = [
+            (base_iri, ontology_info)
+            for base_iri, ontology_info in sorted(KNOWN_ONTOLOGY_SOURCES.items(), key=lambda item: len(item[0]), reverse=True)
+            if iri.startswith(base_iri)
+        ]
+        if not matching_sources:
+            return None
+        subject_candidates = _subject_candidates(iri)
+        logger.info(
+            "Known ontology candidates for %s: %s",
+            iri,
+            [ontology_info.get("label", base_iri) for base_iri, ontology_info in matching_sources],
+        )
+        for base_iri, ontology_info in matching_sources:
+            graph_from_doc = _load_known_ontology_graph(base_iri, ontology_info)
+            if graph_from_doc is None:
+                continue
+            for subject in subject_candidates:
+                if (subject, None, None) in graph_from_doc:
+                    logger.info("Found known ontology subject %s in %s", subject, ontology_info.get("label", base_iri))
+                    return _subject_subgraph(graph_from_doc, subject)
+            logger.info(
+                "Known ontology %s has %d triples but no subject candidates matched %s",
+                ontology_info.get("label", base_iri),
+                len(graph_from_doc),
+                [str(subject) for subject in subject_candidates],
+            )
+        return None
+
+    def _ontology_document_urls(iri: str) -> list[str]:
+        parsed = urllib.parse.urlparse(iri)
+        if not parsed.fragment or parsed.scheme not in {"http", "https"}:
+            return []
+        if _zenodo_record_info(iri) is not None:
+            return []
+        document_url = urllib.parse.urlunparse(parsed._replace(fragment=""))
+        suffix = pathlib.Path(parsed.path).suffix
+        if parsed.path and not parsed.path.endswith("/") and not suffix:
+            slash_url = urllib.parse.urlunparse(parsed._replace(path=f"{parsed.path}/", fragment=""))
+            return [slash_url, document_url]
+        return [document_url]
+
+    def _parse_rdf_bytes(data: bytes, source_url: str) -> Optional[rdflib.Graph]:
+        suffix_format = _rdf_download_format(source_url)
+        formats = [fmt for fmt in [suffix_format, "turtle", "xml", "json-ld", "nt"] if fmt]
+        seen_formats = set()
+        logger.info("Trying to parse RDF document %s (%d bytes) as %s", source_url, len(data), formats)
+        for rdf_format in formats:
+            if rdf_format in seen_formats:
+                continue
+            seen_formats.add(rdf_format)
+            graph_from_doc = rdflib.Graph()
+            try:
+                graph_from_doc.parse(data=data, format=rdf_format, publicID=source_url)
+            except Exception as e:
+                logger.info("Could not parse %s as %s: %s", source_url, rdf_format, e)
+                continue
+            _bind_standard_prefixes(graph_from_doc)
+            logger.info("Parsed %s as %s with %d triples", source_url, rdf_format, len(graph_from_doc))
+            return graph_from_doc
+        logger.info("No RDF parser succeeded for %s", source_url)
+        return None
+
+    def _rdf_links_from_html(data: bytes, document_url: str) -> list[str]:
+        try:
+            html = data.decode("utf-8", errors="ignore")
+        except Exception as e:
+            logger.info("Could not decode ontology HTML from %s: %s", document_url, e)
+            return []
+        links = []
+        for href in re.findall(r"""href=["']([^"']+)["']""", html, flags=re.IGNORECASE):
+            resolved = urllib.parse.urljoin(document_url, href)
+            if _rdf_download_format(resolved):
+                links.append(resolved)
+        logger.info("Found %d linked RDF serialization candidates in %s: %s", len(links), document_url, links[:10])
+        return links
+
+    def _load_ontology_graph(document_url: str) -> Optional[rdflib.Graph]:
+        if document_url in ontology_graph_cache:
+            logger.info("Using cached ontology document %s: %s", document_url, "hit" if ontology_graph_cache[document_url] is not None else "miss")
+            return ontology_graph_cache[document_url]
+        logger.info("Loading ontology document %s", document_url)
+        request = urllib.request.Request(
+            document_url,
+            headers={
+                "Accept": (
+                    "text/turtle, application/ld+json;q=0.9, "
+                    "application/rdf+xml;q=0.8, application/n-triples;q=0.7"
+                )
+            },
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=15) as response:
+                data = response.read()
+                response_url = response.geturl() if hasattr(response, "geturl") else document_url
+                content_type = response.headers.get("Content-Type", "") if hasattr(response, "headers") else ""
+                logger.info("Loaded ontology document %s via %s, content-type=%s, bytes=%d", document_url, response_url, content_type, len(data))
+        except (urllib.error.URLError, TimeoutError) as e:
+            logger.warning("Could not load ontology document %s: %s", document_url, e)
+            ontology_graph_cache[document_url] = None
+            return None
+        graph_from_doc = _parse_rdf_bytes(data, response_url)
+        if graph_from_doc is None:
+            for rdf_url in _rdf_links_from_html(data, response_url):
+                logger.info("Loading linked RDF serialization %s from ontology page %s", rdf_url, document_url)
+                try:
+                    with urllib.request.urlopen(rdf_url, timeout=15) as rdf_response:
+                        rdf_data = rdf_response.read()
+                        rdf_response_url = rdf_response.geturl() if hasattr(rdf_response, "geturl") else rdf_url
+                        rdf_content_type = rdf_response.headers.get("Content-Type", "") if hasattr(rdf_response, "headers") else ""
+                        logger.info("Loaded linked RDF serialization %s via %s, content-type=%s, bytes=%d", rdf_url, rdf_response_url, rdf_content_type, len(rdf_data))
+                except (urllib.error.URLError, TimeoutError) as e:
+                    logger.warning("Could not load RDF serialization %s linked from %s: %s", rdf_url, document_url, e)
+                    continue
+                graph_from_doc = _parse_rdf_bytes(rdf_data, rdf_response_url)
+                if graph_from_doc is not None:
+                    break
+        if graph_from_doc is None:
+            logger.info("No RDF graph could be extracted from ontology document %s", document_url)
+        ontology_graph_cache[document_url] = graph_from_doc
+        return graph_from_doc
+
+    def _find_ontology_subject_graph(iri: str) -> Optional[rdflib.Graph]:
+        subject_candidates = _subject_candidates(iri)
+        document_urls = _ontology_document_urls(iri)
+        logger.info("Ontology enrichment candidates for %s: %s", iri, document_urls)
+        logger.info("Ontology subject candidates for %s: %s", iri, [str(subject) for subject in subject_candidates])
+        for document_url in document_urls:
+            graph_from_doc = _load_ontology_graph(document_url)
+            if graph_from_doc is not None:
+                for subject in subject_candidates:
+                    if (subject, None, None) in graph_from_doc:
+                        logger.info("Found ontology subject %s in %s", subject, document_url)
+                        return _subject_subgraph(graph_from_doc, subject)
+                logger.info(
+                    "Ontology graph %s has %d triples but none of the subject candidates matched %s",
+                    document_url,
+                    len(graph_from_doc),
+                    [str(subject) for subject in subject_candidates],
+                )
+        return None
+
+    def _wikidata_entity_id(iri: str) -> Optional[str]:
+        parsed = urllib.parse.urlparse(iri)
+        host = parsed.netloc.lower()
+        path = parsed.path.strip("/")
+        if host == "www.wikidata.org" and path.startswith("wiki/"):
+            entity_id = path.rsplit("/", 1)[-1]
+        elif host == "www.wikidata.org" and path.startswith("entity/"):
+            entity_id = path.rsplit("/", 1)[-1]
+        elif host == "www.wikidata.org" and path.startswith("prop/direct/"):
+            return None
+        elif host == "www.wikidata.org":
+            return None
+        else:
+            return None
+        return entity_id if re.match(r"^Q\d+$", entity_id) else None
+
+    def _wikidata_value_to_term(value_binding: dict):
+        value = value_binding.get("value", "")
+        value_type = value_binding.get("type", "")
+        datatype = value_binding.get("datatype")
+        if value_type == "uri":
+            return rdflib.URIRef(value)
+        if datatype:
+            return rdflib.Literal(value, datatype=rdflib.URIRef(datatype))
+        return rdflib.Literal(value)
+
+    def _load_wikidata_graph(entity_id: str, display_iri: str) -> Optional[rdflib.Graph]:
+        if entity_id in wikidata_graph_cache:
+            logger.info("Using cached Wikidata entity %s: %s", entity_id, "hit" if wikidata_graph_cache[entity_id] is not None else "miss")
+            return wikidata_graph_cache[entity_id]
+        query = f"""SELECT ?property ?value
+WHERE {{
+  wd:{entity_id} ?property ?value .
+  FILTER(STRSTARTS(STR(?property), "http://www.wikidata.org/prop/direct/"))
+}}
+LIMIT 100"""
+        params = urllib.parse.urlencode({"query": query, "format": "json"})
+        request = urllib.request.Request(
+            f"{WIKIDATA_SPARQL_URL}?{params}",
+            headers={"Accept": "application/sparql-results+json"},
+        )
+        logger.info("Loading Wikidata direct claims for %s", entity_id)
+        try:
+            with urllib.request.urlopen(request, timeout=15) as response:
+                results = json.loads(response.read().decode("utf-8"))
+        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as e:
+            logger.warning("Could not load Wikidata entity %s: %s", entity_id, e)
+            wikidata_graph_cache[entity_id] = None
+            return None
+        graph_from_doc = rdflib.Graph()
+        subject = rdflib.URIRef(display_iri)
+        for row in results.get("results", {}).get("bindings", []):
+            property_binding = row.get("property", {})
+            value_binding = row.get("value", {})
+            property_iri = property_binding.get("value")
+            if not property_iri or not value_binding:
+                continue
+            graph_from_doc.add((subject, rdflib.URIRef(property_iri), _wikidata_value_to_term(value_binding)))
+        _bind_standard_prefixes(graph_from_doc)
+        wikidata_graph_cache[entity_id] = graph_from_doc
+        logger.info("Loaded Wikidata entity %s with %d direct claims", entity_id, len(graph_from_doc))
+        return graph_from_doc
+
+    def _find_wikidata_subject_graph(iri: str) -> Optional[rdflib.Graph]:
+        entity_id = _wikidata_entity_id(iri)
+        if entity_id is None:
+            return None
+        graph_from_doc = _load_wikidata_graph(entity_id, iri)
+        subject = rdflib.URIRef(iri)
+        if graph_from_doc is not None and (subject, None, None) in graph_from_doc:
+            return _subject_subgraph(graph_from_doc, subject)
         return None
 
     def _resource_format(request: Request, format: Optional[str] = None) -> str:
@@ -390,6 +668,7 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
 
     def _resolve_iri_response(iri: str, request: Request, format: Optional[str] = None):
 
+        logger.info("Resolving IRI %s with requested format=%s accept=%s", iri, format, request.headers.get("accept", ""))
         subject = rdflib.URIRef(iri)
         merged_subgraph = rdflib.Graph()
         found_local_subject = False
@@ -402,12 +681,26 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
             )
             _bind_standard_prefixes(rdf_graph)
             if (subject, None, None) in rdf_graph:
+                logger.info("Found local subject %s in served file %s", iri, hdf_file)
                 subgraph = _subject_subgraph(rdf_graph, subject)
                 for triple in subgraph:
                     merged_subgraph.add(triple)
                 for ns_prefix, namespace in subgraph.namespaces():
                     merged_subgraph.bind(ns_prefix, namespace)
                 found_local_subject = True
+            else:
+                logger.info("Subject %s not found in served file %s", iri, hdf_file)
+        try:
+            known_ontology_subgraph = _find_known_ontology_subject_graph(iri)
+        except HTTPException:
+            if found_local_subject:
+                return _resource_response(subject, merged_subgraph, request, format=format)
+            raise
+        if known_ontology_subgraph is not None:
+            for triple in known_ontology_subgraph:
+                merged_subgraph.add(triple)
+            for ns_prefix, namespace in known_ontology_subgraph.namespaces():
+                merged_subgraph.bind(ns_prefix, namespace)
         try:
             external_subgraph = _find_zenodo_subject_graph(iri)
         except HTTPException:
@@ -419,8 +712,30 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
                 merged_subgraph.add(triple)
             for ns_prefix, namespace in external_subgraph.namespaces():
                 merged_subgraph.bind(ns_prefix, namespace)
-        if found_local_subject or external_subgraph is not None:
+        ontology_subgraph = None
+        if known_ontology_subgraph is None:
+            ontology_subgraph = _find_ontology_subject_graph(iri)
+        if ontology_subgraph is not None:
+            for triple in ontology_subgraph:
+                merged_subgraph.add(triple)
+            for ns_prefix, namespace in ontology_subgraph.namespaces():
+                merged_subgraph.bind(ns_prefix, namespace)
+        wikidata_subgraph = _find_wikidata_subject_graph(iri)
+        if wikidata_subgraph is not None:
+            for triple in wikidata_subgraph:
+                merged_subgraph.add(triple)
+            for ns_prefix, namespace in wikidata_subgraph.namespaces():
+                merged_subgraph.bind(ns_prefix, namespace)
+        if (
+            found_local_subject
+            or known_ontology_subgraph is not None
+            or external_subgraph is not None
+            or ontology_subgraph is not None
+            or wikidata_subgraph is not None
+        ):
+            logger.info("Resolved IRI %s with %d triples", iri, len(merged_subgraph))
             return _resource_response(subject, merged_subgraph, request, format=format)
+        logger.info("IRI %s could not be resolved from local graph, known ontologies, Zenodo, ontology document, or Wikidata", iri)
         raise HTTPException(status_code=404, detail="Unknown RDF subject")
 
     @app.get("/", response_class=HTMLResponse)
@@ -496,6 +811,35 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
       display: grid;
       gap: 12px;
     }}
+    .resolve-form {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+      padding: 16px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }}
+    .resolve-form input {{
+      flex: 1 1 360px;
+      min-height: 36px;
+      min-width: 0;
+      padding: 0 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font: inherit;
+    }}
+    .resolve-form button {{
+      min-height: 36px;
+      padding: 0 14px;
+      border: 0;
+      border-radius: 6px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 650;
+      cursor: pointer;
+    }}
     .file-card {{
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
@@ -562,6 +906,10 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
     <h1>HDF5 files</h1>
     <p class="subtitle">Select a file and RDF serialization format. Each view includes controls for structural data, contextual data, and file URI.</p>
   </header>
+  <form class="resolve-form" action="/resolve" method="get">
+    <input type="url" name="iri" placeholder="https://doi.org/10.5072/zenodo.403669#observable_property/T1" aria-label="IRI to resolve">
+    <button type="submit">Resolve</button>
+  </form>
   {body}
 </main>
 </body>
@@ -2330,6 +2678,8 @@ def run_server(host: str = "127.0.0.1",
         filenames = [filename] if filename is not None else None
     import uvicorn
 
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(name)s:%(message)s")
+    logger.setLevel(logging.INFO)
     app = create_app(
         filenames,
         structural=structural,
