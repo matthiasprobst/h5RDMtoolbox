@@ -1,4 +1,5 @@
 import unittest
+import pathlib
 from unittest.mock import patch
 
 from click.testing import CliRunner
@@ -121,6 +122,28 @@ class TestCLI(unittest.TestCase):
         self.assertIsNone(result.exception)
         run_server.assert_called_once()
         self.assertEqual(run_server.call_args.kwargs["filenames"], ["a.h5", "b.hdf5"])
+
+    def test_serve_with_folder(self):
+        runner = CliRunner()
+        with runner.isolated_filesystem():
+            pathlib.Path("data").mkdir()
+            with patch("h5rdmtoolbox.server.run_server") as run_server:
+                result = runner.invoke(h5tbx, ["serve", "data"])
+
+        self.assertIsNone(result.exception)
+        run_server.assert_called_once()
+        self.assertEqual(run_server.call_args.kwargs["filenames"], ["data"])
+
+    def test_serve_with_h5ext(self):
+        runner = CliRunner()
+        with runner.isolated_filesystem():
+            pathlib.Path("data").mkdir()
+            with patch("h5rdmtoolbox.server.run_server") as run_server:
+                result = runner.invoke(h5tbx, ["serve", "data", "--h5ext=.h5", "--h5ext=hdf5"])
+
+        self.assertIsNone(result.exception)
+        run_server.assert_called_once()
+        self.assertEqual(run_server.call_args.kwargs["h5_extensions"], [".h5", ".hdf5"])
 
     def test_serve_with_local_iri_pattern(self):
         runner = CliRunner()

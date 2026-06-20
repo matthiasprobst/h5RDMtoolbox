@@ -144,28 +144,54 @@ LIMIT 25""",
 ]
 
 
-def discover_hdf_files(directory: Union[str, pathlib.Path] = ".") -> list[pathlib.Path]:
+def _normalize_hdf_extensions(extensions: Optional[Sequence[str]] = None) -> set[str]:
+    """Return normalized HDF5 filename extensions."""
+    if extensions is None:
+        return set(HDF5_SUFFIXES)
+    normalized = set()
+    for extension in extensions:
+        extension = str(extension).strip().lower()
+        if not extension:
+            raise ValueError("HDF5 extension values must not be empty")
+        if not extension.startswith("."):
+            extension = f".{extension}"
+        normalized.add(extension)
+    return normalized
+
+
+def discover_hdf_files(directory: Union[str, pathlib.Path] = ".",
+                       extensions: Optional[Sequence[str]] = None) -> list[pathlib.Path]:
     """Return HDF5 files in *directory* sorted by filename."""
     root = pathlib.Path(directory)
+    hdf_extensions = _normalize_hdf_extensions(extensions)
     return sorted(
-        (path for path in root.iterdir() if path.is_file() and path.suffix.lower() in HDF5_SUFFIXES),
+        (path for path in root.iterdir() if path.is_file() and path.suffix.lower() in hdf_extensions),
         key=lambda path: path.name.lower(),
     )
 
 
-def _as_file_list(hdf_filenames: Optional[Union[str, pathlib.Path, Sequence[Union[str, pathlib.Path]]]]) -> list[pathlib.Path]:
+def _as_file_list(hdf_filenames: Optional[Union[str, pathlib.Path, Sequence[Union[str, pathlib.Path]]]],
+                  extensions: Optional[Sequence[str]] = None) -> list[pathlib.Path]:
     if hdf_filenames is None:
-        return discover_hdf_files()
+        return discover_hdf_files(extensions=extensions)
     if isinstance(hdf_filenames, (str, pathlib.Path)):
         filenames = [hdf_filenames]
     else:
         filenames = list(hdf_filenames)
-    return [pathlib.Path(filename) for filename in filenames]
+    files = []
+    for filename in filenames:
+        path = pathlib.Path(filename)
+        if path.is_dir():
+            files.extend(discover_hdf_files(path, extensions=extensions))
+        else:
+            files.append(path)
+    return files
 
 
-def _file_registry(hdf_filenames: Optional[Union[str, pathlib.Path, Sequence[Union[str, pathlib.Path]]]]) -> dict[str, pathlib.Path]:
+def _file_registry(hdf_filenames: Optional[Union[str, pathlib.Path, Sequence[Union[str, pathlib.Path]]]],
+                   extensions: Optional[Sequence[str]] = None) -> dict[str, pathlib.Path]:
     registry = {}
-    for filename in _as_file_list(hdf_filenames):
+    for filename in _as_file_list(hdf_filenames, extensions=extensions):
         key = filename.name
         if key in registry:
             raise ValueError(f'Duplicate HDF5 filename "{key}" cannot be served twice')
@@ -190,7 +216,8 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
                contextual: bool = True,
                file_uri: Optional[str] = None,
                list_landing: bool = True,
-               local_iri_patterns: Optional[Union[str, Sequence[str]]] = None):
+               local_iri_patterns: Optional[Union[str, Sequence[str]]] = None,
+               h5_extensions: Optional[Sequence[str]] = None):
     """Create a FastAPI app serving RDF extracted from one or more HDF5 files.
 
     This function intentionally returns a *minimal* ASGI app using FastAPI if available.
@@ -206,7 +233,7 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
                            "Install with: pip install 'h5rdmtoolbox[server]'\n") from e
 
     app = FastAPI(title="h5rdmtoolbox RDF server")
-    hdf_files = _file_registry(hdf_filename)
+    hdf_files = _file_registry(hdf_filename, extensions=h5_extensions)
     default_hdf_filename = next(iter(hdf_files.values()), None)
 
     # Load graph once at startup
@@ -2775,7 +2802,8 @@ def run_server(host: str = "127.0.0.1",
                structural: bool = True,
                contextual: bool = True,
                file_uri: Optional[str] = None,
-               local_iri_patterns: Optional[Sequence[str]] = None):
+               local_iri_patterns: Optional[Sequence[str]] = None,
+               h5_extensions: Optional[Sequence[str]] = None):
     """Run a FastAPI/uvicorn server exposing RDF for HDF5 files."""
     if filenames is None:
         filenames = [filename] if filename is not None else None
@@ -2789,6 +2817,7 @@ def run_server(host: str = "127.0.0.1",
         contextual=contextual,
         file_uri=file_uri,
         local_iri_patterns=local_iri_patterns,
+        h5_extensions=h5_extensions,
     )
     url = f"http://{host}:{port}/"
     logger.info("Starting h5rdmtoolbox RDF server at %s serving files %s", url, app.state.hdf_files)

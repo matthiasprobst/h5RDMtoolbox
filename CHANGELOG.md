@@ -12,6 +12,7 @@ Log of changes in the versions
   - `--prefix`
 - add `h5tbx serve` for local browser-based HDF5/RDF inspection
   - discovers `.h5`, `.hdf`, and `.hdf5` files when no filename is provided
+  - accepts folders as `h5tbx serve` inputs and adds repeatable `--h5ext` folder-discovery filters
   - serves RDF serializations as Turtle, JSON-LD, N-Triples, and RDF/XML
   - adds interactive graph view with draggable nodes, class-based colors, literal popovers, and hide/unhide controls
   - adds SPARQL query page with sample queries and tabular SELECT results

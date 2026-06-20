@@ -131,16 +131,20 @@ def _serialize(filename, fmt, structural=True, contextual=True, file_uri=None):
 @click.option('--file-uri', type=str, default=None, help='Base file URI to use for RDF subjects (must end with # or /)')
 @click.option('--local-iri-pattern', multiple=True,
               help='External IRI pattern to resolve locally, e.g. "https://doi.org/10.5281/zenodo.*". Can be used multiple times.')
-def serve(filenames, host, port, no_structural, no_contextual, file_uri, local_iri_pattern):
+@click.option('--h5ext', multiple=True,
+              help='HDF5 extension to discover in folders, e.g. ".h5" or "hdf5". Can be used multiple times.')
+def serve(filenames, host, port, no_structural, no_contextual, file_uri, local_iri_pattern, h5ext):
     """Serve HDF5 file RDF data over HTTP (FastAPI/uvicorn)."""
     structural = not no_structural
     contextual = not no_contextual
-    from h5rdmtoolbox.server import run_server
+    from h5rdmtoolbox.server import _normalize_hdf_extensions, run_server
     selected_filenames = [str(filename) for filename in filenames] if filenames else None
+    h5_extensions = sorted(_normalize_hdf_extensions(h5ext)) if h5ext else None
     run_server(host=host, port=port, filenames=selected_filenames,
                structural=structural, contextual=contextual,
                file_uri=file_uri,
-               local_iri_patterns=list(local_iri_pattern))
+               local_iri_patterns=list(local_iri_pattern),
+               h5_extensions=h5_extensions)
 
 
 @h5tbx.command()

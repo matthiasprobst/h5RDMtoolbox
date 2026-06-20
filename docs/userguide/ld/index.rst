@@ -65,10 +65,14 @@ For interactive inspection, start the local web viewer:
 .. code-block:: bash
 
    h5tbx serve example.h5
+   h5tbx serve data/ --h5ext=.h5 --h5ext=.hdf5
    h5tbx serve example.h5 --file-uri https://doi.org/10.5281/zenodo.17572275# --local-iri-pattern "https://doi.org/10.5281/zenodo.*"
 
-If no filename is provided, ``h5tbx serve`` lists all ``.h5``, ``.hdf``, and
-``.hdf5`` files in the current directory. Each file page links to:
+``h5tbx serve`` accepts files and folders. Folder inputs are searched for
+``.h5``, ``.hdf``, and ``.hdf5`` files by default; repeat ``--h5ext`` to limit
+folder discovery to specific extensions. If no filename is provided,
+``h5tbx serve`` lists matching files in the current directory. Each file page
+links to:
 
 - RDF serializations: Turtle, JSON-LD, N-Triples, and RDF/XML.
 - ``Graph``: an interactive RDF graph view with class-based colors, draggable

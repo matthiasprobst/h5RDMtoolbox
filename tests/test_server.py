@@ -933,3 +933,59 @@ def test_create_app_discovers_hdf5_files(monkeypatch, hdf_filename):
     ttl_response = client.get("/second.hdf/ttl?raw=true")
     assert ttl_response.status_code == 200
     assert "hdf:File" in ttl_response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_create_app_expands_folder_input(hdf_filename):
+    from h5rdmtoolbox.server import create_app
+
+    folder = hdf_filename.parent / "data"
+    folder.mkdir()
+    with h5py.File(folder / "first.h5", "w"):
+        pass
+    with h5py.File(folder / "second.hdf5", "w"):
+        pass
+    (folder / "ignored.txt").write_text("not hdf5")
+    client = TestClient(create_app(folder))
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert "first.h5" in response.text
+    assert "second.hdf5" in response.text
+    assert "ignored.txt" not in response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_create_app_filters_folder_input_by_extension(hdf_filename):
+    from h5rdmtoolbox.server import create_app
+
+    folder = hdf_filename.parent / "data"
+    folder.mkdir()
+    with h5py.File(folder / "first.h5", "w"):
+        pass
+    with h5py.File(folder / "second.hdf5", "w"):
+        pass
+    client = TestClient(create_app(folder, h5_extensions=["hdf5"]))
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert "first.h5" not in response.text
+    assert "second.hdf5" in response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_create_app_supports_mixed_file_and_folder_inputs(hdf_filename):
+    from h5rdmtoolbox.server import create_app
+
+    folder = hdf_filename.parent / "data"
+    folder.mkdir()
+    with h5py.File(folder / "from_folder.h5", "w"):
+        pass
+    with h5py.File(hdf_filename.parent / "single.hdf5", "w"):
+        pass
+    client = TestClient(create_app([folder, hdf_filename.parent / "single.hdf5"]))
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert "from_folder.h5" in response.text
+    assert "single.hdf5" in response.text
