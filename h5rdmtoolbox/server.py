@@ -652,16 +652,25 @@ LIMIT 100"""
         return f"{request.url.path}?{urllib.parse.urlencode(params)}"
 
     def _resource_html(subject, subgraph: rdflib.Graph, request: Request) -> HTMLResponse:
-        rows = []
-        for _, predicate, obj in subgraph:
+        def _object_html(obj) -> str:
             object_label = _graph_label(obj, subgraph) if not isinstance(obj, rdflib.Literal) else str(obj)
             if isinstance(obj, rdflib.URIRef):
                 object_href = f"/resolve?iri={urllib.parse.quote(str(obj), safe='')}"
-                object_html = f'<a href="{object_href}">{escape(object_label)}</a>'
-            else:
-                object_html = escape(object_label)
+                return f'<a href="{object_href}">{escape(object_label)}</a>'
+            return escape(object_label)
+
+        grouped_objects = {}
+        for _, predicate, obj in subgraph:
+            grouped_objects.setdefault(predicate, []).append(obj)
+        rows = []
+        for predicate in sorted(grouped_objects, key=lambda term: _graph_label(term, subgraph)):
+            object_items = sorted(
+                grouped_objects[predicate],
+                key=lambda term: _graph_label(term, subgraph) if not isinstance(term, rdflib.Literal) else str(term),
+            )
+            object_html = "".join(f"<li>{_object_html(obj)}</li>" for obj in object_items)
             rows.append(
-                f"<tr><td>{escape(_graph_label(predicate, subgraph))}</td><td>{object_html}</td></tr>"
+                f'<tr><td>{escape(_graph_label(predicate, subgraph))}</td><td><ul class="object-list">{object_html}</ul></td></tr>'
             )
         table = (
             '<table class="resource-table"><thead><tr><th>Predicate</th><th>Object</th></tr></thead>'
@@ -694,6 +703,7 @@ LIMIT 100"""
     th, td {{ padding: 8px 6px; text-align: left; vertical-align: top; overflow-wrap: anywhere; }}
     th {{ color: var(--muted); font-size: 0.85rem; }}
     td:first-child {{ width: 34%; color: var(--muted); }}
+    .object-list {{ list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }}
     .empty-result {{ color: var(--muted); }}
   </style>
 </head>

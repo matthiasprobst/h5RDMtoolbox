@@ -115,6 +115,33 @@ def test_file_subject_endpoint_returns_html_by_default(hdf_filename):
 
 
 @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_resource_html_groups_multiple_objects_per_predicate(monkeypatch, hdf_filename):
+    import h5rdmtoolbox.server as server
+
+    subject = rdflib.URIRef("https://example.org/subject")
+    predicate = rdflib.URIRef("https://example.org/related")
+    objects = [
+        rdflib.URIRef("https://example.org/object-a"),
+        rdflib.URIRef("https://example.org/object-b"),
+        rdflib.URIRef("https://example.org/object-c"),
+    ]
+    graph = rdflib.Graph()
+    graph.bind("ex", rdflib.Namespace("https://example.org/"))
+    for obj in objects:
+        graph.add((subject, predicate, obj))
+
+    monkeypatch.setattr(server, "get_ld", lambda *args, **kwargs: graph)
+    client = TestClient(server.create_app(hdf_filename, file_uri="https://example.org/"))
+    response = client.get("/resolve", params={"iri": str(subject)}, headers={"accept": "text/html"})
+
+    assert response.status_code == 200
+    assert response.text.count("<td>ex:related</td>") == 1
+    assert response.text.count('<li><a href="/resolve?iri=https%3A%2F%2Fexample.org%2Fobject-') == 3
+    for obj in objects:
+        assert str(obj).rsplit("/", 1)[-1] in response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_file_subject_endpoint_uses_accept_header(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
