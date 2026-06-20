@@ -21,6 +21,9 @@ from h5rdmtoolbox.ld.metrics import (
 
 logger = logging.getLogger(__name__)
 HDF5_SUFFIXES = {".h5", ".hdf", ".hdf5"}
+COMBINED_METRICS_DISTANCE_NODE_LIMIT = 2000
+COMBINED_GRAPH_NODE_LIMIT = 1000
+COMBINED_GRAPH_EDGE_LIMIT = 2000
 PREFIX_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_.-]*$")
 RDF_FORMATS = {
     "ttl": ("turtle", "text/turtle; charset=utf-8", "Turtle"),
@@ -238,6 +241,8 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
     server_graph = rdflib.Graph()
     hdf_graph_cache: dict[pathlib.Path, rdflib.Graph] = {}
     local_subject_index: dict[str, tuple[object, rdflib.Graph]] = {}
+    server_graph_version = 0
+    combined_metrics_cache: Optional[tuple[int, int, dict[str, object]]] = None
 
     # Jinja2 environment
     try:
@@ -292,12 +297,17 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
         return subgraph
 
     def _merge_graph(target_graph: rdflib.Graph, source_graph: Optional[rdflib.Graph]) -> None:
+        nonlocal server_graph_version, combined_metrics_cache
         if source_graph is None:
             return
+        before = len(target_graph)
         for ns_prefix, namespace in source_graph.namespaces():
             target_graph.bind(ns_prefix, namespace)
         for triple in source_graph:
             target_graph.add(triple)
+        if target_graph is server_graph and len(target_graph) != before:
+            server_graph_version += 1
+            combined_metrics_cache = None
 
     def _index_first_local_subjects(rdf_graph: rdflib.Graph) -> None:
         for subject in rdf_graph.subjects():
@@ -928,6 +938,17 @@ LIMIT 100"""
                 if not file_cards
                 else f'<section class="file-list">{"".join(file_cards)}</section>'
             )
+            combined_format_links = "".join(
+                f'<a class="format-link" href="/combined/{format_key}">{escape(label)}</a>'
+                for format_key, (_, _, label) in RDF_FORMATS.items()
+            )
+            combined_actions = (
+                f'{combined_format_links}'
+                '<a class="format-link graph-link" href="/combined/graph">Graph</a>'
+                '<a class="format-link query-link" href="/combined/query">Query</a>'
+                '<a class="format-link metrics-link" href="/combined/metrics">Metrics</a>'
+                '<a class="format-link shacl-link" href="/combined/shacl">SHACL</a>'
+            )
             return HTMLResponse(f"""<!doctype html>
 <html>
 <head>
@@ -972,6 +993,25 @@ LIMIT 100"""
     .file-list {{
       display: grid;
       gap: 12px;
+    }}
+    .combined-card {{
+      display: grid;
+      gap: 10px;
+      margin-bottom: 16px;
+      padding: 16px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }}
+    .combined-card h2 {{
+      margin: 0 0 4px;
+      font-size: 1rem;
+      font-weight: 650;
+    }}
+    .combined-card p {{
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.875rem;
     }}
     .resolve-form {{
       display: flex;
@@ -1068,6 +1108,13 @@ LIMIT 100"""
     <h1>HDF5 files</h1>
     <p class="subtitle">Select a file and RDF serialization format. Each view includes controls for structural data, contextual data, and file URI.</p>
   </header>
+  <section class="combined-card">
+    <div>
+      <h2>Combined graph</h2>
+      <p>All served files plus RDF enrichment loaded during browsing.</p>
+    </div>
+    <div class="format-actions">{combined_actions}</div>
+  </section>
   <form class="resolve-form" action="/resolve" method="get">
     <input type="url" name="iri" placeholder="https://doi.org/10.5072/zenodo.403669#observable_property/T1" aria-label="IRI to resolve">
     <button type="submit">Resolve</button>
@@ -1299,7 +1346,32 @@ LIMIT 100"""
             return False, True
         raise HTTPException(status_code=400, detail="mode must be one of: both, structural, contextual")
 
-    def _graph_data(rdf_graph: rdflib.Graph) -> dict[str, list[dict[str, str]]]:
+    def _is_ontology_term(term) -> bool:
+        text = str(term)
+        ontology_prefixes = (
+            "http://www.w3.org/",
+            "https://www.w3.org/",
+            "http://purl.org/dc/",
+            "http://purl.org/dc/terms/",
+            "http://xmlns.com/foaf/",
+            "http://qudt.org/",
+            "https://qudt.org/",
+            "https://matthiasprobst.github.io/ssno",
+        )
+        return any(text.startswith(prefix) for prefix in ontology_prefixes)
+
+    def _graph_data(rdf_graph: rdflib.Graph,
+                    limit_nodes: Optional[int] = None,
+                    limit_edges: Optional[int] = None,
+                    q: Optional[str] = None,
+                    include_ontology: bool = True,
+                    include_isolated: bool = True,
+                    focus: Optional[str] = None,
+                    depth: int = 1,
+                    labels: str = "auto") -> dict[str, object]:
+        if labels not in {"auto", "on", "off"}:
+            raise HTTPException(status_code=400, detail="labels must be one of: auto, on, off")
+        depth = max(1, min(int(depth), 2))
         class_palette = [
             ("#d8eef2", "#0b6f85"),
             ("#e4def8", "#6b4bb3"),
@@ -1325,8 +1397,78 @@ LIMIT 100"""
             "blank": {"color": {"background": "#eceff3", "border": "#667085"}},
             **class_groups,
         }
+        node_terms = set()
+        resource_edges = []
+        literal_values = {}
+        degree_counts = {}
+        search = (q or "").strip().lower()
+        focus = (focus or "").strip()
+
+        for subject, predicate, obj in rdf_graph:
+            if not include_ontology and (_is_ontology_term(subject) or _is_ontology_term(obj)):
+                continue
+            node_terms.add(subject)
+            if isinstance(obj, rdflib.Literal):
+                literal_values.setdefault(subject, []).append((predicate, obj))
+                continue
+            node_terms.add(obj)
+            resource_edges.append((subject, predicate, obj))
+            degree_counts[subject] = degree_counts.get(subject, 0) + 1
+            degree_counts[obj] = degree_counts.get(obj, 0) + 1
+
+        if not include_isolated:
+            node_terms = {node for node in node_terms if degree_counts.get(node, 0) > 0}
+
+        if focus:
+            term_by_id = {str(term): term for term in node_terms}
+            focus_term = term_by_id.get(focus)
+            if focus_term is None:
+                matched_focus_terms = [
+                    term for term in node_terms
+                    if focus in str(term) or focus.lower() == _graph_label(term, rdf_graph).lower()
+                ]
+                focus_term = matched_focus_terms[0] if matched_focus_terms else None
+            if focus_term is None:
+                selected_terms = set()
+            else:
+                selected_terms = {focus_term}
+                frontier = {focus_term}
+                for _ in range(depth):
+                    next_frontier = set()
+                    for subject, _, obj in resource_edges:
+                        if subject in frontier:
+                            next_frontier.add(obj)
+                        if obj in frontier:
+                            next_frontier.add(subject)
+                    next_frontier.difference_update(selected_terms)
+                    selected_terms.update(next_frontier)
+                    frontier = next_frontier
+                    if not frontier:
+                        break
+        elif search:
+            matched_nodes = {
+                node for node in node_terms
+                if search in str(node).lower() or search in _graph_label(node, rdf_graph).lower()
+            }
+            neighbor_nodes = set(matched_nodes)
+            for subject, _, obj in resource_edges:
+                if subject in matched_nodes or obj in matched_nodes:
+                    neighbor_nodes.add(subject)
+                    neighbor_nodes.add(obj)
+            selected_terms = neighbor_nodes
+        else:
+            selected_terms = set(node_terms)
+
+        total_nodes = len(selected_terms)
+        if limit_nodes is not None and len(selected_terms) > limit_nodes:
+            selected_terms = set(sorted(
+                selected_terms,
+                key=lambda term: (-degree_counts.get(term, 0), _graph_label(term, rdf_graph), str(term)),
+            )[:limit_nodes])
+
         nodes = {}
         edges = []
+        visible_degree_counts = {term: 0 for term in selected_terms}
 
         def node_group(value) -> str:
             class_label = type_by_node.get(str(value))
@@ -1334,7 +1476,7 @@ LIMIT 100"""
                 return f"class:{class_label}"
             return "resource" if isinstance(value, rdflib.URIRef) else "blank"
 
-        for subject, predicate, obj in rdf_graph:
+        for subject in sorted(selected_terms, key=lambda term: _graph_label(term, rdf_graph)):
             subject_id = str(subject)
             nodes.setdefault(subject_id, {
                 "id": subject_id,
@@ -1342,53 +1484,149 @@ LIMIT 100"""
                 "group": node_group(subject),
                 "rdf_class": type_by_node.get(subject_id, ""),
                 "local_href": _local_iri_href(subject_id) if isinstance(subject, rdflib.URIRef) else "",
+                "degree": degree_counts.get(subject, 0),
+                "shown_neighbor_count": 0,
+                "hidden_neighbor_count": 0,
+                "expandable": False,
                 "literals": [],
             })
-            if isinstance(obj, rdflib.Literal):
+            for predicate, obj in literal_values.get(subject, []):
                 nodes[subject_id]["literals"].append({
                     "predicate": _graph_label(predicate, rdf_graph),
                     "value": str(obj),
                 })
+        total_edges = 0
+        for subject, predicate, obj in resource_edges:
+            if subject not in selected_terms or obj not in selected_terms:
                 continue
+            total_edges += 1
+            visible_degree_counts[subject] = visible_degree_counts.get(subject, 0) + 1
+            visible_degree_counts[obj] = visible_degree_counts.get(obj, 0) + 1
+            if limit_edges is not None and len(edges) >= limit_edges:
+                continue
+            subject_id = str(subject)
             object_id = str(obj)
-            nodes.setdefault(object_id, {
-                "id": object_id,
-                "label": _graph_label(obj, rdf_graph),
-                "group": node_group(obj),
-                "rdf_class": type_by_node.get(object_id, ""),
-                "local_href": _local_iri_href(object_id) if isinstance(obj, rdflib.URIRef) else "",
-                "literals": [],
-            })
             edges.append({
                 "from": subject_id,
                 "to": object_id,
                 "label": _graph_label(predicate, rdf_graph),
                 "arrows": "to",
             })
-        return {"nodes": list(nodes.values()), "edges": edges, "groups": groups}
+        for subject in selected_terms:
+            subject_id = str(subject)
+            if subject_id not in nodes:
+                continue
+            shown_neighbors = visible_degree_counts.get(subject, 0)
+            hidden_neighbors = max(degree_counts.get(subject, 0) - shown_neighbors, 0)
+            nodes[subject_id]["shown_neighbor_count"] = shown_neighbors
+            nodes[subject_id]["hidden_neighbor_count"] = hidden_neighbors
+            nodes[subject_id]["expandable"] = hidden_neighbors > 0
+        rendered_labels = labels
+        if rendered_labels == "auto":
+            rendered_labels = "off" if len(nodes) > 250 or len(edges) > 500 else "on"
+        return {
+            "nodes": list(nodes.values()),
+            "edges": edges,
+            "groups": groups,
+            "summary": {
+                "total_nodes": total_nodes,
+                "shown_nodes": len(nodes),
+                "total_edges": total_edges,
+                "shown_edges": len(edges),
+                "truncated": len(nodes) < total_nodes or len(edges) < total_edges,
+                "labels": labels,
+                "rendered_labels": rendered_labels,
+                "focus": focus,
+                "depth": depth,
+            },
+        }
+
+    def _graph_response(filename: pathlib.Path,
+                        mode: str = "both",
+                        file_uri: Optional[str] = None,
+                        prefix: Optional[str] = None,
+                        rdf_graph: Optional[rdflib.Graph] = None,
+                        limit_nodes: Optional[int] = None,
+                        limit_edges: Optional[int] = None,
+                        q: Optional[str] = None,
+                        include_ontology: bool = True,
+                        include_isolated: bool = True,
+                        focus: Optional[str] = None,
+                        depth: int = 1,
+                        labels: str = "auto") -> dict[str, object]:
+        graph_file_uri = file_uri if file_uri is not None else create_app_file_uri
+        if rdf_graph is None:
+            structural_graph, contextual_graph = _graph_mode_flags(mode)
+            try:
+                graph_prefix = _validate_prefix(prefix)
+                rdf_graph = get_ld(
+                    filename,
+                    structural=structural_graph,
+                    contextual=contextual_graph,
+                    file_uri=graph_file_uri,
+                )
+                _bind_standard_prefixes(rdf_graph)
+                if graph_prefix and graph_file_uri:
+                    rdf_graph.bind(graph_prefix, rdflib.URIRef(graph_file_uri), override=True, replace=True)
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e)) from e
+        else:
+            try:
+                graph_prefix = _validate_prefix(prefix)
+                if graph_prefix and graph_file_uri:
+                    rdf_graph.bind(graph_prefix, rdflib.URIRef(graph_file_uri), override=True, replace=True)
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e)) from e
+        return _graph_data(
+            rdf_graph,
+            limit_nodes=limit_nodes,
+            limit_edges=limit_edges,
+            q=q,
+            include_ontology=include_ontology,
+            include_isolated=include_isolated,
+            focus=focus,
+            depth=depth,
+            labels=labels,
+        )
 
     def _graph_page(filename: pathlib.Path,
                     mode: str = "both",
                     file_uri: Optional[str] = None,
-                    prefix: Optional[str] = None) -> HTMLResponse:
-        structural_graph, contextual_graph = _graph_mode_flags(mode)
+                    prefix: Optional[str] = None,
+                    rdf_graph: Optional[rdflib.Graph] = None,
+                    page_label: Optional[str] = None,
+                    route_name: Optional[str] = None,
+                    limit_nodes: Optional[int] = None,
+                    limit_edges: Optional[int] = None,
+                    q: Optional[str] = None,
+                    include_ontology: bool = True,
+                    include_isolated: bool = True,
+                    labels: str = "auto") -> HTMLResponse:
         graph_file_uri = file_uri if file_uri is not None else create_app_file_uri
-        try:
-            graph_prefix = _validate_prefix(prefix)
-            rdf_graph = get_ld(
-                filename,
-                structural=structural_graph,
-                contextual=contextual_graph,
-                file_uri=graph_file_uri,
-            )
-            _bind_standard_prefixes(rdf_graph)
-            if graph_prefix and graph_file_uri:
-                rdf_graph.bind(graph_prefix, rdflib.URIRef(graph_file_uri), override=True, replace=True)
-        except ValueError as e:
-            raise HTTPException(status_code=400, detail=str(e)) from e
 
-        encoded_filename = urllib.parse.quote(filename.name)
-        graph_json = json.dumps(_graph_data(rdf_graph)).replace("</", "<\\/")
+        display_name = page_label or filename.name
+        encoded_filename = urllib.parse.quote(route_name or filename.name)
+        graph_payload = _graph_response(
+            filename,
+            mode=mode,
+            file_uri=file_uri,
+            prefix=prefix,
+            rdf_graph=rdf_graph,
+            limit_nodes=limit_nodes,
+            limit_edges=limit_edges,
+            q=q,
+            include_ontology=include_ontology,
+            include_isolated=include_isolated,
+            labels=labels,
+        )
+        graph_json = json.dumps(graph_payload).replace("</", "<\\/")
+        graph_summary = graph_payload["summary"]
+        truncation_notice = (
+            f'<p class="graph-notice">Showing {graph_summary["shown_nodes"]:,} of {graph_summary["total_nodes"]:,} nodes '
+            f'and {graph_summary["shown_edges"]:,} of {graph_summary["total_edges"]:,} edges. Refine the search or raise limits to see more.</p>'
+            if graph_summary["truncated"]
+            else ""
+        )
         escaped_file_uri = escape(graph_file_uri or "")
         graph_nav = " ".join(
             f'<a href="/{encoded_filename}/{key}">{escape(label)}</a>'
@@ -1399,12 +1637,18 @@ LIMIT 100"""
             "structural": "checked" if mode == "structural" else "",
             "contextual": "checked" if mode == "contextual" else "",
         }
+        label_selected = {
+            "auto": "selected" if labels == "auto" else "",
+            "on": "selected" if labels == "on" else "",
+            "off": "selected" if labels == "off" else "",
+        }
+        graph_data_url = f"/{encoded_filename}/graph-data"
         page = f"""<!doctype html>
 <html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{escape(filename.name)} Graph</title>
+  <title>{escape(display_name)} Graph</title>
   <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
   <style>
     :root {{
@@ -1624,13 +1868,18 @@ LIMIT 100"""
       color: var(--muted);
       padding: 12px;
     }}
+    .graph-notice {{
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.875rem;
+    }}
   </style>
 </head>
 <body>
 <main>
   <header>
     <nav><a href="/">Files</a> {graph_nav}</nav>
-    <h1>{escape(filename.name)} - Graph</h1>
+    <h1>{escape(display_name)} - Graph</h1>
     <form id="graph-form" method="get" action="/{encoded_filename}/graph">
       <fieldset>
         <legend>RDF content</legend>
@@ -1644,8 +1893,29 @@ LIMIT 100"""
       <label>Prefix
         <input type="text" name="prefix" value="{escape(prefix or "")}" placeholder="ex">
       </label>
+      <label>Search
+        <input type="text" name="q" value="{escape(q or "")}" placeholder="label or IRI">
+      </label>
+      <label>Node limit
+        <input type="number" name="limit_nodes" min="10" max="10000" value="{escape(str(limit_nodes or ""))}" placeholder="1000">
+      </label>
+      <label>Edge limit
+        <input type="number" name="limit_edges" min="10" max="20000" value="{escape(str(limit_edges or ""))}" placeholder="2000">
+      </label>
+      <label>Labels
+        <select name="labels" id="label-mode">
+          <option value="auto" {label_selected["auto"]}>Auto</option>
+          <option value="on" {label_selected["on"]}>On</option>
+          <option value="off" {label_selected["off"]}>Off</option>
+        </select>
+      </label>
+      <input type="hidden" name="include_ontology" value="false">
+      <label class="radio-label"><input type="checkbox" name="include_ontology" value="true" {"checked" if include_ontology else ""}> Include ontology nodes</label>
+      <input type="hidden" name="include_isolated" value="false">
+      <label class="radio-label"><input type="checkbox" name="include_isolated" value="true" {"checked" if include_isolated else ""}> Include isolated nodes</label>
       <button type="submit">Update</button>
     </form>
+    {truncation_notice}
   </header>
   <section class="graph-panel">
     <div class="hidden-node-menu">
@@ -1659,24 +1929,79 @@ LIMIT 100"""
 </main>
 <script>
   const graphData = {graph_json};
+  const graphDataUrl = "{graph_data_url}";
   const graphForm = document.getElementById("graph-form");
   const container = document.getElementById("network");
   const emptyGraph = document.getElementById("empty-graph");
   const nodeDetails = document.getElementById("node-details");
   const hiddenNodeToggle = document.getElementById("hidden-node-toggle");
   const hiddenNodeList = document.getElementById("hidden-node-list");
-  const allNodes = graphData.nodes;
-  const allEdges = graphData.edges;
+  const labelModeInput = document.getElementById("label-mode");
+  const allNodes = new Map();
+  const allEdges = new Map();
+  const nodeSources = new Map();
+  const edgeSources = new Map();
   const hiddenNodeIds = new Set();
-  const nodeById = new Map(allNodes.map((node) => [node.id, node]));
+  const expandedNodeIds = new Set();
+  const nodeById = allNodes;
   let hideNode = () => {{}};
   let unhideNode = () => {{}};
+  let refreshVisibleGraph = () => {{}};
   const escapeHtml = (value) => String(value)
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+  const edgeKey = (edge) => `${{edge.from}}\\u0000${{edge.to}}\\u0000${{edge.label}}`;
+  const renderedLabelsEnabled = () => {{
+    if (labelModeInput.value === "on") {{
+      return true;
+    }}
+    if (labelModeInput.value === "off") {{
+      return false;
+    }}
+    return (allNodes.size <= 250 && allEdges.size <= 500);
+  }};
+  const visibleNode = (node) => ({{
+    ...node,
+    label: renderedLabelsEnabled() ? node.label : undefined,
+    title: node.label
+  }});
+  const visibleEdge = (edge) => ({{
+    ...edge,
+    label: renderedLabelsEnabled() ? edge.label : undefined,
+    title: edge.label
+  }});
+  const rememberSource = (sourceMap, id, source) => {{
+    const sources = sourceMap.get(id) || new Set();
+    sources.add(source);
+    sourceMap.set(id, sources);
+  }};
+  const forgetSource = (sourceMap, id, source) => {{
+    const sources = sourceMap.get(id);
+    if (!sources) {{
+      return false;
+    }}
+    sources.delete(source);
+    if (sources.size === 0) {{
+      sourceMap.delete(id);
+      return true;
+    }}
+    return false;
+  }};
+  const addGraphPayload = (payload, source) => {{
+    (payload.nodes || []).forEach((node) => {{
+      allNodes.set(node.id, {{ ...(allNodes.get(node.id) || {{}}), ...node }});
+      rememberSource(nodeSources, node.id, source);
+    }});
+    (payload.edges || []).forEach((edge) => {{
+      const key = edgeKey(edge);
+      allEdges.set(key, {{ ...(allEdges.get(key) || {{}}), ...edge }});
+      rememberSource(edgeSources, key, source);
+    }});
+  }};
+  addGraphPayload(graphData, "base");
   const updateHiddenNodeMenu = () => {{
     const hiddenNodes = Array.from(hiddenNodeIds)
       .map((nodeId) => nodeById.get(nodeId))
@@ -1696,13 +2021,16 @@ LIMIT 100"""
   }};
   const showNodeDetails = (node) => {{
     const literals = node.literals || [];
+    const hiddenNeighborText = node.hidden_neighbor_count
+      ? `<p class="no-literals">${{node.hidden_neighbor_count}} more connected node(s). Double-click to expand.</p>`
+      : "";
     const literalRows = literals.length
       ? `<dl>${{literals.map((literal) => `<dt>${{escapeHtml(literal.predicate)}}</dt><dd>${{escapeHtml(literal.value)}}</dd>`).join("")}}</dl>`
       : '<p class="no-literals">No literal values are available for this node.</p>';
     const localLink = node.local_href
       ? `<a class="node-link" href="${{escapeHtml(node.local_href)}}" target="_blank" rel="noopener">Open local TTL</a>`
       : "";
-    nodeDetails.innerHTML = `<div class="node-details-header"><h2>${{escapeHtml(node.label)}}</h2><button type="button" class="hide-node-button">Hide</button></div>${{localLink}}${{literalRows}}`;
+    nodeDetails.innerHTML = `<div class="node-details-header"><h2>${{escapeHtml(node.label)}}</h2><button type="button" class="hide-node-button">Hide</button></div>${{localLink}}${{hiddenNeighborText}}${{literalRows}}`;
     nodeDetails.querySelector(".hide-node-button").addEventListener("click", () => {{
       hideNode(node.id);
     }});
@@ -1726,17 +2054,24 @@ LIMIT 100"""
       }}
     }});
   }});
+  labelModeInput.addEventListener("change", () => {{
+    refreshVisibleGraph();
+  }});
   if (graphData.nodes.length === 0) {{
     emptyGraph.style.display = "block";
   }} else if (window.vis) {{
-    const nodes = new vis.DataSet(allNodes);
-    const edges = new vis.DataSet(allEdges);
+    const nodes = new vis.DataSet(Array.from(allNodes.values()).map(visibleNode));
+    const edges = new vis.DataSet(Array.from(allEdges.values()).map(visibleEdge));
     const groups = graphData.groups || {{}};
-    const refreshVisibleGraph = () => {{
+    refreshVisibleGraph = () => {{
       nodes.clear();
-      nodes.add(allNodes.filter((node) => !hiddenNodeIds.has(node.id)));
+      nodes.add(Array.from(allNodes.values())
+        .filter((node) => !hiddenNodeIds.has(node.id))
+        .map(visibleNode));
       edges.clear();
-      edges.add(allEdges.filter((edge) => !hiddenNodeIds.has(edge.from) && !hiddenNodeIds.has(edge.to)));
+      edges.add(Array.from(allEdges.values())
+        .filter((edge) => !hiddenNodeIds.has(edge.from) && !hiddenNodeIds.has(edge.to))
+        .map(visibleEdge));
       updateHiddenNodeMenu();
     }};
     hideNode = (nodeId) => {{
@@ -1747,6 +2082,44 @@ LIMIT 100"""
     unhideNode = (nodeId) => {{
       hiddenNodeIds.delete(nodeId);
       refreshVisibleGraph();
+    }};
+    const collapseNode = (nodeId) => {{
+      const source = `expand:${{nodeId}}`;
+      expandedNodeIds.delete(nodeId);
+      for (const edgeId of Array.from(edgeSources.keys())) {{
+        if (forgetSource(edgeSources, edgeId, source)) {{
+          allEdges.delete(edgeId);
+        }}
+      }}
+      for (const currentNodeId of Array.from(nodeSources.keys())) {{
+        if (currentNodeId === nodeId) {{
+          forgetSource(nodeSources, currentNodeId, source);
+          continue;
+        }}
+        if (forgetSource(nodeSources, currentNodeId, source)) {{
+          allNodes.delete(currentNodeId);
+          hiddenNodeIds.delete(currentNodeId);
+        }}
+      }}
+      refreshVisibleGraph();
+    }};
+    const expandNode = async (nodeId) => {{
+      if (expandedNodeIds.has(nodeId)) {{
+        collapseNode(nodeId);
+        return;
+      }}
+      const params = new URLSearchParams(new FormData(graphForm));
+      params.set("focus", nodeId);
+      params.set("depth", "1");
+      const response = await fetch(`${{graphDataUrl}}?${{params.toString()}}`);
+      if (!response.ok) {{
+        return;
+      }}
+      const payload = await response.json();
+      expandedNodeIds.add(nodeId);
+      addGraphPayload(payload, `expand:${{nodeId}}`);
+      refreshVisibleGraph();
+      network.selectNodes([nodeId]);
     }};
     const network = new vis.Network(container, {{ nodes, edges }}, {{
       nodes: {{
@@ -1765,7 +2138,9 @@ LIMIT 100"""
       interaction: {{
         dragNodes: true,
         hover: true,
-        navigationButtons: true
+        navigationButtons: true,
+        hideEdgesOnDrag: true,
+        hideEdgesOnZoom: true
       }},
       physics: {{
         enabled: true,
@@ -1779,6 +2154,9 @@ LIMIT 100"""
         stabilization: {{ iterations: 180 }}
       }}
     }});
+    network.once("stabilizationIterationsDone", () => {{
+      network.setOptions({{ physics: {{ enabled: false }} }});
+    }});
     network.on("click", (params) => {{
       if (params.nodes.length === 0) {{
         nodeDetails.style.display = "none";
@@ -1787,6 +2165,11 @@ LIMIT 100"""
       const node = nodeById.get(params.nodes[0]);
       if (node) {{
         showNodeDetails(node);
+      }}
+    }});
+    network.on("doubleClick", (params) => {{
+      if (params.nodes.length > 0) {{
+        expandNode(params.nodes[0]);
       }}
     }});
     updateHiddenNodeMenu();
@@ -1837,15 +2220,20 @@ LIMIT 100"""
         text = str(result)
         return text, f"<pre>{escape(text)}</pre>"
 
-    def _query_page(filename: pathlib.Path, query: Optional[str] = None) -> HTMLResponse:
+    def _query_page(filename: pathlib.Path,
+                    query: Optional[str] = None,
+                    rdf_graph: Optional[rdflib.Graph] = None,
+                    page_label: Optional[str] = None,
+                    route_name: Optional[str] = None) -> HTMLResponse:
         sparql_query = query or DEFAULT_SPARQL_QUERY
-        rdf_graph = server_graph
+        rdf_graph = rdf_graph if rdf_graph is not None else _load_hdf_graph(filename)
         result_text = ""
         result_html = '<p class="empty-result">Run the example query or edit it before submitting.</p>'
         if query is not None:
             result_text, result_html = _query_result(rdf_graph, sparql_query)
 
-        encoded_filename = urllib.parse.quote(filename.name)
+        display_name = page_label or filename.name
+        encoded_filename = urllib.parse.quote(route_name or filename.name)
         sample_queries_json = json.dumps([query for _, query in SAMPLE_SPARQL_QUERIES]).replace("</", "<\\/")
         sample_buttons = "".join(
             f'<button type="button" class="sample-query-button" data-query-index="{index}">{escape(label)}</button>'
@@ -1856,7 +2244,7 @@ LIMIT 100"""
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{escape(filename.name)} Query</title>
+  <title>{escape(display_name)} Query</title>
   <style>
     :root {{
       --bg: #f7f8fa;
@@ -1991,7 +2379,7 @@ LIMIT 100"""
 <main>
   <header>
     <nav><a href="/">Files</a><a href="/{encoded_filename}/graph">Graph</a><a href="/{encoded_filename}/ttl">Turtle</a></nav>
-    <h1>{escape(filename.name)} - SPARQL Query</h1>
+    <h1>{escape(display_name)} - SPARQL Query</h1>
   </header>
   <section class="query-panel">
     <form method="get" action="/{encoded_filename}/query">
@@ -2054,27 +2442,26 @@ LIMIT 100"""
         except Exception as e:
             return f"SHACL validation error: {e}", '<div class="validation-status invalid">Validation failed</div>'
 
-    def _shacl_page(filename: pathlib.Path, shapes: Optional[str] = None) -> HTMLResponse:
+    def _shacl_page(filename: pathlib.Path,
+                    shapes: Optional[str] = None,
+                    rdf_graph: Optional[rdflib.Graph] = None,
+                    page_label: Optional[str] = None,
+                    route_name: Optional[str] = None) -> HTMLResponse:
         shapes_text = shapes or DEFAULT_SHACL_SHAPES
-        rdf_graph = get_ld(
-            filename,
-            structural=True,
-            contextual=True,
-            file_uri=create_app_file_uri,
-        )
-        _bind_standard_prefixes(rdf_graph)
+        rdf_graph = rdf_graph if rdf_graph is not None else _load_hdf_graph(filename)
         result_text = ""
         result_html = '<p class="empty-result">Run the default shape or paste your own SHACL Turtle before validating.</p>'
         if shapes is not None:
             result_text, result_html = _shacl_result(rdf_graph, shapes_text)
 
-        encoded_filename = urllib.parse.quote(filename.name)
+        display_name = page_label or filename.name
+        encoded_filename = urllib.parse.quote(route_name or filename.name)
         page = f"""<!doctype html>
 <html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{escape(filename.name)} SHACL</title>
+  <title>{escape(display_name)} SHACL</title>
   <style>
     :root {{
       --bg: #f7f8fa;
@@ -2182,7 +2569,7 @@ LIMIT 100"""
 <main>
   <header>
     <nav><a href="/">Files</a><a href="/{encoded_filename}/graph">Graph</a><a href="/{encoded_filename}/query">Query</a><a href="/{encoded_filename}/metrics">Metrics</a><a href="/{encoded_filename}/ttl">Turtle</a></nav>
-    <h1>{escape(filename.name)} - SHACL Validation</h1>
+    <h1>{escape(display_name)} - SHACL Validation</h1>
   </header>
   <section class="shacl-panel">
     <form method="get" action="/{encoded_filename}/shacl">
@@ -2236,19 +2623,48 @@ LIMIT 100"""
                 terms.append(term)
         return terms
 
-    def _graph_metrics(rdf_graph: rdflib.Graph) -> dict[str, object]:
-        return compute_graph_metrics(rdf_graph, base_namespace=create_app_file_uri)
-
-    def _metrics_page(filename: pathlib.Path) -> HTMLResponse:
-        rdf_graph = get_ld(
-            filename,
-            structural=True,
-            contextual=True,
-            file_uri=create_app_file_uri,
+    def _graph_metrics(rdf_graph: rdflib.Graph,
+                       compute_distances: bool = True,
+                       distance_node_limit: int = COMBINED_METRICS_DISTANCE_NODE_LIMIT) -> dict[str, object]:
+        return compute_graph_metrics(
+            rdf_graph,
+            base_namespace=create_app_file_uri,
+            compute_distances=compute_distances,
+            distance_node_limit=distance_node_limit,
         )
-        _bind_standard_prefixes(rdf_graph)
-        metrics = _graph_metrics(rdf_graph)
-        encoded_filename = urllib.parse.quote(filename.name)
+
+    def _combined_graph_metrics() -> dict[str, object]:
+        nonlocal combined_metrics_cache
+        cache_key = (server_graph_version, len(server_graph))
+        if combined_metrics_cache is not None and combined_metrics_cache[:2] == cache_key:
+            return combined_metrics_cache[2]
+        metrics = _graph_metrics(
+            server_graph,
+            compute_distances=True,
+            distance_node_limit=COMBINED_METRICS_DISTANCE_NODE_LIMIT,
+        )
+        combined_metrics_cache = (cache_key[0], cache_key[1], metrics)
+        return metrics
+
+    def _metrics_page(filename: pathlib.Path,
+                      rdf_graph: Optional[rdflib.Graph] = None,
+                      page_label: Optional[str] = None,
+                      route_name: Optional[str] = None,
+                      metrics: Optional[dict[str, object]] = None) -> HTMLResponse:
+        rdf_graph = rdf_graph if rdf_graph is not None else _load_hdf_graph(filename)
+        metrics = metrics if metrics is not None else _graph_metrics(rdf_graph)
+        display_name = page_label or filename.name
+        encoded_filename = urllib.parse.quote(route_name or filename.name)
+        largest_distance_value = (
+            metrics["largest_distance"]
+            if metrics.get("largest_distance_computed", True)
+            else "Not computed"
+        )
+        largest_distance_description = (
+            "Largest shortest-path distance within connected components."
+            if metrics.get("largest_distance_computed", True)
+            else f"Skipped for graphs above {metrics.get('largest_distance_node_limit', COMBINED_METRICS_DISTANCE_NODE_LIMIT):,} resource nodes."
+        )
         cards = [
             ("Total triples", metrics["triples"], "Total RDF statements in the graph."),
             ("Distinct subjects", metrics["subjects"], "Unique resources or blank nodes used as subjects."),
@@ -2266,7 +2682,7 @@ LIMIT 100"""
             ("Weakly connected nodes", metrics["weakly_connected_nodes"], "Resource nodes with zero or one resource link."),
             ("Connected components", metrics["components"], "Disconnected resource groups in the graph."),
             ("Largest component", metrics["largest_component"], "Node count of the largest connected component."),
-            ("Largest distance", metrics["largest_distance"], "Largest shortest-path distance within connected components."),
+            ("Largest distance", largest_distance_value, largest_distance_description),
             ("Label coverage", f'{metrics["label_coverage"]:.1f}%', "Percentage of subjects with at least one rdfs:label."),
             ("Blank node percentage", f'{metrics["blank_node_percentage"]:.1f}%', "Blank nodes divided by all unique resource nodes."),
             ("owl:sameAs links", metrics["same_as_count"], "Explicit identity links to equivalent resources."),
@@ -2285,7 +2701,7 @@ LIMIT 100"""
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{escape(filename.name)} Metrics</title>
+  <title>{escape(display_name)} Metrics</title>
   <style>
     :root {{
       --bg: #f7f8fa;
@@ -2386,7 +2802,7 @@ LIMIT 100"""
 <main>
   <header>
     <nav><a href="/">Files</a><a href="/{encoded_filename}/graph">Graph</a><a href="/{encoded_filename}/query">Query</a><a href="/{encoded_filename}/ttl">Turtle</a></nav>
-    <h1>{escape(filename.name)} - Graph Metrics</h1>
+    <h1>{escape(display_name)} - Graph Metrics</h1>
   </header>
   <section>
     <h2>Knowledge Graph Metrics</h2>
@@ -2515,6 +2931,26 @@ LIMIT 100"""
             prefix=prefix,
         )
 
+    def _graph_formatted_response(rdf_graph: rdflib.Graph,
+                                  label: str,
+                                  format_key: str,
+                                  raw: bool = False):
+        if format_key not in RDF_FORMATS:
+            raise HTTPException(status_code=404, detail="Unknown RDF format")
+        rdflib_format, media_type, _ = RDF_FORMATS[format_key]
+        serialized = rdf_graph.serialize(format=rdflib_format)
+        if raw:
+            return PlainTextResponse(content=serialized, media_type=media_type)
+        return _format_controls(
+            filename=label,
+            format_key=format_key,
+            serialized=serialized,
+            structural=True,
+            contextual=True,
+            file_uri=None,
+            prefix=None,
+        )
+
     def _subject_response(filename: pathlib.Path,
                           resource_path: str,
                           request: Request,
@@ -2562,6 +2998,106 @@ LIMIT 100"""
 
         subgraph = _subject_subgraph(rdf_graph, subject)
         return _resource_response(subject, subgraph, request, format=format)
+
+    @app.get("/combined/ttl")
+    def get_combined_ttl(raw: bool = False):
+        return _graph_formatted_response(server_graph, "combined", "ttl", raw=raw)
+
+    @app.get("/combined/jsonld")
+    def get_combined_jsonld(raw: bool = False):
+        return _graph_formatted_response(server_graph, "combined", "jsonld", raw=raw)
+
+    @app.get("/combined/nt")
+    def get_combined_nt(raw: bool = False):
+        return _graph_formatted_response(server_graph, "combined", "nt", raw=raw)
+
+    @app.get("/combined/xml")
+    def get_combined_xml(raw: bool = False):
+        return _graph_formatted_response(server_graph, "combined", "xml", raw=raw)
+
+    @app.get("/combined/graph")
+    def get_combined_graph(mode: str = "both",
+                           file_uri: Optional[str] = None,
+                           prefix: Optional[str] = None,
+                           limit_nodes: int = COMBINED_GRAPH_NODE_LIMIT,
+                           limit_edges: int = COMBINED_GRAPH_EDGE_LIMIT,
+                           q: Optional[str] = None,
+                           include_ontology: bool = False,
+                           include_isolated: bool = False,
+                           labels: str = "auto"):
+        return _graph_page(
+            pathlib.Path("combined"),
+            mode=mode,
+            file_uri=file_uri,
+            prefix=prefix,
+            rdf_graph=server_graph,
+            page_label="Combined graph",
+            route_name="combined",
+            limit_nodes=limit_nodes,
+            limit_edges=limit_edges,
+            q=q,
+            include_ontology=include_ontology,
+            include_isolated=include_isolated,
+            labels=labels,
+        )
+
+    @app.get("/combined/graph-data")
+    def get_combined_graph_data(mode: str = "both",
+                                file_uri: Optional[str] = None,
+                                prefix: Optional[str] = None,
+                                limit_nodes: int = COMBINED_GRAPH_NODE_LIMIT,
+                                limit_edges: int = COMBINED_GRAPH_EDGE_LIMIT,
+                                q: Optional[str] = None,
+                                include_ontology: bool = False,
+                                include_isolated: bool = False,
+                                focus: Optional[str] = None,
+                                depth: int = 1,
+                                labels: str = "auto"):
+        return JSONResponse(_graph_response(
+            pathlib.Path("combined"),
+            mode=mode,
+            file_uri=file_uri,
+            prefix=prefix,
+            rdf_graph=server_graph,
+            limit_nodes=limit_nodes,
+            limit_edges=limit_edges,
+            q=q,
+            include_ontology=include_ontology,
+            include_isolated=include_isolated,
+            focus=focus,
+            depth=depth,
+            labels=labels,
+        ))
+
+    @app.get("/combined/query")
+    def get_combined_query(query: Optional[str] = None):
+        return _query_page(
+            pathlib.Path("combined"),
+            query=query,
+            rdf_graph=server_graph,
+            page_label="Combined graph",
+            route_name="combined",
+        )
+
+    @app.get("/combined/shacl")
+    def get_combined_shacl(shapes: Optional[str] = None):
+        return _shacl_page(
+            pathlib.Path("combined"),
+            shapes=shapes,
+            rdf_graph=server_graph,
+            page_label="Combined graph",
+            route_name="combined",
+        )
+
+    @app.get("/combined/metrics")
+    def get_combined_metrics():
+        return _metrics_page(
+            pathlib.Path("combined"),
+            rdf_graph=server_graph,
+            page_label="Combined graph",
+            route_name="combined",
+            metrics=_combined_graph_metrics(),
+        )
 
     @app.get("/{filename}/ttl")
     def get_file_ttl(filename: str,
@@ -2619,11 +3155,59 @@ LIMIT 100"""
     def get_file_graph(filename: str,
                        mode: str = "both",
                        file_uri: Optional[str] = None,
-                       prefix: Optional[str] = None):
+                       prefix: Optional[str] = None,
+                       limit_nodes: Optional[int] = None,
+                       limit_edges: Optional[int] = None,
+                       q: Optional[str] = None,
+                       include_ontology: bool = True,
+                       include_isolated: bool = True,
+                       labels: str = "auto"):
         hdf_file = hdf_files.get(filename)
         if hdf_file is None:
             raise HTTPException(status_code=404, detail="Unknown HDF5 file")
-        return _graph_page(hdf_file, mode=mode, file_uri=file_uri, prefix=prefix)
+        return _graph_page(
+            hdf_file,
+            mode=mode,
+            file_uri=file_uri,
+            prefix=prefix,
+            limit_nodes=limit_nodes,
+            limit_edges=limit_edges,
+            q=q,
+            include_ontology=include_ontology,
+            include_isolated=include_isolated,
+            labels=labels,
+        )
+
+    @app.get("/{filename}/graph-data")
+    def get_file_graph_data(filename: str,
+                            mode: str = "both",
+                            file_uri: Optional[str] = None,
+                            prefix: Optional[str] = None,
+                            limit_nodes: Optional[int] = None,
+                            limit_edges: Optional[int] = None,
+                            q: Optional[str] = None,
+                            include_ontology: bool = True,
+                            include_isolated: bool = True,
+                            focus: Optional[str] = None,
+                            depth: int = 1,
+                            labels: str = "auto"):
+        hdf_file = hdf_files.get(filename)
+        if hdf_file is None:
+            raise HTTPException(status_code=404, detail="Unknown HDF5 file")
+        return JSONResponse(_graph_response(
+            hdf_file,
+            mode=mode,
+            file_uri=file_uri,
+            prefix=prefix,
+            limit_nodes=limit_nodes,
+            limit_edges=limit_edges,
+            q=q,
+            include_ontology=include_ontology,
+            include_isolated=include_isolated,
+            focus=focus,
+            depth=depth,
+            labels=labels,
+        ))
 
     @app.get("/{filename}/query")
     def get_file_query(filename: str, query: Optional[str] = None):

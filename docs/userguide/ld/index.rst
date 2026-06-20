@@ -84,6 +84,14 @@ links to:
 - ``SHACL``: a SHACL validation page where Turtle shapes can be pasted and run
   against the currently loaded RDF graph.
 
+These per-file buttons are scoped to the selected file. The landing page also
+provides a ``Combined graph`` section with the same views for all served files
+and enrichment graphs already loaded while browsing. Combined graph
+visualization is reduced by default with node and edge limits plus a search
+field, so large local datasets do not have to be rendered completely in the
+browser. Combined metrics also skip exact largest-distance computation for large
+resource networks and show this explicitly on the metrics page.
+
 All web views are generated from the currently loaded HDF5 file and support the
 same structural/contextual RDF model used by ``ld dump``. HDF5 object URLs such
 as ``/example.h5/group/dataset`` are dereferenceable RDF resources. Browsers get
@@ -103,9 +111,9 @@ directly from their Turtle definitions. Browser requests that cannot be resolved
 locally return a small fallback page that opens the original IRI in a new tab;
 machine-readable RDF requests still return ``404`` when no triples are found.
 The server keeps one shared graph for all served files and loaded enrichment
-graphs, so SPARQL queries can run across the whole local view quickly. Entity
-resolution still returns the first matching local HDF5 subject when the same IRI
-appears in multiple served files. Use
+graphs, so combined SPARQL queries can run across the whole local view quickly.
+Entity resolution still returns the first matching local HDF5 subject when the
+same IRI appears in multiple served files. Use
 ``--local-iri-pattern`` only when graph nodes should show local resolver links
 for selected external IRI patterns, for example Zenodo DOI IRIs. If a fragment
 identifier (``#...``) is passed in a URL, encode it as ``%23`` because browsers

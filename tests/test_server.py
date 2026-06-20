@@ -42,6 +42,15 @@ def test_landing_page_lists_hdf5_files(hdf_filename):
     assert "/server_test.h5/query" in response.text
     assert "/server_test.h5/metrics" in response.text
     assert "/server_test.h5/shacl" in response.text
+    assert "/combined/ttl" in response.text
+    assert "/combined/jsonld" in response.text
+    assert "/combined/nt" in response.text
+    assert "/combined/xml" in response.text
+    assert "/combined/graph" in response.text
+    assert "/combined/query" in response.text
+    assert "/combined/metrics" in response.text
+    assert "/combined/shacl" in response.text
+    assert "Combined graph" in response.text
     assert 'action="/resolve"' in response.text
     assert 'name="iri"' in response.text
     assert ">Resolve<" in response.text
@@ -740,8 +749,15 @@ def test_file_graph_endpoint_returns_interactive_page(hdf_filename):
     assert "graphForm.requestSubmit();" in response.text
     assert 'id="node-details"' in response.text
     assert 'network.on("click"' in response.text
+    assert 'network.on("doubleClick"' in response.text
     assert 'id="hidden-node-toggle"' in response.text
     assert 'id="hidden-node-list"' in response.text
+    assert 'id="label-mode"' in response.text
+    assert 'name="labels"' in response.text
+    assert 'const graphDataUrl = "/server_test.h5/graph-data";' in response.text
+    assert 'params.set("focus", nodeId);' in response.text
+    assert "hideEdgesOnDrag: true" in response.text
+    assert "hideEdgesOnZoom: true" in response.text
     assert 'class="hide-node-button">Hide</button>' in response.text
     assert "hiddenNodeIds.add(nodeId);" in response.text
     assert "hiddenNodeIds.delete(nodeId);" in response.text
@@ -754,6 +770,8 @@ def test_file_graph_endpoint_returns_interactive_page(hdf_filename):
     assert '"edges":' in response.text
     assert '"groups":' in response.text
     assert '"literals":' in response.text
+    assert '"expandable":' in response.text
+    assert '"hidden_neighbor_count":' in response.text
     assert '"group": "literal"' not in response.text
     assert '"group": "class:hdf:File"' in response.text
     assert '"group": "class:hdf:Group"' in response.text
@@ -767,16 +785,71 @@ def test_file_graph_endpoint_returns_interactive_page(hdf_filename):
 
 
 @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_file_graph_data_endpoint_returns_json_with_label_mode(hdf_filename):
+    from h5rdmtoolbox.server import create_app
+
+    client = TestClient(create_app(hdf_filename))
+    response = client.get("/server_test.h5/graph-data?labels=off")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["summary"]["labels"] == "off"
+    assert payload["summary"]["rendered_labels"] == "off"
+    assert payload["nodes"]
+    assert "label" in payload["nodes"][0]
+    assert "degree" in payload["nodes"][0]
+    assert "expandable" in payload["nodes"][0]
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_combined_graph_data_focus_returns_node_neighborhood(monkeypatch, hdf_filename):
+    import h5rdmtoolbox.server as server
+
+    graph = rdflib.Graph()
+    predicate = rdflib.URIRef("https://example.org/linksTo")
+    graph.add((rdflib.URIRef("https://example.org/alpha"), predicate, rdflib.URIRef("https://example.org/beta")))
+    graph.add((rdflib.URIRef("https://example.org/beta"), predicate, rdflib.URIRef("https://example.org/gamma")))
+    graph.add((rdflib.URIRef("https://example.org/gamma"), predicate, rdflib.URIRef("https://example.org/delta")))
+    monkeypatch.setattr(server, "get_ld", lambda *args, **kwargs: graph)
+    client = TestClient(server.create_app(hdf_filename))
+    response = client.get("/combined/graph-data?focus=https%3A%2F%2Fexample.org%2Fbeta&depth=1")
+
+    assert response.status_code == 200
+    payload = response.json()
+    node_ids = {node["id"] for node in payload["nodes"]}
+    assert "https://example.org/alpha" in node_ids
+    assert "https://example.org/beta" in node_ids
+    assert "https://example.org/gamma" in node_ids
+    assert "https://example.org/delta" not in node_ids
+    beta = next(node for node in payload["nodes"] if node["id"] == "https://example.org/beta")
+    assert beta["shown_neighbor_count"] == 2
+    assert beta["hidden_neighbor_count"] == 0
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_file_graph_endpoint_accepts_mode_and_prefix_options(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
     client = TestClient(create_app(hdf_filename))
-    response = client.get("/server_test.h5/graph?mode=structural&file_uri=https://example.org/data/&prefix=ex")
+    response = client.get("/server_test.h5/graph?mode=structural&file_uri=https://example.org/data/&prefix=ex&labels=off")
 
     assert response.status_code == 200
     assert 'name="mode" value="structural" checked' in response.text
     assert 'value="https://example.org/data/"' in response.text
     assert 'value="ex"' in response.text
+    assert '<option value="off" selected>Off</option>' in response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_graph_data_endpoint_rejects_invalid_labels(hdf_filename):
+    from h5rdmtoolbox.server import create_app
+
+    client = TestClient(create_app(hdf_filename))
+    response = client.get("/server_test.h5/graph-data?labels=always")
+
+    assert response.status_code == 400
+    assert "labels must be one of" in response.text
+
 
 
 @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
@@ -873,7 +946,7 @@ def test_file_query_endpoint_runs_select_query(hdf_filename):
 
 
 @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
-def test_file_query_endpoint_uses_combined_server_graph(monkeypatch, hdf_filename):
+def test_file_query_endpoint_is_scoped_to_selected_file(monkeypatch, hdf_filename):
     import h5rdmtoolbox.server as server
 
     first = hdf_filename.parent / "first.h5"
@@ -905,7 +978,172 @@ def test_file_query_endpoint_uses_combined_server_graph(monkeypatch, hdf_filenam
 
     assert response.status_code == 200
     assert "first" in response.text
+    assert "second" not in response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_combined_query_endpoint_uses_combined_server_graph(monkeypatch, hdf_filename):
+    import h5rdmtoolbox.server as server
+
+    first = hdf_filename.parent / "first.h5"
+    second = hdf_filename.parent / "second.h5"
+    for filename in [first, second]:
+        with h5py.File(filename, "w"):
+            pass
+    predicate = rdflib.URIRef("https://example.org/source")
+    first_graph = rdflib.Graph()
+    first_graph.bind("ex", rdflib.Namespace("https://example.org/"))
+    first_graph.add((rdflib.URIRef("https://example.org/first"), predicate, rdflib.Literal("first")))
+    second_graph = rdflib.Graph()
+    second_graph.bind("ex", rdflib.Namespace("https://example.org/"))
+    second_graph.add((rdflib.URIRef("https://example.org/second"), predicate, rdflib.Literal("second")))
+
+    def fake_get_ld(filename, **kwargs):
+        if pathlib.Path(filename) == first:
+            return first_graph
+        if pathlib.Path(filename) == second:
+            return second_graph
+        return rdflib.Graph()
+
+    monkeypatch.setattr(server, "get_ld", fake_get_ld)
+    client = TestClient(server.create_app([first, second]))
+    response = client.get(
+        "/combined/query",
+        params={"query": "SELECT ?value WHERE { ?s <https://example.org/source> ?value . } ORDER BY ?value"},
+    )
+
+    assert response.status_code == 200
+    assert "Combined graph - SPARQL Query" in response.text
+    assert "first" in response.text
     assert "second" in response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_combined_ttl_endpoint_serializes_combined_server_graph(monkeypatch, hdf_filename):
+    import h5rdmtoolbox.server as server
+
+    first = hdf_filename.parent / "first.h5"
+    second = hdf_filename.parent / "second.h5"
+    for filename in [first, second]:
+        with h5py.File(filename, "w"):
+            pass
+    predicate = rdflib.URIRef("https://example.org/source")
+    first_graph = rdflib.Graph()
+    first_graph.bind("ex", rdflib.Namespace("https://example.org/"))
+    first_graph.add((rdflib.URIRef("https://example.org/first"), predicate, rdflib.Literal("first")))
+    second_graph = rdflib.Graph()
+    second_graph.bind("ex", rdflib.Namespace("https://example.org/"))
+    second_graph.add((rdflib.URIRef("https://example.org/second"), predicate, rdflib.Literal("second")))
+
+    def fake_get_ld(filename, **kwargs):
+        if pathlib.Path(filename) == first:
+            return first_graph
+        if pathlib.Path(filename) == second:
+            return second_graph
+        return rdflib.Graph()
+
+    monkeypatch.setattr(server, "get_ld", fake_get_ld)
+    client = TestClient(server.create_app([first, second]))
+    response = client.get("/combined/ttl?raw=true")
+
+    assert response.status_code == 200
+    assert "text/turtle" in response.headers["content-type"]
+    assert '"first"' in response.text
+    assert '"second"' in response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_combined_metrics_endpoint_uses_combined_server_graph(monkeypatch, hdf_filename):
+    import h5rdmtoolbox.server as server
+
+    first = hdf_filename.parent / "first.h5"
+    second = hdf_filename.parent / "second.h5"
+    for filename in [first, second]:
+        with h5py.File(filename, "w"):
+            pass
+    predicate = rdflib.URIRef("https://example.org/source")
+    first_graph = rdflib.Graph()
+    first_graph.add((rdflib.URIRef("https://example.org/first"), predicate, rdflib.Literal("first")))
+    second_graph = rdflib.Graph()
+    second_graph.add((rdflib.URIRef("https://example.org/second"), predicate, rdflib.Literal("second")))
+
+    def fake_get_ld(filename, **kwargs):
+        if pathlib.Path(filename) == first:
+            return first_graph
+        if pathlib.Path(filename) == second:
+            return second_graph
+        return rdflib.Graph()
+
+    monkeypatch.setattr(server, "get_ld", fake_get_ld)
+    client = TestClient(server.create_app([first, second]))
+    response = client.get("/combined/metrics")
+
+    assert response.status_code == 200
+    assert "Combined graph - Graph Metrics" in response.text
+    assert "Total triples" in response.text
+    assert ">2<" in response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_combined_metrics_skips_exact_distance_for_large_graph(monkeypatch, hdf_filename):
+    import h5rdmtoolbox.server as server
+
+    monkeypatch.setattr(server, "COMBINED_METRICS_DISTANCE_NODE_LIMIT", 3)
+    graph = rdflib.Graph()
+    for index in range(4):
+        graph.add((
+            rdflib.URIRef(f"https://example.org/{index}"),
+            rdflib.URIRef("https://example.org/linksTo"),
+            rdflib.URIRef(f"https://example.org/{index + 1}"),
+        ))
+    monkeypatch.setattr(server, "get_ld", lambda *args, **kwargs: graph)
+    client = TestClient(server.create_app(hdf_filename))
+    response = client.get("/combined/metrics")
+
+    assert response.status_code == 200
+    assert "Not computed" in response.text
+    assert "Skipped for graphs above 3 resource nodes" in response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_combined_graph_endpoint_truncates_large_graph(monkeypatch, hdf_filename):
+    import h5rdmtoolbox.server as server
+
+    graph = rdflib.Graph()
+    predicate = rdflib.URIRef("https://example.org/linksTo")
+    for index in range(12):
+        graph.add((
+            rdflib.URIRef(f"https://example.org/node-{index}"),
+            predicate,
+            rdflib.URIRef(f"https://example.org/node-{index + 1}"),
+        ))
+    monkeypatch.setattr(server, "get_ld", lambda *args, **kwargs: graph)
+    client = TestClient(server.create_app(hdf_filename))
+    response = client.get("/combined/graph?limit_nodes=5&limit_edges=4")
+
+    assert response.status_code == 200
+    assert "Showing 5 of" in response.text
+    assert "edges. Refine the search or raise limits to see more." in response.text
+    assert 'name="limit_nodes"' in response.text
+    assert 'name="limit_edges"' in response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_combined_graph_endpoint_searches_node_neighborhood(monkeypatch, hdf_filename):
+    import h5rdmtoolbox.server as server
+
+    graph = rdflib.Graph()
+    predicate = rdflib.URIRef("https://example.org/linksTo")
+    graph.add((rdflib.URIRef("https://example.org/alpha"), predicate, rdflib.URIRef("https://example.org/beta")))
+    graph.add((rdflib.URIRef("https://example.org/gamma"), predicate, rdflib.URIRef("https://example.org/delta")))
+    monkeypatch.setattr(server, "get_ld", lambda *args, **kwargs: graph)
+    client = TestClient(server.create_app(hdf_filename))
+    response = client.get("/combined/graph?q=alpha&limit_nodes=10&limit_edges=10")
+
+    assert response.status_code == 200
+    assert "alpha" in response.text
+    assert "beta" in response.text
+    assert "gamma" not in response.text
 
 
 @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")

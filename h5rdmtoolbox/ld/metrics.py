@@ -85,7 +85,12 @@ def _resource_terms(subject, predicate, obj) -> list:
     ]
 
 
-def compute_graph_metrics(rdf_graph: rdflib.Graph, base_namespace: Optional[str] = None) -> Dict[str, object]:
+def compute_graph_metrics(
+        rdf_graph: rdflib.Graph,
+        base_namespace: Optional[str] = None,
+        compute_distances: bool = True,
+        distance_node_limit: int = 2000,
+) -> Dict[str, object]:
     """Compute RDF knowledge graph metrics for an existing graph."""
     bind_standard_prefixes(rdf_graph)
     triples = list(rdf_graph)
@@ -177,19 +182,22 @@ def compute_graph_metrics(rdf_graph: rdflib.Graph, base_namespace: Optional[str]
                     stack.append(neighbor)
         component_sizes.append(size)
 
-    largest_distance = 0
-    for start in resource_nodes:
-        distances = {start: 0}
-        queue = [start]
-        for current in queue:
-            for neighbor in adjacency.get(current, set()):
-                if neighbor not in distances:
-                    distances[neighbor] = distances[current] + 1
-                    queue.append(neighbor)
-        if distances:
-            largest_distance = max(largest_distance, max(distances.values()))
-
     resource_count = len(resource_nodes)
+    largest_distance = None
+    largest_distance_computed = compute_distances and resource_count <= distance_node_limit
+    if largest_distance_computed:
+        largest_distance = 0
+        for start in resource_nodes:
+            distances = {start: 0}
+            queue = [start]
+            for current in queue:
+                for neighbor in adjacency.get(current, set()):
+                    if neighbor not in distances:
+                        distances[neighbor] = distances[current] + 1
+                        queue.append(neighbor)
+            if distances:
+                largest_distance = max(largest_distance, max(distances.values()))
+
     subjects_without_type = len(subjects - typed_subjects)
     subjects_with_labels = len(labels)
     subjects_missing_labels = len(subjects - labels)
@@ -219,6 +227,8 @@ def compute_graph_metrics(rdf_graph: rdflib.Graph, base_namespace: Optional[str]
         "components": len(component_sizes),
         "largest_component": max(component_sizes, default=0),
         "largest_distance": largest_distance,
+        "largest_distance_computed": largest_distance_computed,
+        "largest_distance_node_limit": distance_node_limit,
         "datatype_distribution": sorted(datatype_counts.items(), key=lambda item: (-item[1], item[0])),
         "language_distribution": sorted(language_counts.items(), key=lambda item: (-item[1], item[0])),
         "untyped_literals": untyped_literal_count,

@@ -21,7 +21,8 @@ Log of changes in the versions
   - dereferences HDF5 object URLs such as `/example.h5/group/dataset` as Turtle RDF subject descriptions
   - adds content-negotiated RDF resource URLs with browser HTML, `Accept` negotiation, and `?format=ttl|jsonld|nt|xml|html`
   - adds external RDF subject resolution through local `/resolve?iri=...` URLs, with optional `--local-iri-pattern` graph-link filtering
-  - builds one shared server graph for all served files and loaded ontology/enrichment graphs, while resolving duplicate local subjects from the first served file occurrence
+  - builds one shared server graph for combined landing-page views and loaded ontology/enrichment graphs, while keeping per-file buttons scoped to one file and resolving duplicate local subjects from the first served file occurrence
+  - bounds combined graph visualization and skips exact largest-distance metrics on large graphs to keep local browser/server sessions responsive
   - adds lazy Zenodo DOI/record enrichment that searches attached RDF files for fragment IRIs and merges matching triples
   - adds generic ontology-document enrichment for fragment IRIs by loading the URL before `#` with RDF `Accept` headers and following linked RDF serializations from HTML pages
   - adds known ontology TTL registry lookup, QUDT unit/quantity-kind per-resource resolution, Wikidata direct-claim enrichment, and browser fallback links for unresolved IRIs
