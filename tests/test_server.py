@@ -756,8 +756,14 @@ def test_file_graph_endpoint_returns_interactive_page(hdf_filename):
     assert 'id="hidden-node-list"' in response.text
     assert 'id="label-mode"' in response.text
     assert 'id="graph-detail"' in response.text
+    assert "Initial view" in response.text
+    assert "Compact preview" in response.text
+    assert "Full graph, no limits" in response.text
+    assert '<option value="full"' in response.text
     assert 'id="expansion-direction"' in response.text
     assert 'id="expansion-depth"' in response.text
+    assert "Double-click expansion direction" in response.text
+    assert "Double-click expansion depth" in response.text
     assert 'name="labels"' in response.text
     assert '<section class="graph-panel">' in response.text
     assert '"nodes":' in response.text
@@ -880,6 +886,7 @@ def test_graph_detail_presets_select_limits(monkeypatch, hdf_filename):
         "compact": (2, 1),
         "balanced": (4, 3),
         "detailed": (6, 5),
+        "full": (None, None),
     })
     graph = rdflib.Graph()
     predicate = rdflib.URIRef("https://example.org/linksTo")
@@ -894,6 +901,7 @@ def test_graph_detail_presets_select_limits(monkeypatch, hdf_filename):
 
     compact = client.get("/server_test.h5/graph-data?detail=compact").json()
     detailed = client.get("/server_test.h5/graph-data?detail=detailed").json()
+    full = client.get("/server_test.h5/graph-data?detail=full").json()
 
     assert compact["summary"]["detail"] == "compact"
     assert compact["summary"]["limit_nodes"] == 2
@@ -901,7 +909,69 @@ def test_graph_detail_presets_select_limits(monkeypatch, hdf_filename):
     assert detailed["summary"]["detail"] == "detailed"
     assert detailed["summary"]["limit_nodes"] == 6
     assert detailed["summary"]["limit_edges"] == 5
+    assert full["summary"]["detail"] == "full"
+    assert full["summary"]["limit_nodes"] is None
+    assert full["summary"]["limit_edges"] is None
+    assert full["summary"]["truncated"] is False
     assert detailed["summary"]["shown_nodes"] >= compact["summary"]["shown_nodes"]
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_graph_detail_full_ignores_limits_and_includes_isolated_nodes(monkeypatch, hdf_filename):
+    import h5rdmtoolbox.server as server
+
+    graph = rdflib.Graph()
+    predicate = rdflib.URIRef("https://example.org/linksTo")
+    literal_predicate = rdflib.URIRef("https://example.org/name")
+    for index in range(6):
+        graph.add((
+            rdflib.URIRef(f"https://example.org/node-{index}"),
+            predicate,
+            rdflib.URIRef(f"https://example.org/node-{index + 1}"),
+        ))
+    graph.add((rdflib.URIRef("https://example.org/literal-only"), literal_predicate, rdflib.Literal("value")))
+    monkeypatch.setattr(server, "get_ld", lambda *args, **kwargs: graph)
+    client = TestClient(server.create_app(hdf_filename))
+
+    response = client.get(
+        "/server_test.h5/graph-data?detail=full&limit_nodes=2&limit_edges=1&include_isolated=false"
+    )
+    payload = response.json()
+
+    assert response.status_code == 200
+    assert payload["summary"]["limit_nodes"] is None
+    assert payload["summary"]["limit_edges"] is None
+    assert payload["summary"]["shown_nodes"] == 8
+    assert payload["summary"]["shown_edges"] == 6
+    assert payload["summary"]["truncated"] is False
+    assert payload["summary"]["dropped_isolated_visible_nodes"] == 0
+    assert "https://example.org/literal-only" in {node["id"] for node in payload["nodes"]}
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_graph_detail_full_respects_search_and_ontology_filter(monkeypatch, hdf_filename):
+    import h5rdmtoolbox.server as server
+
+    graph = rdflib.Graph()
+    predicate = rdflib.URIRef("https://example.org/linksTo")
+    graph.add((rdflib.URIRef("https://example.org/alpha"), predicate, rdflib.URIRef("https://example.org/beta")))
+    graph.add((rdflib.URIRef("https://example.org/gamma"), predicate, rdflib.URIRef("https://example.org/delta")))
+    graph.add((rdflib.URIRef("https://example.org/alpha"), predicate, rdflib.URIRef("http://www.w3.org/2000/01/rdf-schema#Class")))
+    monkeypatch.setattr(server, "get_ld", lambda *args, **kwargs: graph)
+    client = TestClient(server.create_app(hdf_filename))
+
+    searched = client.get("/server_test.h5/graph-data?detail=full&q=alpha")
+    searched_ids = {node["id"] for node in searched.json()["nodes"]}
+    assert searched.status_code == 200
+    assert "https://example.org/alpha" in searched_ids
+    assert "https://example.org/beta" in searched_ids
+    assert "https://example.org/gamma" not in searched_ids
+    assert "https://example.org/delta" not in searched_ids
+
+    without_ontology = client.get("/server_test.h5/graph-data?detail=full&include_ontology=false")
+    without_ontology_ids = {node["id"] for node in without_ontology.json()["nodes"]}
+    assert without_ontology.status_code == 200
+    assert "http://www.w3.org/2000/01/rdf-schema#Class" not in without_ontology_ids
 
 
 @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")

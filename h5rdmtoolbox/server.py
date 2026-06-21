@@ -32,6 +32,7 @@ GRAPH_DETAIL_LIMITS = {
     "compact": (250, 750),
     "balanced": (GRAPH_NODE_LIMIT, GRAPH_EDGE_LIMIT),
     "detailed": (2500, 8000),
+    "full": (None, None),
 }
 PREFIX_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_.-]*$")
 RDF_FORMATS = {
@@ -1359,10 +1360,12 @@ LIMIT 100"""
                       limit_nodes: Optional[int],
                       limit_edges: Optional[int],
                       default_node_limit: int,
-                      default_edge_limit: int) -> tuple[int, int]:
+                      default_edge_limit: int) -> tuple[Optional[int], Optional[int]]:
         if detail not in GRAPH_DETAIL_LIMITS:
-            raise HTTPException(status_code=400, detail="detail must be one of: compact, balanced, detailed")
+            raise HTTPException(status_code=400, detail="detail must be one of: compact, balanced, detailed, full")
         preset_nodes, preset_edges = GRAPH_DETAIL_LIMITS[detail]
+        if detail == "full":
+            return None, None
         if detail == "balanced":
             preset_nodes, preset_edges = default_node_limit, default_edge_limit
         return (
@@ -1402,7 +1405,11 @@ LIMIT 100"""
         if direction not in {"both", "out", "in"}:
             raise HTTPException(status_code=400, detail="direction must be one of: both, out, in")
         if detail not in GRAPH_DETAIL_LIMITS:
-            raise HTTPException(status_code=400, detail="detail must be one of: compact, balanced, detailed")
+            raise HTTPException(status_code=400, detail="detail must be one of: compact, balanced, detailed, full")
+        if detail == "full":
+            limit_nodes = None
+            limit_edges = None
+            include_isolated = True
         depth = max(1, min(int(depth), 2))
         class_palette = [
             ("#d8eef2", "#0b6f85"),
@@ -1435,7 +1442,7 @@ LIMIT 100"""
         degree_counts = {}
         search = (q or "").strip().lower()
         focus = (focus or "").strip()
-        if focus:
+        if focus and detail != "full":
             if limit_nodes is None:
                 limit_nodes = expansion_limit_nodes
             if limit_edges is None:
@@ -1673,6 +1680,7 @@ LIMIT 100"""
         resolved_limit_nodes, resolved_limit_edges = _graph_limits(
             detail, limit_nodes, limit_edges, default_node_limit, default_edge_limit
         )
+        effective_include_isolated = include_isolated or detail == "full"
         graph_payload = _graph_response(
             filename,
             mode=mode,
@@ -1683,7 +1691,7 @@ LIMIT 100"""
             limit_edges=resolved_limit_edges,
             q=q,
             include_ontology=include_ontology,
-            include_isolated=include_isolated,
+            include_isolated=effective_include_isolated,
             labels=labels,
             direction=direction,
             detail=detail,
@@ -1712,7 +1720,7 @@ LIMIT 100"""
             resolved_limit_nodes=resolved_limit_nodes,
             resolved_limit_edges=resolved_limit_edges,
             include_ontology=include_ontology,
-            include_isolated=include_isolated,
+            include_isolated=effective_include_isolated,
             labels=labels,
             direction=direction,
             detail=detail,
@@ -2612,11 +2620,15 @@ LIMIT 100"""
             file_uri=file_uri,
             prefix=prefix,
             rdf_graph=server_graph,
-            limit_nodes=limit_nodes if limit_nodes is not None else (None if focus else resolved_limit_nodes),
-            limit_edges=limit_edges if limit_edges is not None else (None if focus else resolved_limit_edges),
+            limit_nodes=None if detail == "full" else (
+                limit_nodes if limit_nodes is not None else (None if focus else resolved_limit_nodes)
+            ),
+            limit_edges=None if detail == "full" else (
+                limit_edges if limit_edges is not None else (None if focus else resolved_limit_edges)
+            ),
             q=q,
             include_ontology=include_ontology,
-            include_isolated=include_isolated,
+            include_isolated=include_isolated or detail == "full",
             focus=focus,
             depth=depth,
             labels=labels,
@@ -2769,11 +2781,15 @@ LIMIT 100"""
             mode=mode,
             file_uri=file_uri,
             prefix=prefix,
-            limit_nodes=limit_nodes if limit_nodes is not None else (None if focus else resolved_limit_nodes),
-            limit_edges=limit_edges if limit_edges is not None else (None if focus else resolved_limit_edges),
+            limit_nodes=None if detail == "full" else (
+                limit_nodes if limit_nodes is not None else (None if focus else resolved_limit_nodes)
+            ),
+            limit_edges=None if detail == "full" else (
+                limit_edges if limit_edges is not None else (None if focus else resolved_limit_edges)
+            ),
             q=q,
             include_ontology=include_ontology,
-            include_isolated=include_isolated,
+            include_isolated=include_isolated or detail == "full",
             focus=focus,
             depth=depth,
             labels=labels,
