@@ -2,7 +2,7 @@
 
 Log of changes in the versions
 
-## v2.7.5
+## v2.8.0
 
 - improve `h5tbx` CLI startup and linked-data commands
 - add `h5tbx ld dump` options for RDF output control:
@@ -11,21 +11,9 @@ Log of changes in the versions
   - `--file-uri`
   - `--prefix`
 - add `h5tbx serve` for local browser-based HDF5/RDF inspection
-  - discovers `.h5`, `.hdf`, and `.hdf5` files when no filename is provided
-  - accepts folders as `h5tbx serve` inputs and adds repeatable `--h5ext` folder-discovery filters
-  - serves RDF serializations as Turtle, JSON-LD, N-Triples, and RDF/XML
-  - adds interactive graph view with draggable nodes, class-based colors, literal popovers, and hide/unhide controls
-  - adds SPARQL query page with sample queries and tabular SELECT results
-  - adds graph metrics page with RDF knowledge-graph size, predicate, class, connectivity, literal, label, quality, and external-linkage metrics
-  - adds SHACL validation page for pasted Turtle shapes
-  - dereferences HDF5 object URLs such as `/example.h5/group/dataset` as Turtle RDF subject descriptions
-  - adds content-negotiated RDF resource URLs with browser HTML, `Accept` negotiation, and `?format=ttl|jsonld|nt|xml|html`
-  - adds external RDF subject resolution through local `/resolve?iri=...` URLs, with optional `--local-iri-pattern` graph-link filtering
-  - builds one shared server graph for combined landing-page views and loaded ontology/enrichment graphs, while keeping per-file buttons scoped to one file and resolving duplicate local subjects from the first served file occurrence
-  - bounds combined graph visualization and skips exact largest-distance metrics on large graphs to keep local browser/server sessions responsive
-  - adds lazy Zenodo DOI/record enrichment that searches attached RDF files for fragment IRIs and merges matching triples
-  - adds generic ontology-document enrichment for fragment IRIs by loading the URL before `#` with RDF `Accept` headers and following linked RDF serializations from HTML pages
-  - adds known ontology TTL registry lookup, QUDT unit/quantity-kind per-resource resolution, Wikidata direct-claim enrichment, and browser fallback links for unresolved IRIs
+  - serves discovered files and folders with configurable HDF5 extensions
+  - adds RDF serialization, resource, graph, SPARQL, metrics, and SHACL browser views
+  - adds combined graph views, lazy RDF enrichment, and local IRI resolution
 - add reusable RDF graph metrics API:
   - `h5rdmtoolbox.compute_metrics(filename)`
   - `h5rdmtoolbox.File(...).metrics()`
