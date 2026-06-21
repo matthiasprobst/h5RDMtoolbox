@@ -762,12 +762,21 @@ def test_file_graph_endpoint_returns_interactive_page(hdf_filename):
     assert 'name="color_by"' in response.text
     assert 'id="color-scheme"' in response.text
     assert 'name="color_scheme"' in response.text
+    assert 'id="node-size"' in response.text
+    assert 'name="node_size"' in response.text
+    assert 'id="edge-width"' in response.text
+    assert 'name="edge_width"' in response.text
+    assert 'id="background-color"' in response.text
+    assert 'name="background_color"' in response.text
     assert 'class="graph-view-actions"' in response.text
     assert 'class="graph-view-link active"' in response.text
     assert "Initial view" in response.text
     assert "Graph view" in response.text
     assert "Color nodes by" in response.text
     assert "Color scheme" in response.text
+    assert "Node size" in response.text
+    assert "Edge width" in response.text
+    assert "Background" in response.text
     assert "Compact preview" in response.text
     assert "Full graph, no limits" in response.text
     assert '<option value="full"' in response.text
@@ -795,6 +804,9 @@ def test_file_graph_endpoint_returns_interactive_page(hdf_filename):
     assert '"namespace_label":' in response.text
     assert '"colorBy": "class"' in response.text
     assert '"colorScheme": "strong"' in response.text
+    assert '"nodeSize": 14' in response.text
+    assert '"edgeWidth": 1' in response.text
+    assert '"backgroundColor": "#ffffff"' in response.text
     assert '"group": "literal"' not in response.text
     assert '"group": "class:hdf:File"' in response.text
     assert '"group": "class:hdf:Group"' in response.text
@@ -837,13 +849,25 @@ def test_file_graph_endpoint_returns_interactive_page(hdf_filename):
     assert 'params.set("color_by"' in graph_js.text
     assert "colorSchemeInput" in graph_js.text
     assert 'params.set("color_scheme"' in graph_js.text
+    assert "nodeSizeInput" in graph_js.text
+    assert "edgeWidthInput" in graph_js.text
+    assert "backgroundColorInput" in graph_js.text
+    assert "selectedNodeSize" in graph_js.text
+    assert "selectedEdgeWidth" in graph_js.text
+    assert "selectedBackgroundColor" in graph_js.text
+    assert "applyGraphBackground" in graph_js.text
+    assert 'params.set("node_size"' in graph_js.text
+    assert 'params.set("edge_width"' in graph_js.text
+    assert 'params.set("background_color"' in graph_js.text
+    assert ".linkWidth((link) => link.width)" in graph_js.text
+    assert ".backgroundColor(selectedBackgroundColor())" in graph_js.text
 
     response_3d = client.get("/server_test.h5/graph?view=3d")
     assert response_3d.status_code == 200
     assert "https://unpkg.com/3d-force-graph" in response_3d.text
     assert '"graphView": "3d"' in response_3d.text
     assert '<option value="3d" selected' in response_3d.text
-    assert 'class="graph-view-link active" href="/server_test.h5/graph?mode=both&amp;detail=balanced&amp;labels=auto&amp;color_by=class&amp;color_scheme=strong&amp;direction=both&amp;depth=1&amp;include_ontology=true&amp;include_isolated=false&amp;view=3d"' in response_3d.text
+    assert 'class="graph-view-link active" href="/server_test.h5/graph?mode=both&amp;detail=balanced&amp;labels=auto&amp;color_by=class&amp;color_scheme=strong&amp;node_size=14&amp;edge_width=1&amp;background_color=%23ffffff&amp;direction=both&amp;depth=1&amp;include_ontology=true&amp;include_isolated=false&amp;view=3d"' in response_3d.text
 
     response_invalid_view = client.get("/server_test.h5/graph?view=4d")
     assert response_invalid_view.status_code == 400
@@ -871,6 +895,36 @@ def test_file_graph_data_endpoint_returns_json_with_label_mode(hdf_filename):
     assert "label" in payload["nodes"][0]
     assert "degree" in payload["nodes"][0]
     assert "expandable" in payload["nodes"][0]
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_file_graph_endpoint_normalizes_visual_tuning_options(hdf_filename):
+    from h5rdmtoolbox.server import create_app
+
+    client = TestClient(create_app(hdf_filename))
+    response = client.get(
+        "/server_test.h5/graph?node_size=20&edge_width=4&background_color=%23ddeeff"
+    )
+
+    assert response.status_code == 200
+    assert 'id="node-size" min="6" max="36" step="1" value="20"' in response.text
+    assert 'id="edge-width" min="1" max="8" step="1" value="4"' in response.text
+    assert 'id="background-color" value="#ddeeff"' in response.text
+    assert '"nodeSize": 20' in response.text
+    assert '"edgeWidth": 4' in response.text
+    assert '"backgroundColor": "#ddeeff"' in response.text
+
+    normalized = client.get(
+        "/server_test.h5/graph?node_size=999&edge_width=bad&background_color=red"
+    )
+
+    assert normalized.status_code == 200
+    assert 'id="node-size" min="6" max="36" step="1" value="36"' in normalized.text
+    assert 'id="edge-width" min="1" max="8" step="1" value="1"' in normalized.text
+    assert 'id="background-color" value="#ffffff"' in normalized.text
+    assert '"nodeSize": 36' in normalized.text
+    assert '"edgeWidth": 1' in normalized.text
+    assert '"backgroundColor": "#ffffff"' in normalized.text
 
 
 @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")

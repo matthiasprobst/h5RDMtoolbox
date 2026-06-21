@@ -63,7 +63,15 @@ GRAPH_COLOR_SCHEMES = {
         "neutral": ("#eceff3", "#667085"),
     },
 }
+GRAPH_NODE_SIZE_DEFAULT = 14
+GRAPH_NODE_SIZE_MIN = 6
+GRAPH_NODE_SIZE_MAX = 36
+GRAPH_EDGE_WIDTH_DEFAULT = 1
+GRAPH_EDGE_WIDTH_MIN = 1
+GRAPH_EDGE_WIDTH_MAX = 8
+GRAPH_BACKGROUND_COLOR_DEFAULT = "#ffffff"
 PREFIX_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_.-]*$")
+HEX_COLOR_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 RDF_FORMATS = {
     "ttl": ("turtle", "text/turtle; charset=utf-8", "Turtle"),
     "jsonld": ("json-ld", "application/ld+json; charset=utf-8", "JSON-LD"),
@@ -1406,6 +1414,18 @@ LIMIT 100"""
             limit_edges if limit_edges is not None else preset_edges,
         )
 
+    def _normalize_graph_int(value, default: int, minimum: int, maximum: int) -> int:
+        try:
+            normalized = int(value)
+        except (TypeError, ValueError):
+            return default
+        return max(minimum, min(maximum, normalized))
+
+    def _normalize_graph_background_color(value: Optional[str]) -> str:
+        if isinstance(value, str) and HEX_COLOR_RE.match(value):
+            return value
+        return GRAPH_BACKGROUND_COLOR_DEFAULT
+
     def _is_ontology_term(term) -> bool:
         text = str(term)
         ontology_prefixes = (
@@ -1743,11 +1763,21 @@ LIMIT 100"""
                     depth: int = 1,
                     color_by: str = "class",
                     color_scheme: str = "strong",
+                    node_size=GRAPH_NODE_SIZE_DEFAULT,
+                    edge_width=GRAPH_EDGE_WIDTH_DEFAULT,
+                    background_color: str = GRAPH_BACKGROUND_COLOR_DEFAULT,
                     view: Optional[str] = None) -> HTMLResponse:
         depth = max(1, min(int(depth), 2))
         graph_view = (view or default_graph_view).lower()
         if graph_view not in GRAPH_VIEWS:
             raise HTTPException(status_code=400, detail="view must be either '2d' or '3d'")
+        graph_node_size = _normalize_graph_int(
+            node_size, GRAPH_NODE_SIZE_DEFAULT, GRAPH_NODE_SIZE_MIN, GRAPH_NODE_SIZE_MAX
+        )
+        graph_edge_width = _normalize_graph_int(
+            edge_width, GRAPH_EDGE_WIDTH_DEFAULT, GRAPH_EDGE_WIDTH_MIN, GRAPH_EDGE_WIDTH_MAX
+        )
+        graph_background_color = _normalize_graph_background_color(background_color)
         graph_file_uri = file_uri if file_uri is not None else create_app_file_uri
         display_name = page_label or filename.name
         encoded_filename = urllib.parse.quote(route_name or filename.name)
@@ -1787,6 +1817,9 @@ LIMIT 100"""
             "graphView": graph_view,
             "colorBy": color_by,
             "colorScheme": color_scheme,
+            "nodeSize": graph_node_size,
+            "edgeWidth": graph_edge_width,
+            "backgroundColor": graph_background_color,
         }
         graph_view_links = []
         base_graph_params = {
@@ -1795,6 +1828,9 @@ LIMIT 100"""
             "labels": labels,
             "color_by": color_by,
             "color_scheme": color_scheme,
+            "node_size": str(graph_node_size),
+            "edge_width": str(graph_edge_width),
+            "background_color": graph_background_color,
             "direction": direction,
             "depth": str(depth),
             "include_ontology": _bool_str(include_ontology),
@@ -1834,6 +1870,9 @@ LIMIT 100"""
             labels=labels,
             color_by=color_by,
             color_scheme=color_scheme,
+            node_size=graph_node_size,
+            edge_width=graph_edge_width,
+            background_color=graph_background_color,
             direction=direction,
             detail=detail,
             depth=depth,
@@ -2692,6 +2731,9 @@ LIMIT 100"""
                            depth: int = 1,
                            color_by: str = "class",
                            color_scheme: str = "strong",
+                           node_size=GRAPH_NODE_SIZE_DEFAULT,
+                           edge_width=GRAPH_EDGE_WIDTH_DEFAULT,
+                           background_color: str = GRAPH_BACKGROUND_COLOR_DEFAULT,
                            view: Optional[str] = None):
         return _graph_page(
             pathlib.Path("combined"),
@@ -2712,6 +2754,9 @@ LIMIT 100"""
             depth=depth,
             color_by=color_by,
             color_scheme=color_scheme,
+            node_size=node_size,
+            edge_width=edge_width,
+            background_color=background_color,
             view=view,
         )
 
@@ -2860,6 +2905,9 @@ LIMIT 100"""
                        depth: int = 1,
                        color_by: str = "class",
                        color_scheme: str = "strong",
+                       node_size=GRAPH_NODE_SIZE_DEFAULT,
+                       edge_width=GRAPH_EDGE_WIDTH_DEFAULT,
+                       background_color: str = GRAPH_BACKGROUND_COLOR_DEFAULT,
                        view: Optional[str] = None):
         hdf_file = hdf_files.get(filename)
         if hdf_file is None:
@@ -2880,6 +2928,9 @@ LIMIT 100"""
             depth=depth,
             color_by=color_by,
             color_scheme=color_scheme,
+            node_size=node_size,
+            edge_width=edge_width,
+            background_color=background_color,
             view=view,
         )
 
