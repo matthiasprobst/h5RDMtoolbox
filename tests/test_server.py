@@ -758,15 +758,25 @@ def test_file_graph_endpoint_returns_interactive_page(hdf_filename):
     assert 'id="label-mode"' in response.text
     assert 'id="graph-detail"' in response.text
     assert 'id="graph-view"' in response.text
+    assert 'id="color-by"' in response.text
+    assert 'name="color_by"' in response.text
+    assert 'id="color-scheme"' in response.text
+    assert 'name="color_scheme"' in response.text
     assert 'class="graph-view-actions"' in response.text
     assert 'class="graph-view-link active"' in response.text
     assert "Initial view" in response.text
     assert "Graph view" in response.text
+    assert "Color nodes by" in response.text
+    assert "Color scheme" in response.text
     assert "Compact preview" in response.text
     assert "Full graph, no limits" in response.text
     assert '<option value="full"' in response.text
     assert '<option value="2d" selected' in response.text
     assert '<option value="3d"' in response.text
+    assert '<option value="class" selected' in response.text
+    assert '<option value="namespace"' in response.text
+    assert '<option value="strong" selected' in response.text
+    assert '<option value="light"' in response.text
     assert "view=2d" in response.text
     assert "view=3d" in response.text
     assert 'id="expansion-direction"' in response.text
@@ -781,6 +791,10 @@ def test_file_graph_endpoint_returns_interactive_page(hdf_filename):
     assert '"literals":' in response.text
     assert '"expandable":' in response.text
     assert '"hidden_neighbor_count":' in response.text
+    assert '"namespace":' in response.text
+    assert '"namespace_label":' in response.text
+    assert '"colorBy": "class"' in response.text
+    assert '"colorScheme": "strong"' in response.text
     assert '"group": "literal"' not in response.text
     assert '"group": "class:hdf:File"' in response.text
     assert '"group": "class:hdf:Group"' in response.text
@@ -817,13 +831,19 @@ def test_file_graph_endpoint_returns_interactive_page(hdf_filename):
     assert "hideEdgesOnZoom: true" in graph_js.text
     assert "setGraphStatus" in graph_js.text
     assert "expansionLimitNodes" in graph_js.text
+    assert "colorByInput" in graph_js.text
+    assert "selectedColorMode" in graph_js.text
+    assert "selectedNodeGroup" in graph_js.text
+    assert 'params.set("color_by"' in graph_js.text
+    assert "colorSchemeInput" in graph_js.text
+    assert 'params.set("color_scheme"' in graph_js.text
 
     response_3d = client.get("/server_test.h5/graph?view=3d")
     assert response_3d.status_code == 200
     assert "https://unpkg.com/3d-force-graph" in response_3d.text
     assert '"graphView": "3d"' in response_3d.text
     assert '<option value="3d" selected' in response_3d.text
-    assert 'class="graph-view-link active" href="/server_test.h5/graph?mode=both&amp;detail=balanced&amp;labels=auto&amp;direction=both&amp;depth=1&amp;include_ontology=true&amp;include_isolated=false&amp;view=3d"' in response_3d.text
+    assert 'class="graph-view-link active" href="/server_test.h5/graph?mode=both&amp;detail=balanced&amp;labels=auto&amp;color_by=class&amp;color_scheme=strong&amp;direction=both&amp;depth=1&amp;include_ontology=true&amp;include_isolated=false&amp;view=3d"' in response_3d.text
 
     response_invalid_view = client.get("/server_test.h5/graph?view=4d")
     assert response_invalid_view.status_code == 400
@@ -851,6 +871,107 @@ def test_file_graph_data_endpoint_returns_json_with_label_mode(hdf_filename):
     assert "label" in payload["nodes"][0]
     assert "degree" in payload["nodes"][0]
     assert "expandable" in payload["nodes"][0]
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_file_graph_data_endpoint_returns_namespace_color_metadata(monkeypatch, hdf_filename):
+    import h5rdmtoolbox.server as server
+
+    graph = rdflib.Graph()
+    graph.bind("ex", rdflib.Namespace("https://example.org/ns#"))
+    graph.add((
+        rdflib.URIRef("https://example.org/ns#alpha"),
+        rdflib.RDF.type,
+        rdflib.URIRef("https://example.org/ns#Sample"),
+    ))
+    graph.add((
+        rdflib.URIRef("https://example.org/ns#alpha"),
+        rdflib.URIRef("https://other.example/vocab/linksTo"),
+        rdflib.URIRef("https://other.example/data/beta"),
+    ))
+    monkeypatch.setattr(server, "get_ld", lambda *args, **kwargs: graph)
+    client = TestClient(server.create_app(hdf_filename))
+
+    response = client.get("/server_test.h5/graph-data?color_by=namespace")
+    payload = response.json()
+
+    assert response.status_code == 200
+    assert payload["summary"]["color_by"] == "namespace"
+    assert "namespace:https://example.org/ns#" in payload["groups"]
+    assert "namespace:https://other.example/data/" in payload["groups"]
+    alpha = next(node for node in payload["nodes"] if node["id"] == "https://example.org/ns#alpha")
+    beta = next(node for node in payload["nodes"] if node["id"] == "https://other.example/data/beta")
+    assert alpha["namespace"] == "https://example.org/ns#"
+    assert alpha["namespace_label"] == "ex"
+    assert alpha["rdf_class"] == "ex:Sample"
+    assert beta["namespace"] == "https://other.example/data/"
+    assert beta["namespace_label"] == "https://other.example/data/"
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_file_graph_data_endpoint_supports_color_schemes(monkeypatch, hdf_filename):
+    import h5rdmtoolbox.server as server
+
+    graph = rdflib.Graph()
+    graph.bind("ex", rdflib.Namespace("https://example.org/ns#"))
+    graph.add((
+        rdflib.URIRef("https://example.org/ns#alpha"),
+        rdflib.RDF.type,
+        rdflib.URIRef("https://example.org/ns#Sample"),
+    ))
+    graph.add((
+        rdflib.URIRef("https://example.org/ns#alpha"),
+        rdflib.URIRef("https://example.org/ns#linksTo"),
+        rdflib.URIRef("https://example.org/ns#beta"),
+    ))
+    monkeypatch.setattr(server, "get_ld", lambda *args, **kwargs: graph)
+    client = TestClient(server.create_app(hdf_filename))
+
+    default_payload = client.get("/server_test.h5/graph-data").json()
+    strong_payload = client.get("/server_test.h5/graph-data?color_scheme=strong").json()
+    light_payload = client.get("/server_test.h5/graph-data?color_scheme=light").json()
+
+    assert default_payload["summary"]["color_scheme"] == "strong"
+    assert strong_payload["summary"]["color_scheme"] == "strong"
+    assert light_payload["summary"]["color_scheme"] == "light"
+    assert strong_payload["groups"]["class:ex:Sample"]["color"] == {
+        "background": "#2563eb",
+        "border": "#1e3a8a",
+    }
+    assert light_payload["groups"]["class:ex:Sample"]["color"] == {
+        "background": "#d8eef2",
+        "border": "#0b6f85",
+    }
+    assert strong_payload["groups"]["resource"]["color"] == {
+        "background": "#cbd5e1",
+        "border": "#475569",
+    }
+    assert light_payload["groups"]["resource"]["color"] == {
+        "background": "#eceff3",
+        "border": "#667085",
+    }
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_graph_data_endpoint_rejects_invalid_color_by(hdf_filename):
+    from h5rdmtoolbox.server import create_app
+
+    client = TestClient(create_app(hdf_filename))
+    response = client.get("/server_test.h5/graph-data?color_by=predicate")
+
+    assert response.status_code == 400
+    assert "color_by must be one of" in response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_graph_data_endpoint_rejects_invalid_color_scheme(hdf_filename):
+    from h5rdmtoolbox.server import create_app
+
+    client = TestClient(create_app(hdf_filename))
+    response = client.get("/server_test.h5/graph-data?color_scheme=dim")
+
+    assert response.status_code == 400
+    assert "color_scheme must be one of" in response.text
 
 
 @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
@@ -1063,13 +1184,18 @@ def test_file_graph_endpoint_accepts_mode_and_prefix_options(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
     client = TestClient(create_app(hdf_filename))
-    response = client.get("/server_test.h5/graph?mode=structural&file_uri=https://example.org/data/&prefix=ex&labels=off")
+    response = client.get(
+        "/server_test.h5/graph?mode=structural&file_uri=https://example.org/data/&prefix=ex"
+        "&labels=off&color_by=namespace&color_scheme=light"
+    )
 
     assert response.status_code == 200
     assert 'name="mode" value="structural" checked' in response.text
     assert 'value="https://example.org/data/"' in response.text
     assert 'value="ex"' in response.text
     assert '<option value="off" selected>Off</option>' in response.text
+    assert '<option value="namespace" selected>Namespace</option>' in response.text
+    assert '<option value="light" selected>Light</option>' in response.text
 
 
 @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")

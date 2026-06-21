@@ -35,6 +35,34 @@ GRAPH_DETAIL_LIMITS = {
     "detailed": (2500, 8000),
     "full": (None, None),
 }
+GRAPH_COLOR_SCHEMES = {
+    "strong": {
+        "palette": [
+            ("#2563eb", "#1e3a8a"),
+            ("#f97316", "#9a3412"),
+            ("#16a34a", "#166534"),
+            ("#db2777", "#9d174d"),
+            ("#0891b2", "#155e75"),
+            ("#7c3aed", "#5b21b6"),
+            ("#dc2626", "#991b1b"),
+            ("#d97706", "#92400e"),
+        ],
+        "neutral": ("#cbd5e1", "#475569"),
+    },
+    "light": {
+        "palette": [
+            ("#d8eef2", "#0b6f85"),
+            ("#e4def8", "#6b4bb3"),
+            ("#dff3df", "#287a3e"),
+            ("#fff0cc", "#a66b00"),
+            ("#f8dfe8", "#b33963"),
+            ("#dbeafe", "#2563eb"),
+            ("#f1e7d0", "#8a5a18"),
+            ("#e0f2fe", "#0369a1"),
+        ],
+        "neutral": ("#eceff3", "#667085"),
+    },
+}
 PREFIX_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_.-]*$")
 RDF_FORMATS = {
     "ttl": ("turtle", "text/turtle; charset=utf-8", "Turtle"),
@@ -1392,6 +1420,26 @@ LIMIT 100"""
         )
         return any(text.startswith(prefix) for prefix in ontology_prefixes)
 
+    def _term_namespace(term) -> str:
+        if isinstance(term, rdflib.BNode):
+            return "blank"
+        if not isinstance(term, rdflib.URIRef):
+            return "resource"
+        text = str(term)
+        if "#" in text:
+            return text.rsplit("#", 1)[0] + "#"
+        if "/" in text:
+            return text.rsplit("/", 1)[0] + "/"
+        return text
+
+    def _namespace_label(namespace: str, rdf_graph: rdflib.Graph) -> str:
+        if namespace in {"blank", "resource"}:
+            return namespace
+        for prefix, bound_namespace in rdf_graph.namespaces():
+            if str(bound_namespace) == namespace and prefix and not re.fullmatch(r"ns\d+", prefix):
+                return prefix
+        return namespace
+
     def _graph_data(rdf_graph: rdflib.Graph,
                     limit_nodes: Optional[int] = None,
                     limit_edges: Optional[int] = None,
@@ -1403,6 +1451,8 @@ LIMIT 100"""
                     labels: str = "auto",
                     direction: str = "both",
                     detail: str = "balanced",
+                    color_by: str = "class",
+                    color_scheme: str = "strong",
                     expansion_limit_nodes: int = GRAPH_EXPANSION_NODE_LIMIT,
                     expansion_limit_edges: int = GRAPH_EXPANSION_EDGE_LIMIT) -> dict[str, object]:
         if labels not in {"auto", "on", "off"}:
@@ -1411,35 +1461,21 @@ LIMIT 100"""
             raise HTTPException(status_code=400, detail="direction must be one of: both, out, in")
         if detail not in GRAPH_DETAIL_LIMITS:
             raise HTTPException(status_code=400, detail="detail must be one of: compact, balanced, detailed, full")
+        if color_by not in {"class", "namespace"}:
+            raise HTTPException(status_code=400, detail="color_by must be one of: class, namespace")
+        if color_scheme not in GRAPH_COLOR_SCHEMES:
+            raise HTTPException(status_code=400, detail="color_scheme must be one of: strong, light")
         if detail == "full":
             limit_nodes = None
             limit_edges = None
             include_isolated = True
         depth = max(1, min(int(depth), 2))
-        class_palette = [
-            ("#d8eef2", "#0b6f85"),
-            ("#e4def8", "#6b4bb3"),
-            ("#dff3df", "#287a3e"),
-            ("#fff0cc", "#a66b00"),
-            ("#f8dfe8", "#b33963"),
-            ("#dbeafe", "#2563eb"),
-            ("#f1e7d0", "#8a5a18"),
-            ("#e0f2fe", "#0369a1"),
-        ]
+        color_scheme_config = GRAPH_COLOR_SCHEMES[color_scheme]
+        class_palette = color_scheme_config["palette"]
+        neutral_background, neutral_border = color_scheme_config["neutral"]
         type_by_node = {
             str(subject): _graph_label(obj, rdf_graph)
             for subject, obj in rdf_graph.subject_objects(rdflib.RDF.type)
-        }
-        class_groups = {}
-        for index, class_label in enumerate(sorted(set(type_by_node.values()))):
-            background, border = class_palette[index % len(class_palette)]
-            class_groups[f"class:{class_label}"] = {
-                "color": {"background": background, "border": border},
-            }
-        groups = {
-            "resource": {"color": {"background": "#eceff3", "border": "#667085"}},
-            "blank": {"color": {"background": "#eceff3", "border": "#667085"}},
-            **class_groups,
         }
         node_terms = set()
         resource_edges = []
@@ -1543,6 +1579,26 @@ LIMIT 100"""
             node_terms_to_render.add(focus_term)
         dropped_isolated_visible_nodes = len(selected_terms - node_terms_to_render)
 
+        class_groups = {}
+        for index, class_label in enumerate(sorted(set(type_by_node.values()))):
+            background, border = class_palette[index % len(class_palette)]
+            class_groups[f"class:{class_label}"] = {
+                "color": {"background": background, "border": border},
+            }
+        namespace_groups = {}
+        namespaces = sorted({_term_namespace(term) for term in node_terms_to_render if isinstance(term, rdflib.URIRef)})
+        for index, namespace in enumerate(namespaces):
+            background, border = class_palette[index % len(class_palette)]
+            namespace_groups[f"namespace:{namespace}"] = {
+                "label": _namespace_label(namespace, rdf_graph),
+                "color": {"background": background, "border": border},
+            }
+        groups = {
+            "resource": {"color": {"background": neutral_background, "border": neutral_border}},
+            "blank": {"color": {"background": neutral_background, "border": neutral_border}},
+            **class_groups,
+            **namespace_groups,
+        }
         nodes = {}
 
         def node_group(value) -> str:
@@ -1553,11 +1609,14 @@ LIMIT 100"""
 
         for subject in sorted(node_terms_to_render, key=lambda term: _graph_label(term, rdf_graph)):
             subject_id = str(subject)
+            namespace = _term_namespace(subject)
             nodes.setdefault(subject_id, {
                 "id": subject_id,
                 "label": _graph_label(subject, rdf_graph),
                 "group": node_group(subject),
                 "rdf_class": type_by_node.get(subject_id, ""),
+                "namespace": namespace,
+                "namespace_label": _namespace_label(namespace, rdf_graph),
                 "local_href": _local_iri_href(subject_id) if isinstance(subject, rdflib.URIRef) else "",
                 "degree": degree_counts.get(subject, 0),
                 "shown_neighbor_count": 0,
@@ -1598,6 +1657,8 @@ LIMIT 100"""
                 "depth": depth,
                 "direction": direction,
                 "detail": detail,
+                "color_by": color_by,
+                "color_scheme": color_scheme,
                 "limit_nodes": limit_nodes,
                 "limit_edges": limit_edges,
                 "dropped_isolated_visible_nodes": dropped_isolated_visible_nodes,
@@ -1619,6 +1680,8 @@ LIMIT 100"""
                         labels: str = "auto",
                         direction: str = "both",
                         detail: str = "balanced",
+                        color_by: str = "class",
+                        color_scheme: str = "strong",
                         expansion_limit_nodes: int = GRAPH_EXPANSION_NODE_LIMIT,
                         expansion_limit_edges: int = GRAPH_EXPANSION_EDGE_LIMIT) -> dict[str, object]:
         graph_file_uri = file_uri if file_uri is not None else create_app_file_uri
@@ -1656,6 +1719,8 @@ LIMIT 100"""
             labels=labels,
             direction=direction,
             detail=detail,
+            color_by=color_by,
+            color_scheme=color_scheme,
             expansion_limit_nodes=expansion_limit_nodes,
             expansion_limit_edges=expansion_limit_edges,
         )
@@ -1676,6 +1741,8 @@ LIMIT 100"""
                     direction: str = "both",
                     detail: str = "balanced",
                     depth: int = 1,
+                    color_by: str = "class",
+                    color_scheme: str = "strong",
                     view: Optional[str] = None) -> HTMLResponse:
         depth = max(1, min(int(depth), 2))
         graph_view = (view or default_graph_view).lower()
@@ -1705,6 +1772,8 @@ LIMIT 100"""
             direction=direction,
             detail=detail,
             depth=depth,
+            color_by=color_by,
+            color_scheme=color_scheme,
         )
         graph_json = json.dumps(graph_payload).replace("</", "<\\/")
         graph_nav = " ".join(
@@ -1716,12 +1785,16 @@ LIMIT 100"""
             "expansionLimitNodes": GRAPH_EXPANSION_NODE_LIMIT,
             "expansionLimitEdges": GRAPH_EXPANSION_EDGE_LIMIT,
             "graphView": graph_view,
+            "colorBy": color_by,
+            "colorScheme": color_scheme,
         }
         graph_view_links = []
         base_graph_params = {
             "mode": mode,
             "detail": detail,
             "labels": labels,
+            "color_by": color_by,
+            "color_scheme": color_scheme,
             "direction": direction,
             "depth": str(depth),
             "include_ontology": _bool_str(include_ontology),
@@ -1759,6 +1832,8 @@ LIMIT 100"""
             include_ontology=include_ontology,
             include_isolated=effective_include_isolated,
             labels=labels,
+            color_by=color_by,
+            color_scheme=color_scheme,
             direction=direction,
             detail=detail,
             depth=depth,
@@ -2615,6 +2690,8 @@ LIMIT 100"""
                            direction: str = "both",
                            detail: str = "balanced",
                            depth: int = 1,
+                           color_by: str = "class",
+                           color_scheme: str = "strong",
                            view: Optional[str] = None):
         return _graph_page(
             pathlib.Path("combined"),
@@ -2633,6 +2710,8 @@ LIMIT 100"""
             direction=direction,
             detail=detail,
             depth=depth,
+            color_by=color_by,
+            color_scheme=color_scheme,
             view=view,
         )
 
@@ -2650,6 +2729,8 @@ LIMIT 100"""
                                 labels: str = "auto",
                                 direction: str = "both",
                                 detail: str = "balanced",
+                                color_by: str = "class",
+                                color_scheme: str = "strong",
                                 expansion_limit_nodes: int = GRAPH_EXPANSION_NODE_LIMIT,
                                 expansion_limit_edges: int = GRAPH_EXPANSION_EDGE_LIMIT):
         resolved_limit_nodes, resolved_limit_edges = _graph_limits(
@@ -2675,6 +2756,8 @@ LIMIT 100"""
             labels=labels,
             direction=direction,
             detail=detail,
+            color_by=color_by,
+            color_scheme=color_scheme,
             expansion_limit_nodes=expansion_limit_nodes,
             expansion_limit_edges=expansion_limit_edges,
         ))
@@ -2775,6 +2858,8 @@ LIMIT 100"""
                        direction: str = "both",
                        detail: str = "balanced",
                        depth: int = 1,
+                       color_by: str = "class",
+                       color_scheme: str = "strong",
                        view: Optional[str] = None):
         hdf_file = hdf_files.get(filename)
         if hdf_file is None:
@@ -2793,6 +2878,8 @@ LIMIT 100"""
             direction=direction,
             detail=detail,
             depth=depth,
+            color_by=color_by,
+            color_scheme=color_scheme,
             view=view,
         )
 
@@ -2811,6 +2898,8 @@ LIMIT 100"""
                             labels: str = "auto",
                             direction: str = "both",
                             detail: str = "balanced",
+                            color_by: str = "class",
+                            color_scheme: str = "strong",
                             expansion_limit_nodes: int = GRAPH_EXPANSION_NODE_LIMIT,
                             expansion_limit_edges: int = GRAPH_EXPANSION_EDGE_LIMIT):
         hdf_file = hdf_files.get(filename)
@@ -2838,6 +2927,8 @@ LIMIT 100"""
             labels=labels,
             direction=direction,
             detail=detail,
+            color_by=color_by,
+            color_scheme=color_scheme,
             expansion_limit_nodes=expansion_limit_nodes,
             expansion_limit_edges=expansion_limit_edges,
         ))
