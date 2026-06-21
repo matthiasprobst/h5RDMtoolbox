@@ -1,8 +1,9 @@
 import pathlib
-import sys
 import unittest
+import urllib.error
 
 import numpy as np
+import pytest
 import rdflib
 import requests
 from ontolutils.ex import dcat
@@ -100,9 +101,8 @@ class TestDataStore(unittest.TestCase):
         self.assertIsInstance(qres, QueryResult)
         self.assertEqual(qres.data, "mock_result")
 
+    @pytest.mark.wikidata
     def test_wikidata_store(self):
-        if not (sys.version_info.major == 3 and sys.version_info.minor == 12):
-            self.skipTest("Skipping test on non-3.12 Python to avoid rate limiting")
         remote_store = RemoteSparqlStore("https://query.wikidata.org/sparql", return_format="json")
         self.assertIsInstance(remote_store, RemoteSparqlStore)
 
@@ -114,7 +114,14 @@ SELECT * WHERE {
 ORDER BY ?propertyLabel
 """
         query = RemoteSparqlQuery(sparql_query)
-        res = query.execute(remote_store)
+        try:
+            res = query.execute(remote_store)
+        except urllib.error.HTTPError as exc:
+            if exc.code in {429, 503}:
+                pytest.skip(f"Wikidata Query Service unavailable: HTTP {exc.code}")
+            raise
+        except urllib.error.URLError as exc:
+            pytest.skip(f"Wikidata Query Service unavailable: {exc}")
         self.assertTrue(len(res.data) >= 172)
 
     def test_InMemoryRDFStore(self):
