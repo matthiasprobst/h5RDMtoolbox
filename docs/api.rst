@@ -56,7 +56,7 @@ Query HDF5 files directly or via MongoDB.
    database.FilesDB
 
 Repository
-=========
+==========
 
 Upload and manage HDF5 files in online repositories.
 
@@ -85,6 +85,12 @@ Work with RDF metadata in HDF5 files.
 
    ld.shacl.validate_hdf
    ld.get_ld
+   ld.hdf2ttl
+   ld.hdf2jsonld
+   ld.compute_metrics
+   ld.compute_graph_metrics
+   compute_metrics
+   wrapper.core.File.metrics
 
 Utilities
 =========
@@ -93,8 +99,8 @@ General utility functions.
 
 .. autosummary::
    :toctree: generated/
-   :no-index:
 
    utils.generate_temporary_filename
    utils.has_datasets
    utils.has_groups
+   utils.DownloadFileManager

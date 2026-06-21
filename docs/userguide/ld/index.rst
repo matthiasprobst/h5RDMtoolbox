@@ -46,7 +46,8 @@ Command Line and Web Viewer
 ---------------------------
 
 The ``h5tbx`` command exposes the linked-data tools without writing Python code.
-Use ``ld dump`` to serialize a file directly from the shell:
+Use ``ld dump`` to serialize a file directly from the shell. See
+:doc:`cli` for details.
 
 .. code-block:: bash
 
@@ -60,7 +61,8 @@ By default, structural and contextual RDF are both included. Use
 ``--file-uri`` option defines stable subject IRIs; ``--prefix`` binds a compact
 prefix for that URI in serializations that support prefixes.
 
-For interactive inspection, start the local web viewer:
+For interactive inspection, start the local web viewer. See
+:doc:`web_viewer` for the available pages and graph controls.
 
 .. code-block:: bash
 
@@ -70,62 +72,7 @@ For interactive inspection, start the local web viewer:
 
 ``h5tbx serve`` accepts files and folders. Folder inputs are searched for
 ``.h5``, ``.hdf``, and ``.hdf5`` files by default; repeat ``--h5ext`` to limit
-folder discovery to specific extensions. If no filename is provided,
-``h5tbx serve`` lists matching files in the current directory. Each file page
-links to:
-
-- RDF serializations: Turtle, JSON-LD, N-Triples, and RDF/XML.
-- ``Graph``: an interactive RDF graph view with class-based colors, draggable
-  nodes, literal popovers, and hide/unhide controls.
-- ``Query``: a SPARQL editor with sample queries and tabular SELECT results.
-- ``Metrics``: RDF knowledge-graph metrics, including graph size, predicate and
-  class usage, connectivity, datatype distribution, label coverage, and external
-  namespace usage.
-- ``SHACL``: a SHACL validation page where Turtle shapes can be pasted and run
-  against the currently loaded RDF graph.
-
-These per-file buttons are scoped to the selected file. The landing page also
-provides a ``Combined graph`` section with the same views for all served files
-and enrichment graphs already loaded while browsing. Combined graph
-visualization is reduced by default with node and edge limits plus a search
-field, so large local datasets do not have to be rendered completely in the
-browser. Combined metrics also skip exact largest-distance computation for large
-resource networks and show this explicitly on the metrics page.
-
-All web views are generated from the currently loaded HDF5 file and support the
-same structural/contextual RDF model used by ``ld dump``. HDF5 object URLs such
-as ``/example.h5/group/dataset`` are dereferenceable RDF resources. Browsers get
-an HTML representation by default; clients can request RDF with ``Accept:
-text/turtle`` or ``Accept: application/ld+json``. The ``format`` query parameter
-overrides content negotiation, for example ``?format=ttl``, ``?format=jsonld``,
-``?format=nt``, ``?format=xml``, or ``?format=html``.
-
-Manual resolver URLs can use ``/resolve?iri=https://doi.org/...%23path`` and do
-not require ``--local-iri-pattern``. Resolver pages keep navigation local: URI
-objects link back to ``/resolve?iri=...`` instead of sending the browser to the
-external page. The resolver merges served graph data with known ontology TTL
-sources, Zenodo RDF attachments, generic ontology documents, and Wikidata direct
-claims where applicable. Known ontology sources are checked before the generic
-document fallback, so terms such as SSNO classes and QUDT units can be loaded
-directly from their Turtle definitions. Browser requests that cannot be resolved
-locally return a small fallback page that opens the original IRI in a new tab;
-machine-readable RDF requests still return ``404`` when no triples are found.
-The server keeps one shared graph for all served files and loaded enrichment
-graphs, so combined SPARQL queries can run across the whole local view quickly.
-Entity resolution still returns the first matching local HDF5 subject when the
-same IRI appears in multiple served files. Use
-``--local-iri-pattern`` only when graph nodes should show local resolver links
-for selected external IRI patterns, for example Zenodo DOI IRIs. If a fragment
-identifier (``#...``) is passed in a URL, encode it as ``%23`` because browsers
-do not send raw fragments to the server.
-
-.. code-block:: bash
-
-   curl -H "Accept: text/turtle" http://localhost:8000/example.h5/observable_property/T1
-   curl -H "Accept: application/ld+json" "http://localhost:8000/resolve?iri=https://doi.org/10.5072/zenodo.403669%23observable_property/T1"
-   curl -H "Accept: text/turtle" "http://localhost:8000/resolve?iri=https://matthiasprobst.github.io/ssno%23StandardName"
-   curl -H "Accept: text/turtle" "http://localhost:8000/resolve?iri=https://qudt.org/vocab/unit/K"
-   curl -H "Accept: text/turtle" "http://localhost:8000/resolve?iri=https://www.wikidata.org/wiki/Q42"
+folder discovery to specific extensions.
 
 Graph Metrics from Python
 -------------------------
@@ -154,4 +101,8 @@ distribution, label coverage, and external namespace usage.
     :hidden:
 
     getting_started.ipynb
+    cli
+    web_viewer
+    resolver
+    metrics
     shacl_validation.ipynb

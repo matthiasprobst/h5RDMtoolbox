@@ -43,16 +43,8 @@ For backward compatibility, all utilities are still available from ``h5rdmtoolbo
     ``h5rdmtoolbox.utils`` will be removed in v3.0.0. Import from submodules
     for new code.
 
-Key Utilities
-~~~~~~~~~~~~~
-
-.. autosummary::
-   :toctree: generated/
-
-   h5rdmtoolbox.utils.generate_temporary_filename
-   h5rdmtoolbox.utils.has_datasets
-   h5rdmtoolbox.utils.has_groups
-   h5rdmtoolbox.utils.DownloadFileManager
+Key utility functions and classes are listed in the central
+:ref:`API reference <api>`.
 
 Identifiers
 -----------
@@ -130,3 +122,14 @@ Querying HDF5 metadata with SPARQL.
     :glob:
 
     QueryHDFWithSPARQL.ipynb
+
+Chat with LLMs
+--------------
+
+Query and summarize HDF5 files with language-model helpers.
+
+.. toctree::
+    :titlesonly:
+    :glob:
+
+    ChatWithLLM.ipynb
