@@ -6,6 +6,19 @@ import pytest
 import h5rdmtoolbox as h5tbx
 
 
+def pytest_collection_modifyitems(config, items):
+    """Skip public Wikidata Query Service tests unless explicitly enabled."""
+    if os.environ.get("H5RDMTOOLBOX_RUN_WIKIDATA_TESTS") == "1":
+        return
+
+    skip_wikidata = pytest.mark.skip(
+        reason="set H5RDMTOOLBOX_RUN_WIKIDATA_TESTS=1 to run Wikidata tests"
+    )
+    for item in items:
+        if "wikidata" in item.keywords:
+            item.add_marker(skip_wikidata)
+
+
 @pytest.fixture(scope="session", autouse=True)
 def _force_cache_dir_for_tests():
     os.environ.setdefault("MYPACKAGE_CACHE_DIR", str(pathlib.Path(".cache/zenodo")))
