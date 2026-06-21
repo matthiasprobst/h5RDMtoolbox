@@ -1,9 +1,9 @@
 import pathlib
-import sys
 import unittest
+import urllib.error
 
+import pytest
 import rdflib
-from SPARQLWrapper import SPARQLWrapper, JSON
 
 from h5rdmtoolbox.catalog import (
     Query,
@@ -17,12 +17,14 @@ from h5rdmtoolbox.catalog.utils import sparql_result_to_df
 
 __this_dir__ = pathlib.Path(__file__).parent.resolve()
 
-TESTING_VERSIONS = (12,)
 
-
-def get_python_version():
-    """Get the current Python version as a tuple."""
-    return sys.version_info.major, sys.version_info.minor, sys.version_info.micro
+def skip_transient_wikidata_error(exc):
+    """Skip live WDQS tests when the public service throttles or is unavailable."""
+    if isinstance(exc, urllib.error.HTTPError) and exc.code in {429, 503}:
+        pytest.skip(f"Wikidata Query Service unavailable: HTTP {exc.code}")
+    if isinstance(exc, urllib.error.URLError):
+        pytest.skip(f"Wikidata Query Service unavailable: {exc}")
+    raise exc
 
 
 class TestQuery(unittest.TestCase):
@@ -57,10 +59,7 @@ class TestQuery(unittest.TestCase):
             )
         )
 
-    @unittest.skipUnless(
-        get_python_version()[1] in TESTING_VERSIONS,
-        reason=f"Only test on Python {TESTING_VERSIONS}",
-    )
+    @pytest.mark.wikidata
     def test_wikidata_query(self):
         # User-Agent header is now set by RemoteSparqlStore
         endpoint_url = "https://query.wikidata.org/sparql"
@@ -80,7 +79,10 @@ ORDER BY ?propertyLabel
             endpoint_url=endpoint_url, return_format="json"
         )
 
-        res = sparql_query.execute(remote_store)
+        try:
+            res = sparql_query.execute(remote_store)
+        except (urllib.error.HTTPError, urllib.error.URLError) as exc:
+            skip_transient_wikidata_error(exc)
         self.assertIsInstance(res, QueryResult)
         self.assertEqual(res.query, sparql_query)
         self.assertTrue(len(res.data) >= 917)
@@ -89,7 +91,10 @@ ORDER BY ?propertyLabel
         remote_store = RemoteSparqlStore(
             endpoint_url=endpoint_url, return_format="json-ld"
         )
-        res = sparql_query.execute(remote_store)
+        try:
+            res = sparql_query.execute(remote_store)
+        except (urllib.error.HTTPError, urllib.error.URLError) as exc:
+            skip_transient_wikidata_error(exc)
         print(res.data.serialize("json-ld").serialize())
 
     def test_construct_query(self):

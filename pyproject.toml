@@ -132,3 +132,6 @@ h5rdmtoolbox = [
 [tool.pytest.ini_options]
 python_files = "test_*.py"
 testpaths = ["tests"]
+markers = [
+    "wikidata: tests that call the public Wikidata Query Service",
+]
