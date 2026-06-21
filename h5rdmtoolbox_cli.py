@@ -133,7 +133,9 @@ def _serialize(filename, fmt, structural=True, contextual=True, file_uri=None):
               help='External IRI pattern to resolve locally, e.g. "https://doi.org/10.5281/zenodo.*". Can be used multiple times.')
 @click.option('--h5ext', multiple=True,
               help='HDF5 extension to discover in folders, e.g. ".h5" or "hdf5". Can be used multiple times.')
-def serve(filenames, host, port, no_structural, no_contextual, file_uri, local_iri_pattern, h5ext):
+@click.option('--graph-view', type=click.Choice(["2d", "3d"], case_sensitive=False), default="2d",
+              show_default=True, help='Default graph visualization view.')
+def serve(filenames, host, port, no_structural, no_contextual, file_uri, local_iri_pattern, h5ext, graph_view):
     """Serve HDF5 file RDF data over HTTP (FastAPI/uvicorn)."""
     structural = not no_structural
     contextual = not no_contextual
@@ -144,7 +146,8 @@ def serve(filenames, host, port, no_structural, no_contextual, file_uri, local_i
                structural=structural, contextual=contextual,
                file_uri=file_uri,
                local_iri_patterns=list(local_iri_pattern),
-               h5_extensions=h5_extensions)
+               h5_extensions=h5_extensions,
+               graph_view=graph_view.lower())
 
 
 @h5tbx.command()

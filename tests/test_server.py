@@ -750,16 +750,25 @@ def test_file_graph_endpoint_returns_interactive_page(hdf_filename):
     assert 'id="graph-data"' in response.text
     assert "window.h5tbxGraphConfig" in response.text
     assert '"graphDataUrl": "/server_test.h5/graph-data"' in response.text
+    assert '"graphView": "2d"' in response.text
     assert 'id="node-details"' in response.text
     assert 'id="graph-status"' in response.text
     assert 'id="hidden-node-toggle"' in response.text
     assert 'id="hidden-node-list"' in response.text
     assert 'id="label-mode"' in response.text
     assert 'id="graph-detail"' in response.text
+    assert 'id="graph-view"' in response.text
+    assert 'class="graph-view-actions"' in response.text
+    assert 'class="graph-view-link active"' in response.text
     assert "Initial view" in response.text
+    assert "Graph view" in response.text
     assert "Compact preview" in response.text
     assert "Full graph, no limits" in response.text
     assert '<option value="full"' in response.text
+    assert '<option value="2d" selected' in response.text
+    assert '<option value="3d"' in response.text
+    assert "view=2d" in response.text
+    assert "view=3d" in response.text
     assert 'id="expansion-direction"' in response.text
     assert 'id="expansion-depth"' in response.text
     assert "Double-click expansion direction" in response.text
@@ -785,6 +794,13 @@ def test_file_graph_endpoint_returns_interactive_page(hdf_filename):
     graph_js = client.get("/static/graph.js")
     assert graph_js.status_code == 200
     assert "new vis.Network" in graph_js.text
+    assert "ForceGraph3D()(container)" in graph_js.text
+    assert 'currentGraphView === "3d"' in graph_js.text
+    assert "hasWebGLSupport" in graph_js.text
+    assert "canvas.getContext(\"webgl2\")" in graph_js.text
+    assert "could not be loaded from unpkg.com" in graph_js.text
+    assert "this browser could not create a WebGL context. Showing 2D view instead." in graph_js.text
+    assert "initialize2dGraph();" in graph_js.text
     assert "graphForm.requestSubmit();" in graph_js.text
     assert 'network.on("click"' in graph_js.text
     assert 'network.on("doubleClick"' in graph_js.text
@@ -801,6 +817,17 @@ def test_file_graph_endpoint_returns_interactive_page(hdf_filename):
     assert "hideEdgesOnZoom: true" in graph_js.text
     assert "setGraphStatus" in graph_js.text
     assert "expansionLimitNodes" in graph_js.text
+
+    response_3d = client.get("/server_test.h5/graph?view=3d")
+    assert response_3d.status_code == 200
+    assert "https://unpkg.com/3d-force-graph" in response_3d.text
+    assert '"graphView": "3d"' in response_3d.text
+    assert '<option value="3d" selected' in response_3d.text
+    assert 'class="graph-view-link active" href="/server_test.h5/graph?mode=both&amp;detail=balanced&amp;labels=auto&amp;direction=both&amp;depth=1&amp;include_ontology=true&amp;include_isolated=false&amp;view=3d"' in response_3d.text
+
+    response_invalid_view = client.get("/server_test.h5/graph?view=4d")
+    assert response_invalid_view.status_code == 400
+    assert "view must be either '2d' or '3d'" in response_invalid_view.text
     graph_css = client.get("/static/graph.css")
     assert graph_css.status_code == 200
     assert "grid-template-columns: minmax(7rem, max-content) minmax(0, 1fr);" in graph_css.text

@@ -28,6 +28,7 @@ GRAPH_EXPANSION_NODE_LIMIT = 250
 GRAPH_EXPANSION_EDGE_LIMIT = 500
 COMBINED_GRAPH_NODE_LIMIT = 1000
 COMBINED_GRAPH_EDGE_LIMIT = 2000
+GRAPH_VIEWS = {"2d", "3d"}
 GRAPH_DETAIL_LIMITS = {
     "compact": (250, 750),
     "balanced": (GRAPH_NODE_LIMIT, GRAPH_EDGE_LIMIT),
@@ -230,7 +231,8 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
                file_uri: Optional[str] = None,
                list_landing: bool = True,
                local_iri_patterns: Optional[Union[str, Sequence[str]]] = None,
-               h5_extensions: Optional[Sequence[str]] = None):
+               h5_extensions: Optional[Sequence[str]] = None,
+               graph_view: str = "2d"):
     """Create a FastAPI app serving RDF extracted from one or more HDF5 files.
 
     This function intentionally returns a *minimal* ASGI app using FastAPI if available.
@@ -283,6 +285,9 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
 
     file_key = default_hdf_filename.stem if default_hdf_filename is not None else ""
     create_app_file_uri = file_uri
+    default_graph_view = graph_view.lower()
+    if default_graph_view not in GRAPH_VIEWS:
+        raise ValueError("graph_view must be either '2d' or '3d'")
     if local_iri_patterns is None:
         local_iri_pattern_list = []
     elif isinstance(local_iri_patterns, str):
@@ -1670,8 +1675,12 @@ LIMIT 100"""
                     labels: str = "auto",
                     direction: str = "both",
                     detail: str = "balanced",
-                    depth: int = 1) -> HTMLResponse:
+                    depth: int = 1,
+                    view: Optional[str] = None) -> HTMLResponse:
         depth = max(1, min(int(depth), 2))
+        graph_view = (view or default_graph_view).lower()
+        if graph_view not in GRAPH_VIEWS:
+            raise HTTPException(status_code=400, detail="view must be either '2d' or '3d'")
         graph_file_uri = file_uri if file_uri is not None else create_app_file_uri
         display_name = page_label or filename.name
         encoded_filename = urllib.parse.quote(route_name or filename.name)
@@ -1706,7 +1715,35 @@ LIMIT 100"""
             "graphDataUrl": f"/{encoded_filename}/graph-data",
             "expansionLimitNodes": GRAPH_EXPANSION_NODE_LIMIT,
             "expansionLimitEdges": GRAPH_EXPANSION_EDGE_LIMIT,
+            "graphView": graph_view,
         }
+        graph_view_links = []
+        base_graph_params = {
+            "mode": mode,
+            "detail": detail,
+            "labels": labels,
+            "direction": direction,
+            "depth": str(depth),
+            "include_ontology": _bool_str(include_ontology),
+            "include_isolated": _bool_str(effective_include_isolated),
+        }
+        if graph_file_uri:
+            base_graph_params["file_uri"] = graph_file_uri
+        if prefix:
+            base_graph_params["prefix"] = prefix
+        if q:
+            base_graph_params["q"] = q
+        if limit_nodes is not None:
+            base_graph_params["limit_nodes"] = str(limit_nodes)
+        if limit_edges is not None:
+            base_graph_params["limit_edges"] = str(limit_edges)
+        for view_key, view_label in (("2d", "2D"), ("3d", "3D")):
+            view_params = {**base_graph_params, "view": view_key}
+            view_href = f"/{encoded_filename}/graph?{urllib.parse.urlencode(view_params)}"
+            active_class = " active" if view_key == graph_view else ""
+            graph_view_links.append(
+                f'<a class="graph-view-link{active_class}" href="{escape(view_href)}">{view_label}</a>'
+            )
         template = jenv.get_template("graph.html")
         return HTMLResponse(template.render(
             display_name=display_name,
@@ -1725,10 +1762,12 @@ LIMIT 100"""
             direction=direction,
             detail=detail,
             depth=depth,
+            view=graph_view,
             mode=mode,
             graph_summary=graph_payload["summary"],
             graph_json=graph_json,
             graph_config_json=json.dumps(graph_config).replace("</", "<\\/"),
+            graph_view_links=" ".join(graph_view_links),
         ))
 
     def _query_result(graph: rdflib.Graph, query: str) -> tuple[str, str]:
@@ -2575,7 +2614,8 @@ LIMIT 100"""
                            labels: str = "auto",
                            direction: str = "both",
                            detail: str = "balanced",
-                           depth: int = 1):
+                           depth: int = 1,
+                           view: Optional[str] = None):
         return _graph_page(
             pathlib.Path("combined"),
             mode=mode,
@@ -2593,6 +2633,7 @@ LIMIT 100"""
             direction=direction,
             detail=detail,
             depth=depth,
+            view=view,
         )
 
     @app.get("/combined/graph-data")
@@ -2733,7 +2774,8 @@ LIMIT 100"""
                        labels: str = "auto",
                        direction: str = "both",
                        detail: str = "balanced",
-                       depth: int = 1):
+                       depth: int = 1,
+                       view: Optional[str] = None):
         hdf_file = hdf_files.get(filename)
         if hdf_file is None:
             raise HTTPException(status_code=404, detail="Unknown HDF5 file")
@@ -2751,6 +2793,7 @@ LIMIT 100"""
             direction=direction,
             detail=detail,
             depth=depth,
+            view=view,
         )
 
     @app.get("/{filename}/graph-data")
@@ -3003,7 +3046,8 @@ def run_server(host: str = "127.0.0.1",
                contextual: bool = True,
                file_uri: Optional[str] = None,
                local_iri_patterns: Optional[Sequence[str]] = None,
-               h5_extensions: Optional[Sequence[str]] = None):
+               h5_extensions: Optional[Sequence[str]] = None,
+               graph_view: str = "2d"):
     """Run a FastAPI/uvicorn server exposing RDF for HDF5 files."""
     if filenames is None:
         filenames = [filename] if filename is not None else None
@@ -3018,6 +3062,7 @@ def run_server(host: str = "127.0.0.1",
         file_uri=file_uri,
         local_iri_patterns=local_iri_patterns,
         h5_extensions=h5_extensions,
+        graph_view=graph_view,
     )
     url = f"http://{host}:{port}/"
     logger.info("Starting h5rdmtoolbox RDF server at %s serving files %s", url, app.state.hdf_files)

@@ -167,6 +167,17 @@ class TestCLI(unittest.TestCase):
             ["https://doi.org/10.5281/zenodo.*"],
         )
 
+    def test_serve_with_graph_view(self):
+        runner = CliRunner()
+        with runner.isolated_filesystem():
+            open("a.h5", "w").close()
+            with patch("h5rdmtoolbox.server.run_server") as run_server:
+                result = runner.invoke(h5tbx, ["serve", "a.h5", "--graph-view=3d"])
+
+        self.assertIsNone(result.exception)
+        run_server.assert_called_once()
+        self.assertEqual(run_server.call_args.kwargs["graph_view"], "3d")
+
     # def test_fairify(self):
     #     with File() as h5:
     #         pass
