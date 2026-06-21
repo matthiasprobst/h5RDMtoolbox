@@ -123,13 +123,4 @@ Querying HDF5 metadata with SPARQL.
 
     QueryHDFWithSPARQL.ipynb
 
-Chat with LLMs
---------------
 
-Query and summarize HDF5 files with language-model helpers.
-
-.. toctree::
-    :titlesonly:
-    :glob:
-
-    ChatWithLLM.ipynb
