@@ -13,7 +13,7 @@
 import os
 import sys
 
-sys.path.insert(0, os.path.abspath("../.."))
+sys.path.insert(0, os.path.abspath(".."))
 
 # -- Project information -----------------------------------------------------
 
@@ -51,8 +51,6 @@ napoleon_use_param = False
 napoleon_use_rtype = False
 napoleon_preprocess_types = True
 
-nbsphinx_allow_errors = True
-
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
 
@@ -61,9 +59,14 @@ templates_path = ["_templates"]
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = [
     "_build",
+    "jupyter_execute",
+    ".jupyter_cache",
+    "README.md",
     "Thumbs.db",
     ".DS_Store",
     "tests",
+    "userguide/ld/generated",
+    "userguide/misc/generated",
     "**.ipynb_checkpoints",
     "colab",
     "webinars",
@@ -82,7 +85,7 @@ autodoc_typehints = "none"
 #
 html_theme = "sphinx_book_theme"  # 'sphinx_rtd_theme'
 html_logo = "_static/new_icon.svg"
-html_title = "Documentation"
+html_title = "h5RDMtoolbox Documentation"
 
 html_context = {
     "github_user": "matthiasprobst",

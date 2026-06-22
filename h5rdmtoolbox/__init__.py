@@ -19,7 +19,7 @@ _stream_handler = logging.StreamHandler()
 _stream_handler.setLevel(DEFAULT_LOGGING_LEVEL)
 _stream_handler.setFormatter(_formatter)
 
-_file_handler = RotatingFileHandler(USER_LOG_DIR / 'h5rdmtoolbox.log')
+_file_handler = RotatingFileHandler(USER_LOG_DIR / 'h5rdmtoolbox.log', delay=True)
 _file_handler.setLevel(logging.DEBUG)  # log everything to file!
 _file_handler.setFormatter(_formatter)
 
@@ -143,6 +143,28 @@ def get_ld(
         skipND=skipND,
         file_uri=file_uri,
         context=context,
+    )
+
+
+def compute_metrics(
+        hdf_filename: Union[str, pathlib.Path],
+        structural: bool = True,
+        contextual: bool = True,
+        skipND: int = 1,
+        file_uri: Optional[str] = None,
+        context: Optional[Dict] = None,
+        rdf_mappings: Dict[str, RDFMappingEntry] = None,
+) -> Dict[str, object]:
+    """Compute RDF knowledge graph metrics for an HDF5 file."""
+    from .ld.metrics import compute_metrics as _compute_metrics
+    return _compute_metrics(
+        hdf_filename,
+        structural=structural,
+        contextual=contextual,
+        skipND=skipND,
+        file_uri=file_uri,
+        context=context,
+        rdf_mappings=rdf_mappings,
     )
 
 

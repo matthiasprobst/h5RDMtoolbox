@@ -18,7 +18,7 @@ User Guide
         :link: convention/index
         :link-type: doc
 
-        Conventions let you defines standardized attributes and ensure
+        Conventions let you define standardized attributes and ensure
         consistency across your data.
 
     .. grid-item-card:: Linked Data

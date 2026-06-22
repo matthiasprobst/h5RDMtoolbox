@@ -151,18 +151,37 @@ hdf:H5T_INTEL_I64 a hdf:Datatype .
     hdf:size 4 .
 ```
 
-[//]: # (The "HDF5 Research Data Management Toolbox" &#40;h5RDMtoolbox&#41; is a Python package supporting everybody who is working with)
+## Command Line Interface
 
-[//]: # (HDF5 to achieve a sustainable data lifecycle which follows)
+The `h5tbx` command provides quick access to linked-data serialization and local inspection from the shell.
 
-[//]: # (the [FAIR &#40;Findable, Accessible, Interoperable, Reusable&#41;]&#40;https://www.nature.com/articles/sdata201618&#41;)
+Use `h5tbx ld dump example.h5` to print Turtle RDF, or write a specific format with:
 
-[//]: # (principles. It specifically supports the five main steps of *planning*, *collecting*, *analyzing*, *sharing* and)
+```bash
+h5tbx ld dump example.h5 -o example.jsonld
+```
 
-[//]: # (*reusing* data. Please visit the [documentation]&#40;https://h5rdmtoolbox.readthedocs.io/en/latest/&#41; for detailed)
+The dump command accepts `--format`, `--file-uri`, `--prefix`, `--structural=false`, and `--contextual=false`, so you can choose RDF output, assign stable RDF subject URIs, bind a compact prefix, and include only structural or user-provided contextual metadata when needed.
 
-[//]: # (information of try the [quickstart using colab]&#40;#quickstart&#41;.)
+To inspect files in a browser, run:
 
+```bash
+h5tbx serve example.h5
+h5tbx serve data/ --h5ext=.h5 --h5ext=.hdf5
+```
+
+The local web app links to Turtle, JSON-LD, N-Triples, RDF/XML, an interactive graph view, SPARQL query editor, graph metrics, and SHACL validation. Per-file buttons are scoped to that file; the landing page also offers a separate combined graph section for all served files plus loaded enrichment. Combined graph visualization is reduced by default with node/edge limits and search controls, and combined metrics skip exact largest-distance computation on very large graphs to keep the local server responsive. HDF5 object URLs such as `/example.h5/group/dataset` dereference to a browser HTML page by default, while `Accept: text/turtle`, `Accept: application/ld+json`, or `?format=ttl|jsonld|nt|xml|html` return the requested representation. For published DOI-style file URIs, use `/resolve?iri=https://doi.org/...%23path` to resolve an exact external RDF subject locally. The resolver uses the first matching served HDF5 subject, caches all served files in one shared query graph, and enriches that graph with known ontology TTL sources, QUDT unit definitions, Zenodo RDF attachments, generic ontology documents, and Wikidata direct claims where applicable. URI values in resource pages link back into `/resolve?iri=...` so browsing stays inside the local app; if a browser request cannot be resolved locally, the app opens the original IRI in a new tab as a fallback. `h5tbx serve` accepts files and folders; folder discovery uses `.h5`, `.hdf`, and `.hdf5` by default, or repeated `--h5ext` values. `--local-iri-pattern` is optional and only limits which external IRIs get local resolver links in the graph view. If no filename is provided, `h5tbx serve` lists all matching HDF5 files in the current directory.
+
+The same graph metrics are available from Python:
+
+```python
+import h5rdmtoolbox as h5tbx
+
+metrics = h5tbx.compute_metrics("example.h5")
+
+with h5tbx.File("example.h5") as h5:
+    metrics = h5.metrics()
+```
 
 ## 🚀 Key Features
 
