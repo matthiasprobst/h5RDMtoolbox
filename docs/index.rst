@@ -20,21 +20,21 @@ Highlights
 ==========
 
 Effortless, FAIR Metadata
---------------------------
+-------------------------
 
-HDF5 already supports rich metadata—but using it consistently can be tedious.
+HDF5 already supports rich metadata - but using it consistently can be tedious.
 h5rdmtoolbox removes that barrier. Add structured metadata with minimal effort,
 validate physical units automatically, and integrate metadata seamlessly into your
 analysis workflow with xarray. Metadata can be enriched using RDF
-(subject–predicate–object) statements and URI-based identifiers, enabling
+(subject-predicate-object) statements and URI-based identifiers, enabling
 machine-readable, FAIR descriptions when needed.
 
-*Result: your data becomes more findable and interoperable—without extra complexity.* *(Findable, Interoperable)*
+*Result: your data becomes more findable and interoperable - without extra complexity.* *(Findable, Interoperable)*
 
 Turn Your HDF5 Files into FAIR Knowledge Graphs
 -----------------------------------------------
 
-Every HDF5 file encodes structure—groups, datasets, attributes. h5rdmtoolbox unlocks
+Every HDF5 file encodes structure - groups, datasets, attributes. h5rdmtoolbox unlocks
 that structure as a knowledge graph. Automatically extract RDF, query your data with
 SPARQL, export to JSON-LD or Turtle, and validate metadata using SHACL constraints.
 What was once static metadata becomes connected, searchable, and reusable across systems.
@@ -44,10 +44,10 @@ What was once static metadata becomes connected, searchable, and reusable across
 Persistent Identifiers for Unambiguous Reuse
 --------------------------------------------
 
-Ambiguity limits reuse—but it doesn't have to. h5rdmtoolbox enables precise,
+Ambiguity limits reuse - but it doesn't have to. h5rdmtoolbox enables precise,
 persistent identification. Assign identifiers (DOI, ORCID, or custom URIs) to datasets,
 people, and metadata elements. You can link units to ontologies like QUDT or describe
-authors using FOAF—demonstrating how scientific data can be made unambiguous and
+authors using FOAF - demonstrating how scientific data can be made unambiguous and
 machine-interpretable.
 
 *Result: your data is more findable and easier to reuse correctly.* *(Findable, Reusable)*
@@ -63,20 +63,20 @@ and shared, ensuring others can discover, understand, and reuse your data.
 *Result: your data remains accessible and reusable over time.* *(Accessible, Reusable)*
 
 Built on FAIR Semantic Web Principles
-------------------------------------
+-------------------------------------
 
 Interoperability starts with shared meaning. h5rdmtoolbox is built on semantic web
 technologies. Using RDF, SPARQL, and URI-based identifiers, it turns HDF5 metadata
 into machine-readable, linkable information, with validation through SHACL to ensure
 quality and consistency. It provides a flexible framework to incorporate scientific
-conventions such as NeXus, metadata4ing, and standard-name-based approaches—without
+conventions such as NeXus, metadata4ing, and standard-name-based approaches - without
 enforcing a fixed schema.
 
 *Result: metadata that is interoperable, reusable, and ready to connect across domains.* *(Interoperable, Reusable)*
 
 
 Why h5rdmtoolbox?
-------------------
+-----------------
 
 For scientists working with HDF5 data, h5rdmtoolbox addresses critical challenges:
 
@@ -150,4 +150,3 @@ For scientists working with HDF5 data, h5rdmtoolbox addresses critical challenge
    :caption: Repository
 
    GitHub Repository <https://github.com/matthiasprobst/h5RDMtoolbox>
-

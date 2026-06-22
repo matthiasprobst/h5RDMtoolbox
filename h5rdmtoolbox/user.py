@@ -24,6 +24,20 @@ _dircounter = count()
 _now = time.time()
 
 
+def _create_session_tmp_dir(tmp_root: pathlib.Path) -> pathlib.Path:
+    tmp_root.mkdir(parents=True, exist_ok=True)
+    for i in range(1000):
+        tmp_dir = tmp_root / f'tmp_{os.getpid()}_{i}'
+        try:
+            tmp_dir.mkdir()
+        except FileExistsError:
+            continue
+        except PermissionError:
+            continue
+        return tmp_dir
+    raise PermissionError(f'Could not create a temporary directory in "{tmp_root}"')
+
+
 def default_cache_dir(__version__: str) -> pathlib.Path:
     # Your current approach
     return USER_DATA_DIR / "cache"
@@ -41,18 +55,11 @@ class DirManger:
 
     def __init__(self):
         toolbox_tmp_folder = USER_DATA_DIR / 'tmp'
-        toolbox_tmp_folder.mkdir(parents=True, exist_ok=True)
-
-        i = 0
-        tmp_dir = toolbox_tmp_folder / f'tmp_{i}'
-        while tmp_dir.exists():
-            i += 1
-            tmp_dir = toolbox_tmp_folder / f'tmp_{i}'
         try:
-            tmp_dir.mkdir()
-        except Exception:
-            i += 1
-            tmp_dir = toolbox_tmp_folder / f'tmp_{i}'
+            tmp_dir = _create_session_tmp_dir(toolbox_tmp_folder)
+        except PermissionError:
+            fallback_root = pathlib.Path(os.environ.get("TMP") or os.environ.get("TEMP") or ".")
+            tmp_dir = _create_session_tmp_dir(fallback_root / 'h5rdmtoolbox' / __version__ / 'tmp')
 
         self.user_dirs = {'root': USER_DATA_DIR,
                           'tmp': tmp_dir,

@@ -1,0 +1,127 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ display_name }} Graph</title>
+  <link rel="stylesheet" href="/static/graph.css">
+  <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+  {% if view == "3d" %}
+  <script src="https://unpkg.com/3d-force-graph"></script>
+  {% endif %}
+</head>
+<body>
+<main>
+  <header>
+    <nav><a href="/">Files</a> {{ graph_nav | safe }}</nav>
+    <h1>{{ display_name }} - Graph</h1>
+    <div class="graph-view-actions" aria-label="Graph view">{{ graph_view_links | safe }}</div>
+    <form id="graph-form" method="get" action="/{{ encoded_filename }}/graph">
+      <fieldset>
+        <legend>RDF content</legend>
+        <label class="radio-label"><input type="radio" name="mode" value="both" {% if mode == "both" %}checked{% endif %}> Structural + contextual</label>
+        <label class="radio-label"><input type="radio" name="mode" value="structural" {% if mode == "structural" %}checked{% endif %}> Structural only</label>
+        <label class="radio-label"><input type="radio" name="mode" value="contextual" {% if mode == "contextual" %}checked{% endif %}> Contextual only</label>
+      </fieldset>
+      <label>File URI
+        <input type="text" name="file_uri" value="{{ graph_file_uri or '' }}" placeholder="https://example.org/data/">
+      </label>
+      <label>Prefix
+        <input type="text" name="prefix" value="{{ prefix or '' }}" placeholder="ex">
+      </label>
+      <label>Search
+        <input type="text" name="q" value="{{ q or '' }}" placeholder="label or IRI">
+      </label>
+      <label>Initial view
+        <select name="detail" id="graph-detail">
+          <option value="compact" {% if detail == "compact" %}selected{% endif %}>Compact preview</option>
+          <option value="balanced" {% if detail == "balanced" %}selected{% endif %}>Balanced preview</option>
+          <option value="detailed" {% if detail == "detailed" %}selected{% endif %}>Detailed preview</option>
+          <option value="full" {% if detail == "full" %}selected{% endif %}>Full graph, no limits</option>
+        </select>
+      </label>
+      <label>Graph view
+        <select name="view" id="graph-view">
+          <option value="2d" {% if view == "2d" %}selected{% endif %}>2D</option>
+          <option value="3d" {% if view == "3d" %}selected{% endif %}>3D</option>
+        </select>
+      </label>
+      <label>Color nodes by
+        <select name="color_by" id="color-by">
+          <option value="class" {% if color_by == "class" %}selected{% endif %}>Class</option>
+          <option value="namespace" {% if color_by == "namespace" %}selected{% endif %}>Namespace</option>
+        </select>
+      </label>
+      <label>Color scheme
+        <select name="color_scheme" id="color-scheme">
+          <option value="strong" {% if color_scheme == "strong" %}selected{% endif %}>Strong</option>
+          <option value="light" {% if color_scheme == "light" %}selected{% endif %}>Light</option>
+        </select>
+      </label>
+      <label>Node size
+        <input type="range" name="node_size" id="node-size" min="6" max="36" step="1" value="{{ node_size }}">
+      </label>
+      <label>Edge width
+        <input type="range" name="edge_width" id="edge-width" min="1" max="8" step="1" value="{{ edge_width }}">
+      </label>
+      <label>Background
+        <input type="color" name="background_color" id="background-color" value="{{ background_color }}">
+      </label>
+      <label>Labels
+        <select name="labels" id="label-mode">
+          <option value="auto" {% if labels == "auto" %}selected{% endif %}>Auto</option>
+          <option value="on" {% if labels == "on" %}selected{% endif %}>On</option>
+          <option value="off" {% if labels == "off" %}selected{% endif %}>Off</option>
+        </select>
+      </label>
+      <label>Double-click expansion direction
+        <select name="direction" id="expansion-direction">
+          <option value="both" {% if direction == "both" %}selected{% endif %}>Both directions</option>
+          <option value="out" {% if direction == "out" %}selected{% endif %}>Outgoing</option>
+          <option value="in" {% if direction == "in" %}selected{% endif %}>Incoming</option>
+        </select>
+      </label>
+      <label>Double-click expansion depth
+        <select name="depth" id="expansion-depth">
+          <option value="1" {% if depth == 1 %}selected{% endif %}>1</option>
+          <option value="2" {% if depth == 2 %}selected{% endif %}>2</option>
+        </select>
+      </label>
+      <input type="hidden" name="include_ontology" value="false">
+      <label class="radio-label"><input type="checkbox" name="include_ontology" value="true" {% if include_ontology %}checked{% endif %}> Include ontology nodes</label>
+      {% if detail == "full" %}
+        <input type="hidden" name="include_isolated" value="true">
+      {% else %}
+        <input type="hidden" name="include_isolated" value="false">
+        <label class="radio-label"><input type="checkbox" name="include_isolated" value="true" {% if include_isolated %}checked{% endif %}> Include isolated nodes</label>
+      {% endif %}
+      <button type="submit">Update</button>
+    </form>
+    {% if graph_summary.truncated %}
+      <p class="graph-notice">Showing {{ graph_summary.shown_nodes }} of {{ graph_summary.total_nodes }} nodes and {{ graph_summary.shown_edges }} of {{ graph_summary.total_edges }} edges. Refine the search or raise limits to see more.</p>
+    {% endif %}
+    {% if detail == "full" %}
+      <p class="graph-notice">Full graph loads every matching node and edge for the current filters. This may be slow for large RDF graphs.</p>
+    {% endif %}
+    {% if graph_summary.dropped_isolated_visible_nodes %}
+      <p class="graph-notice">{{ graph_summary.dropped_isolated_visible_nodes }} selected node(s) without visible edges are hidden. Enable isolated nodes to show them.</p>
+    {% endif %}
+  </header>
+  <section class="graph-panel">
+    <div class="hidden-node-menu">
+      <button type="button" id="hidden-node-toggle" aria-expanded="false">Hidden nodes (0)</button>
+      <div class="hidden-node-list" id="hidden-node-list"></div>
+    </div>
+    <div id="network"></div>
+    <p class="graph-status" id="graph-status" aria-live="polite"></p>
+    <aside class="node-details" id="node-details" aria-live="polite"></aside>
+    <p class="empty-graph" id="empty-graph">No RDF triples are available for this selection.</p>
+  </section>
+</main>
+<script id="graph-data" type="application/json">{{ graph_json | safe }}</script>
+<script>
+  window.h5tbxGraphConfig = {{ graph_config_json | safe }};
+</script>
+<script src="/static/graph.js"></script>
+</body>
+</html>

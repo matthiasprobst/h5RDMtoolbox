@@ -2841,6 +2841,33 @@ class File(h5py.File, Group):
         from ..ld.sparql import sparql
         return sparql(self, query, **kwargs)
 
+    def metrics(
+        self,
+        structural: bool = True,
+        contextual: bool = True,
+        skipND: int = 1,
+        file_uri: Optional[Union[str, Dict]] = None,
+        context: Optional[Dict] = None,
+        rdf_mappings: Dict[str, RDFMappingEntry] = None,
+    ) -> Dict[str, object]:
+        """Compute RDF knowledge graph metrics for this file."""
+        from ..ld.metrics import compute_graph_metrics
+        from h5rdmtoolbox.ld import get_ld
+
+        file_uri, prefix = _normalize_file_uri_and_prefix(file_uri)
+        graph = get_ld(
+            self.hdf_filename,
+            structural=structural,
+            contextual=contextual,
+            file_uri=file_uri,
+            skipND=skipND,
+            context=context,
+            rdf_mappings=rdf_mappings,
+        )
+        if prefix is not None:
+            graph.bind(prefix, file_uri)
+        return compute_graph_metrics(graph, base_namespace=file_uri)
+
     def moveto(self, destination: Path, overwrite: bool = False) -> Path:
         """Move the opened file to a new destination.
 
