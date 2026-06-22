@@ -54,7 +54,10 @@ class TestCLI(unittest.TestCase):
         self.assertEqual(_resolve_format("turtle", None), "ttl")
 
     def test_ld_graph_output_filename(self):
-        self.assertEqual(str(_graph_output_filename("data/example.h5")), str(pathlib.Path(r"data\example-graph.html")))
+        self.assertEqual(
+            _graph_output_filename("data/example.h5"),
+            pathlib.Path("data") / "example-graph.html",
+        )
 
     def test_ld_dump(self):
         from h5rdmtoolbox import File
