@@ -27,6 +27,7 @@ class TestCLI(unittest.TestCase):
         self.assertIn("ld", result.output)
         self.assertIn("metrics", result.output)
         self.assertIn("serve", result.output)
+        self.assertIn("server", result.output)
 
     def test_command_ld(self):
         runner = CliRunner()
@@ -147,6 +148,31 @@ class TestCLI(unittest.TestCase):
         self.assertIsNone(result.exception)
         run_server.assert_called_once()
         self.assertEqual(run_server.call_args.kwargs["h5_extensions"], [".h5", ".hdf5"])
+
+    def test_serve_with_recursive_and_include_ttl(self):
+        runner = CliRunner()
+        with runner.isolated_filesystem():
+            pathlib.Path("data").mkdir()
+            with patch("h5rdmtoolbox.server.run_server") as run_server:
+                result = runner.invoke(h5tbx, ["serve", "data", "--recursive", "--include-ttl"])
+
+        self.assertIsNone(result.exception)
+        run_server.assert_called_once()
+        self.assertTrue(run_server.call_args.kwargs["recursive"])
+        self.assertTrue(run_server.call_args.kwargs["include_ttl"])
+
+    def test_server_alias(self):
+        runner = CliRunner()
+        with runner.isolated_filesystem():
+            pathlib.Path("data").mkdir()
+            with patch("h5rdmtoolbox.server.run_server") as run_server:
+                result = runner.invoke(h5tbx, ["server", "data", "--recursive", "--include-ttl"])
+
+        self.assertIsNone(result.exception)
+        run_server.assert_called_once()
+        self.assertEqual(run_server.call_args.kwargs["filenames"], ["data"])
+        self.assertTrue(run_server.call_args.kwargs["recursive"])
+        self.assertTrue(run_server.call_args.kwargs["include_ttl"])
 
     def test_serve_with_local_iri_pattern(self):
         runner = CliRunner()

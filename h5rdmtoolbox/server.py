@@ -21,6 +21,7 @@ from h5rdmtoolbox.ld.metrics import (
 
 logger = logging.getLogger(__name__)
 HDF5_SUFFIXES = {".h5", ".hdf", ".hdf5"}
+TURTLE_SUFFIXES = {".ttl", ".turtle"}
 COMBINED_METRICS_DISTANCE_NODE_LIMIT = 2000
 GRAPH_NODE_LIMIT = 1000
 GRAPH_EDGE_LIMIT = 2000
@@ -209,44 +210,85 @@ def _normalize_hdf_extensions(extensions: Optional[Sequence[str]] = None) -> set
     return normalized
 
 
-def discover_hdf_files(directory: Union[str, pathlib.Path] = ".",
-                       extensions: Optional[Sequence[str]] = None) -> list[pathlib.Path]:
-    """Return HDF5 files in *directory* sorted by filename."""
+def _discover_files_by_suffix(directory: Union[str, pathlib.Path],
+                              suffixes: Sequence[str],
+                              recursive: bool = False) -> list[pathlib.Path]:
     root = pathlib.Path(directory)
-    hdf_extensions = _normalize_hdf_extensions(extensions)
+    candidates = root.rglob("*") if recursive else root.iterdir()
+    normalized_suffixes = {suffix.lower() for suffix in suffixes}
     return sorted(
-        (path for path in root.iterdir() if path.is_file() and path.suffix.lower() in hdf_extensions),
-        key=lambda path: path.name.lower(),
+        (path for path in candidates if path.is_file() and path.suffix.lower() in normalized_suffixes),
+        key=lambda path: str(path).lower(),
     )
 
 
+def discover_hdf_files(directory: Union[str, pathlib.Path] = ".",
+                       extensions: Optional[Sequence[str]] = None,
+                       recursive: bool = False) -> list[pathlib.Path]:
+    """Return HDF5 files in *directory* sorted by filename."""
+    hdf_extensions = _normalize_hdf_extensions(extensions)
+    return _discover_files_by_suffix(directory, hdf_extensions, recursive=recursive)
+
+
+def discover_turtle_files(directory: Union[str, pathlib.Path] = ".",
+                          recursive: bool = False) -> list[pathlib.Path]:
+    """Return Turtle RDF files in *directory* sorted by filename."""
+    return _discover_files_by_suffix(directory, TURTLE_SUFFIXES, recursive=recursive)
+
+
 def _as_file_list(hdf_filenames: Optional[Union[str, pathlib.Path, Sequence[Union[str, pathlib.Path]]]],
-                  extensions: Optional[Sequence[str]] = None) -> list[pathlib.Path]:
+                  extensions: Optional[Sequence[str]] = None,
+                  recursive: bool = False,
+                  exclude_extensions: Optional[Sequence[str]] = None) -> list[pathlib.Path]:
     if hdf_filenames is None:
-        return discover_hdf_files(extensions=extensions)
+        return discover_hdf_files(extensions=extensions, recursive=recursive)
     if isinstance(hdf_filenames, (str, pathlib.Path)):
         filenames = [hdf_filenames]
     else:
         filenames = list(hdf_filenames)
     files = []
+    excluded = {extension.lower() for extension in exclude_extensions or []}
     for filename in filenames:
         path = pathlib.Path(filename)
         if path.is_dir():
-            files.extend(discover_hdf_files(path, extensions=extensions))
-        else:
+            files.extend(discover_hdf_files(path, extensions=extensions, recursive=recursive))
+        elif path.suffix.lower() not in excluded:
             files.append(path)
     return files
 
 
 def _file_registry(hdf_filenames: Optional[Union[str, pathlib.Path, Sequence[Union[str, pathlib.Path]]]],
-                   extensions: Optional[Sequence[str]] = None) -> dict[str, pathlib.Path]:
+                   extensions: Optional[Sequence[str]] = None,
+                   recursive: bool = False,
+                   exclude_extensions: Optional[Sequence[str]] = None) -> dict[str, pathlib.Path]:
     registry = {}
-    for filename in _as_file_list(hdf_filenames, extensions=extensions):
+    for filename in _as_file_list(
+            hdf_filenames,
+            extensions=extensions,
+            recursive=recursive,
+            exclude_extensions=exclude_extensions,
+    ):
         key = filename.name
         if key in registry:
             raise ValueError(f'Duplicate HDF5 filename "{key}" cannot be served twice')
         registry[key] = filename
     return registry
+
+
+def _as_turtle_file_list(filenames: Optional[Union[str, pathlib.Path, Sequence[Union[str, pathlib.Path]]]],
+                         recursive: bool = False) -> list[pathlib.Path]:
+    if filenames is None:
+        return discover_turtle_files(recursive=recursive)
+    if isinstance(filenames, (str, pathlib.Path)):
+        filenames = [filenames]
+    files = []
+    for filename in filenames:
+        path = pathlib.Path(filename)
+        if path.is_dir():
+            files.extend(discover_turtle_files(path, recursive=recursive))
+        elif path.is_file() and path.suffix.lower() in TURTLE_SUFFIXES:
+            files.append(path)
+    return sorted(files, key=lambda path: str(path).lower())
 
 
 def _bool_str(value: bool) -> str:
@@ -268,7 +310,9 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
                list_landing: bool = True,
                local_iri_patterns: Optional[Union[str, Sequence[str]]] = None,
                h5_extensions: Optional[Sequence[str]] = None,
-               graph_view: str = "2d"):
+               graph_view: str = "2d",
+               recursive: bool = False,
+               include_ttl: bool = False):
     """Create a FastAPI app serving RDF extracted from one or more HDF5 files.
 
     This function intentionally returns a *minimal* ASGI app using FastAPI if available.
@@ -284,7 +328,13 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
                            "Install with: pip install 'h5rdmtoolbox[server]'\n") from e
 
     app = FastAPI(title="h5rdmtoolbox RDF server")
-    hdf_files = _file_registry(hdf_filename, extensions=h5_extensions)
+    hdf_files = _file_registry(
+        hdf_filename,
+        extensions=h5_extensions,
+        recursive=recursive,
+        exclude_extensions=TURTLE_SUFFIXES if include_ttl else None,
+    )
+    rdf_files = _as_turtle_file_list(hdf_filename, recursive=recursive) if include_ttl else []
     default_hdf_filename = next(iter(hdf_files.values()), None)
     server_graph = rdflib.Graph()
     hdf_graph_cache: dict[pathlib.Path, rdflib.Graph] = {}
@@ -383,8 +433,19 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
         logger.info("Loaded served HDF5 RDF graph %s with %d triples", filename, len(rdf_graph))
         return rdf_graph
 
+    def _load_turtle_graph(filename: pathlib.Path) -> rdflib.Graph:
+        rdf_graph = rdflib.Graph()
+        rdf_graph.parse(filename, format="turtle")
+        _bind_standard_prefixes(rdf_graph)
+        _merge_graph(server_graph, rdf_graph)
+        _index_first_local_subjects(rdf_graph)
+        logger.info("Loaded served Turtle RDF graph %s with %d triples", filename, len(rdf_graph))
+        return rdf_graph
+
     for hdf_file in hdf_files.values():
         _load_hdf_graph(hdf_file)
+    for rdf_file in rdf_files:
+        _load_turtle_graph(rdf_file)
 
     graph = server_graph
 
@@ -3175,6 +3236,7 @@ LIMIT 100"""
     app.state.hdf_graph = graph
     app.state.hdf_filename = str(default_hdf_filename) if default_hdf_filename is not None else None
     app.state.hdf_files = {key: str(value) for key, value in hdf_files.items()}
+    app.state.rdf_files = [str(value) for value in rdf_files]
     app.state.file_key = file_key
 
     return app
@@ -3189,6 +3251,8 @@ def run_server(host: str = "127.0.0.1",
                file_uri: Optional[str] = None,
                local_iri_patterns: Optional[Sequence[str]] = None,
                h5_extensions: Optional[Sequence[str]] = None,
+               recursive: bool = False,
+               include_ttl: bool = False,
                graph_view: str = "2d"):
     """Run a FastAPI/uvicorn server exposing RDF for HDF5 files."""
     if filenames is None:
@@ -3204,6 +3268,8 @@ def run_server(host: str = "127.0.0.1",
         file_uri=file_uri,
         local_iri_patterns=local_iri_patterns,
         h5_extensions=h5_extensions,
+        recursive=recursive,
+        include_ttl=include_ttl,
         graph_view=graph_view,
     )
     url = f"http://{host}:{port}/"

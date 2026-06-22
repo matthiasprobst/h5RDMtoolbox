@@ -27,18 +27,52 @@ main {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   height: 100dvh;
-  min-height: 520px;
+  min-height: 0;
   gap: 12px;
   padding: 18px;
 }
 
-header {
+.graph-settings {
   display: grid;
   gap: 12px;
   padding: 16px;
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 8px;
+}
+
+.graph-settings-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-width: 0;
+  cursor: pointer;
+  color: var(--text);
+  font-size: 1.35rem;
+  font-weight: 650;
+  list-style-position: inside;
+}
+
+.graph-settings-summary span:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.graph-settings-summary-label {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+
+.graph-settings-body {
+  display: grid;
+  gap: 12px;
+  max-height: min(46dvh, 460px);
+  overflow: auto;
+  margin-top: 12px;
+  padding-right: 4px;
 }
 
 nav {
@@ -134,7 +168,7 @@ select {
 }
 
 input[type="text"] {
-  min-width: min(28rem, 80vw);
+  min-width: min(28rem, 100%);
 }
 
 button {
@@ -151,7 +185,8 @@ button {
 .graph-panel {
   position: relative;
   min-height: 0;
-  height: 100%;
+  height: auto;
+  overflow: hidden;
   display: grid;
 }
 

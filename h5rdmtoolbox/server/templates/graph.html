@@ -12,9 +12,13 @@
 </head>
 <body>
 <main>
-  <header>
+  <details class="graph-settings" open>
+    <summary class="graph-settings-summary">
+      <span>{{ display_name }} - Graph</span>
+      <span class="graph-settings-summary-label">Settings</span>
+    </summary>
+    <div class="graph-settings-body">
     <nav><a href="/">Files</a> {{ graph_nav | safe }}</nav>
-    <h1>{{ display_name }} - Graph</h1>
     <div class="graph-view-actions" aria-label="Graph view">{{ graph_view_links | safe }}</div>
     <form id="graph-form" method="get" action="/{{ encoded_filename }}/graph">
       <fieldset>
@@ -106,7 +110,8 @@
     {% if graph_summary.dropped_isolated_visible_nodes %}
       <p class="graph-notice">{{ graph_summary.dropped_isolated_visible_nodes }} selected node(s) without visible edges are hidden. Enable isolated nodes to show them.</p>
     {% endif %}
-  </header>
+    </div>
+  </details>
   <section class="graph-panel">
     <div class="hidden-node-menu">
       <button type="button" id="hidden-node-toggle" aria-expanded="false">Hidden nodes (0)</button>
