@@ -1396,13 +1396,13 @@ def test_file_graph_uses_standard_prefixes_for_compact_labels(monkeypatch, hdf_f
     response = client.get("/server_test.h5/graph")
 
     assert response.status_code == 200
-    assert '"label": "doi:10.5281/zenodo.12345"' in response.text
+    assert '"label": "zen:12345"' in response.text
     assert '"label": "dcat:Dataset"' in response.text
     assert '"predicate": "foaf:name"' in response.text
     assert '"label": "qudt:unit"' in response.text
     assert '"label": "unit:M"' in response.text
     assert '"label": "dcterms:identifier"' in response.text
-    assert '"label": "zenodo:12345"' in response.text
+    assert '"label": "rzen:12345"' in response.text
 
 
 @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")

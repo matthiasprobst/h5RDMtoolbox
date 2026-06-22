@@ -1,7 +1,7 @@
 import rdflib
 
 import h5rdmtoolbox as h5tbx
-from h5rdmtoolbox.ld.metrics import compute_graph_metrics
+from h5rdmtoolbox.ld.metrics import compute_graph_metrics, graph_label
 
 
 def test_compute_metrics_from_filename():
@@ -64,3 +64,19 @@ def test_compute_graph_metrics_skips_largest_distance_above_limit():
     assert metrics["largest_distance"] is None
     assert metrics["largest_distance_computed"] is False
     assert metrics["largest_distance_node_limit"] == 3
+
+
+def test_graph_label_uses_short_zenodo_prefixes():
+    assert graph_label(
+        rdflib.URIRef("https://doi.org/10.5281/zenodo.18349039#2023-11-07/adalwjdawd@quantitykind")
+    ) == "zen:18349039#2023-11-07/adalwjdawd@quantitykind"
+    assert graph_label(
+        rdflib.URIRef("https://zenodo.org/records/18349039#2023-11-07/adalwjdawd@quantitykind")
+    ) == "rzen:18349039#2023-11-07/adalwjdawd@quantitykind"
+    assert graph_label(
+        rdflib.URIRef("https://zenodo.org/record/18349039/files/data.h5")
+    ) == "rzen:18349039/files/data.h5"
+
+
+def test_graph_label_keeps_non_zenodo_doi_prefix():
+    assert graph_label(rdflib.URIRef("https://doi.org/10.1234/example")) == "doi:10.1234/example"
