@@ -1,6 +1,8 @@
 import json
 import pathlib
+import types
 import unittest
+from unittest import mock
 
 import numpy as np
 import ontolutils
@@ -15,10 +17,13 @@ from rdflib import DCAT
 from rdflib.namespace import SKOS
 
 import h5rdmtoolbox as h5tbx
+from h5rdmtoolbox import UserDir
 from h5rdmtoolbox import __version__
 from h5rdmtoolbox.ld import hdf2jsonld, hdf2ttl
 from h5rdmtoolbox.ld import rdf
 from h5rdmtoolbox.ld.rdf import RDFError, RDF_FILE_PREDICATE_ATTR_NAME, RDF_TYPE_ATTR_NAME
+from h5rdmtoolbox.utils import download_context
+from h5rdmtoolbox.utils.download import M4I_CONTEXT_URL
 from h5rdmtoolbox.wrapper import jsonld
 
 logger = h5tbx.logger
@@ -590,9 +595,7 @@ WHERE {
         h5.hdf_filename.unlink(missing_ok=True)
 
     def test_download_context(self):
-        from h5rdmtoolbox.utils import download_context
-        from h5rdmtoolbox import UserDir
-        url = "https://w3id.org/nfdi4ing/metadata4ing/m4i_context.jsonld"
+        url = M4I_CONTEXT_URL
         cache_dir = UserDir['cache']
         UserDir.clear_cache(delta_days=0)
         self.assertEqual(len(list(cache_dir.glob('*'))), 0)
@@ -602,10 +605,31 @@ WHERE {
         ctx = download_context(url)
         self.assertEqual(ctx.vocab, "http://w3id.org/nfdi4ing/metadata4ing#")
 
+    def test_download_context_normalizes_legacy_m4i_url(self):
+        legacy_url = "https://w3id.org/nfdi4ing/metadata4ing/ontology.jsonld"
+        cache_dir = UserDir['cache']
+        UserDir.clear_cache(delta_days=0)
+        response = types.SimpleNamespace(
+            content=b'{"@context": {"@vocab": "http://w3id.org/nfdi4ing/metadata4ing#"}}',
+            raise_for_status=lambda: None,
+        )
+
+        with mock.patch(
+                "h5rdmtoolbox.utils.download._request_with_backoff",
+                return_value=response
+        ) as request_with_backoff:
+            ctx = download_context(legacy_url)
+
+        self.assertEqual(ctx.vocab, "http://w3id.org/nfdi4ing/metadata4ing#")
+        self.assertEqual(len(list(cache_dir.glob('*'))), 1)
+        request_with_backoff.assert_called_once_with(
+            "GET", M4I_CONTEXT_URL, timeout=30, max_retries=8
+        )
+
     def test_to_hdf_with_graph2(self):
         test_data = """{
   "@context": {
-    "@import": "https://w3id.org/nfdi4ing/metadata4ing/m4i_context.jsonld",
+    "@import": "https://w3id.org/nfdi4ing/metadata4ing/ontology.jsonld",
     "foaf": "http://xmlns.com/foaf/0.1/",
     "prov": "http://www.w3.org/ns/prov#",
     "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
@@ -662,6 +686,76 @@ WHERE {
         # cleanup:
         pathlib.Path('graph.json').unlink(missing_ok=True)
         h5.hdf_filename.unlink(missing_ok=True)
+
+    def test_to_hdf_resolves_imported_context_before_rdflib_context(self):
+        test_data = {
+            "@context": {
+                "@import": "https://example.org/ontology.jsonld",
+                "local": "https://local-domain.org/"
+            },
+            "@graph": [
+                {
+                    "@id": "local:velocity",
+                    "@type": "m4i:NumericalVariable",
+                    "label": "Velocity",
+                    "has numerical value": "4.5",
+                    "has unit": "http://qudt.org/vocab/unit/M-PER-SEC"
+                }
+            ]
+        }
+        imported_context = {
+            "@context": {
+                "m4i": "http://w3id.org/nfdi4ing/metadata4ing#",
+                "label": "http://www.w3.org/2000/01/rdf-schema#label",
+                "has numerical value": "http://w3id.org/nfdi4ing/metadata4ing#hasNumericalValue",
+                "has unit": "http://w3id.org/nfdi4ing/metadata4ing#hasUnit"
+            }
+        }
+        fake_context = types.SimpleNamespace(
+            _context_cache={"https://example.org/ontology.jsonld": imported_context}
+        )
+
+        with mock.patch("h5rdmtoolbox.utils.download_context", return_value=fake_context) as download_context:
+            with h5tbx.File() as h5:
+                jsonld.to_hdf(grp=h5.create_group("metadata"), data=test_data)
+                download_context.assert_called_once_with(
+                    "https://example.org/ontology.jsonld", timeout=10, max_retries=1
+                )
+                self.assertIn("Velocity", h5["metadata"])
+                grp = h5["metadata"]["Velocity"]
+                self.assertEqual(grp.attrs["value"], "4.5")
+                self.assertEqual(grp.rdf.type, "http://w3id.org/nfdi4ing/metadata4ing#NumericalVariable")
+                self.assertEqual(
+                    grp.rdf.predicate["unit"],
+                    "http://w3id.org/nfdi4ing/metadata4ing#hasUnit"
+                )
+
+    def test_to_hdf_uses_m4i_context_fallback_if_context_download_fails(self):
+        test_data = {
+            "@context": {
+                "@import": M4I_CONTEXT_URL,
+                "local": "https://local-domain.org/"
+            },
+            "@graph": [
+                {
+                    "@id": "local:velocity",
+                    "@type": "m4i:NumericalVariable",
+                    "label": "Velocity",
+                    "has numerical value": "4.5",
+                    "has unit": "http://qudt.org/vocab/unit/M-PER-SEC"
+                }
+            ]
+        }
+
+        with mock.patch("h5rdmtoolbox.utils.download_context", side_effect=RuntimeError("offline")):
+            with h5tbx.File() as h5:
+                jsonld.to_hdf(grp=h5.create_group("metadata"), data=test_data)
+                grp = h5["metadata"]["Velocity"]
+                self.assertEqual(grp.rdf.type, "http://w3id.org/nfdi4ing/metadata4ing#NumericalVariable")
+                self.assertEqual(
+                    grp.rdf.predicate["value"],
+                    "http://w3id.org/nfdi4ing/metadata4ing#hasNumericalValue"
+                )
 
     def test_to_hdf(self):
         test_data = """{"@context": {"foaf": "http://xmlns.com/foaf/0.1/", "prov": "http://www.w3.org/ns/prov#",

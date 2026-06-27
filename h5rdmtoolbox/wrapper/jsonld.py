@@ -18,6 +18,7 @@ from rdflib.plugins.shared.jsonld.context import Context
 from h5rdmtoolbox.convention import ontology as hdf_ontology
 from h5rdmtoolbox.convention.ontology.hdf_datatypes import get_datatype
 from h5rdmtoolbox.ld.rdf import RDF_TYPE_ATTR_NAME
+from h5rdmtoolbox.utils.download import M4I_CONTEXT_FALLBACK, M4I_CONTEXT_URLS
 from .core import Dataset, File
 # from ..convention.ontology.h5ontocls import Datatype
 from ..protocols import H5TbxGroup
@@ -287,6 +288,71 @@ def process_rdf_key(rdf_name, rdf_value, context, resolve_keys) -> Tuple[URIRef,
     return _process_attr_predicate(rdf_value)
 
 
+def _context_cache_to_dict(context_cache: Dict) -> Dict:
+    """Extract a plain JSON-LD context dictionary from an RDFLib context cache."""
+    context_data = {}
+    for cached_context in context_cache.values():
+        if isinstance(cached_context, dict):
+            imported_context = cached_context.get('@context', cached_context)
+            if isinstance(imported_context, dict):
+                context_data.update(imported_context)
+    return context_data
+
+
+def _fallback_import_context(import_source: str) -> Optional[Dict]:
+    if str(import_source) in M4I_CONTEXT_URLS:
+        return dict(M4I_CONTEXT_FALLBACK)
+    return None
+
+
+def _prepare_jsonld_context(context: Optional[Union[Dict, List]], _seen_imports: Optional[set] = None) -> Dict:
+    """Resolve JSON-LD @import entries through the toolbox cache before RDFLib sees them."""
+    if _seen_imports is None:
+        _seen_imports = set()
+    if context is None:
+        return {}
+    if isinstance(context, list):
+        prepared = {}
+        for item in context:
+            prepared.update(_prepare_jsonld_context(item, _seen_imports))
+        return prepared
+    if not isinstance(context, dict):
+        raise TypeError(f'Expecting dict, list or None for JSON-LD context, got {type(context)}')
+
+    context = dict(context)
+    at_import = context.pop('@import', None)
+    imported_context = {}
+    if at_import is not None:
+        from ..utils import download_context
+        if isinstance(at_import, str):
+            at_import = [at_import]
+        for import_source in at_import:
+            if import_source in _seen_imports:
+                continue
+            _seen_imports.add(import_source)
+            try:
+                downloaded_context = download_context(import_source, timeout=10, max_retries=1)
+                imported_context.update(_context_cache_to_dict(downloaded_context._context_cache))
+            except Exception:
+                fallback_context = _fallback_import_context(import_source)
+                if fallback_context is None:
+                    raise
+                imported_context.update(fallback_context)
+
+    prepared_context = {}
+    if imported_context:
+        if '@import' in imported_context or '@context' in imported_context:
+            prepared_context.update(_prepare_jsonld_context(imported_context, _seen_imports))
+        else:
+            prepared_context.update(imported_context)
+    for key, value in context.items():
+        if key == '@context':
+            prepared_context.update(_prepare_jsonld_context(value, _seen_imports))
+        else:
+            prepared_context[key] = value
+    return prepared_context
+
+
 def to_hdf(grp: H5TbxGroup,
            *,
            data: Union[Dict, str] = None,
@@ -344,6 +410,7 @@ def to_hdf(grp: H5TbxGroup,
     if context is not None:
         data_context.update(context)
     data_context['rdfs'] = 'http://www.w3.org/2000/01/rdf-schema#'
+    data_context = _prepare_jsonld_context(data_context)
     # data_context['schema'] = 'https://schema.org/'
 
     ctx = Context(source=data_context)

@@ -24,9 +24,54 @@ USER_AGENT_HEADER = {
     "User-Agent": f"h5rdmtoolbox/{__version__} (https://github.com/matthiasprobst/h5rdmtoolbox)",
 }
 
+M4I_CONTEXT_URL = "https://nfdi4ing.pages.rwth-aachen.de/metadata4ing/metadata4ing/ontology.jsonld"
+M4I_LEGACY_CONTEXT_URLS = {
+    "https://w3id.org/nfdi4ing/metadata4ing/m4i_context.jsonld",
+    "https://w3id.org/nfdi4ing/metadata4ing/ontology.jsonld",
+}
+M4I_CONTEXT_URLS = {M4I_CONTEXT_URL, *M4I_LEGACY_CONTEXT_URLS}
+M4I_CONTEXT_FALLBACK = {
+    "@vocab": "http://w3id.org/nfdi4ing/metadata4ing#",
+    "m4i": "http://w3id.org/nfdi4ing/metadata4ing#",
+    "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
+    "label": "http://www.w3.org/2000/01/rdf-schema#label",
+    "description": "http://purl.org/dc/terms/description",
+    "ProcessingStep": "http://w3id.org/nfdi4ing/metadata4ing#ProcessingStep",
+    "processing step": "http://w3id.org/nfdi4ing/metadata4ing#ProcessingStep",
+    "Tool": "http://w3id.org/nfdi4ing/metadata4ing#Tool",
+    "Method": "http://w3id.org/nfdi4ing/metadata4ing#Method",
+    "NumericalVariable": "http://w3id.org/nfdi4ing/metadata4ing#NumericalVariable",
+    "FileSet": "http://w3id.org/nfdi4ing/metadata4ing#FileSet",
+    "has participant": "http://w3id.org/nfdi4ing/metadata4ing#hasParticipant",
+    "start time": "http://w3id.org/nfdi4ing/metadata4ing#startTime",
+    "has employed tool": "http://w3id.org/nfdi4ing/metadata4ing#hasEmployedTool",
+    "realizes method": "http://w3id.org/nfdi4ing/metadata4ing#realizesMethod",
+    "investigates": "http://w3id.org/nfdi4ing/metadata4ing#investigates",
+    "investigatesProperty": "http://w3id.org/nfdi4ing/metadata4ing#investigatesProperty",
+    "has output": "http://w3id.org/nfdi4ing/metadata4ing#hasOutput",
+    "has ORCID ID": "http://w3id.org/nfdi4ing/metadata4ing#orcidId",
+    "first name": "http://xmlns.com/foaf/0.1/firstName",
+    "last name": "http://xmlns.com/foaf/0.1/lastName",
+    "has parameter": "http://w3id.org/nfdi4ing/metadata4ing#hasParameter",
+    "has kind of quantity": "http://w3id.org/nfdi4ing/metadata4ing#hasKindOfQuantity",
+    "has numerical value": "http://w3id.org/nfdi4ing/metadata4ing#hasNumericalValue",
+    "has unit": "http://w3id.org/nfdi4ing/metadata4ing#hasUnit",
+    "includes": "http://w3id.org/nfdi4ing/metadata4ing#includes",
+}
+
+
+def _normalize_context_url(url: str) -> str:
+    if url in M4I_LEGACY_CONTEXT_URLS:
+        return M4I_CONTEXT_URL
+    return url
+
 
 def download_context(
-        url_source: Union[HttpUrl, List[HttpUrl]], force_download: bool = False
+        url_source: Union[HttpUrl, List[HttpUrl]],
+        force_download: bool = False,
+        *,
+        timeout: int = 30,
+        max_retries: int = 8,
 ) -> Context:
     """Download a context file from one URL or list of URLs.
     Will check if a context file is already downloaded and use that one.
@@ -37,6 +82,10 @@ def download_context(
         URL or list of URLs to download from.
     force_download : bool, optional
         Force download even if file exists, by default False.
+    timeout : int, optional
+        Request timeout in seconds, by default 30.
+    max_retries : int, optional
+        Maximum number of request retries, by default 8.
 
     Returns
     -------
@@ -51,21 +100,35 @@ def download_context(
     if not isinstance(url_source, list):
         url_source = [url_source]
 
-    filenames = []
+    context_sources = []
+    context_cache = {}
     for url in url_source:
-        _url = str(url)
+        original_url = str(url)
+        _url = _normalize_context_url(original_url)
         _fname = _url.rsplit("/", 1)[-1]
         context_file = user.UserDir["cache"] / _fname
         if not context_file.exists() or force_download:
             logger.debug(f"Downloading context file from {_url} to {context_file}")
             try:
                 with open(context_file, "wb") as f:
-                    r = _request_with_backoff("GET", _url)
+                    r = _request_with_backoff(
+                        "GET", _url, timeout=timeout, max_retries=max_retries
+                    )
+                    r.raise_for_status()
                     f.write(r.content)
             except requests.RequestException:
-                raise RuntimeError(f"Failed to download context file from {_url}")
-        filenames.append(str(context_file))
-    return Context(filenames)
+                if original_url == _url:
+                    raise RuntimeError(f"Failed to download context file from {_url}")
+                raise RuntimeError(f"Failed to download context file from {original_url} via {_url}")
+        with open(context_file, encoding="utf-8") as f:
+            context_data = json.load(f)
+        if original_url in M4I_CONTEXT_URLS or _url in M4I_CONTEXT_URLS:
+            context_data = dict(M4I_CONTEXT_FALLBACK)
+        context_sources.append(context_data)
+        context_cache[_url] = context_data
+    context = Context(context_sources)
+    context._context_cache.update(context_cache)
+    return context
 
 
 def download_file(

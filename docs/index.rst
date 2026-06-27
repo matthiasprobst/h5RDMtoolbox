@@ -150,8 +150,8 @@ For scientists working with HDF5 data, h5rdmtoolbox addresses critical challenge
     Getting Started <gettingstarted/index>
     User Guide <userguide/index>
     Practical Examples <practical_examples/index>
-    HowTo <howto/index>
     Glossary <glossary/index>
+    FAQ <faq>
     API Reference <api>
     References <references>
 

@@ -1,7 +1,7 @@
 {
     "@context": 
         {
-            "@import": "https://w3id.org/nfdi4ing/metadata4ing/m4i_context.jsonld",
+            "@import": "https://w3id.org/nfdi4ing/metadata4ing/ontology.jsonld",
             "local": "https://local-domain.org/",
             "foaf": "http://xmlns.com/foaf/0.1/"
         },
