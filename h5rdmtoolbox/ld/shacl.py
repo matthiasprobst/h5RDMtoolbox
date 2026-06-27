@@ -41,16 +41,34 @@ def _parse_shacl(shacl: Union[str, pathlib.Path, rdflib.Graph], format) -> rdfli
     return shacl_graph
 
 
+def _parse_ont_graph(
+        ont_graph: Union[str, pathlib.Path, rdflib.Graph],
+        ont_graph_format: str,
+) -> rdflib.Graph:
+    if isinstance(ont_graph, rdflib.Graph):
+        return ont_graph
+    if isinstance(ont_graph, pathlib.Path):
+        return rdflib.Graph().parse(ont_graph, format=ont_graph_format)
+    if isinstance(ont_graph, str):
+        return rdflib.Graph().parse(data=ont_graph, format=ont_graph_format)
+    raise TypeError(
+        "ont_graph must be an rdflib.Graph, pathlib.Path, or RDF string."
+    )
+
+
 def validate_hdf(
-    *,
-    hdf_data: Union[str, rdflib.Graph] = None,
-    hdf_source: Union[h5py.File, pathlib.Path] = None,
-    shacl_data: Union[str, rdflib.Graph] = None,
-    shacl_source: Union[str, pathlib.Path] = None,
-    hdf_file_uri="https://example.org/hdf5file#",
-    shacl_format: str = "turtle",
-    hdf_data_format: str = "turtle",
-    **pyshacl_kwargs,
+        *,
+        hdf_data: Union[str, rdflib.Graph] = None,
+        hdf_source: Union[h5py.File, pathlib.Path] = None,
+        shacl_data: Union[str, rdflib.Graph] = None,
+        shacl_source: Union[str, pathlib.Path] = None,
+        hdf_file_uri="https://example.org/hdf5file#",
+        shacl_format: str = "turtle",
+        hdf_data_format: str = "turtle",
+        ont_graph: Union[str, rdflib.Graph, pathlib.Path] = None,
+        ont_graph_format: str = "turtle",
+        merge_ont_graph_into_data: bool = True,
+        **pyshacl_kwargs,
 ) -> ValidationResult:
     """Validate an HDF5 file against SHACL shapes.
 
@@ -61,6 +79,8 @@ def validate_hdf(
         it is assumed to be in Turtle format (you may overwrite this by passing hdf_data_format).
     hdf_source : Union[h5py.File, pathlib.Path], optional
         The path to the HDF5 file.
+    hdf_file_uri: str, optional
+        The base URI to use for the HDF5 file when generating RDF. Default is "
     shacl_data : Union[str, rdflib.Graph], optional
         The SHACL shapes as a string or rdflib.Graph. If is string is provided
         it is assumed to be in Turtle format.
@@ -70,6 +90,16 @@ def validate_hdf(
         The format of the SHACL shapes string. Default is 'turtle'.
     hdf_data_format : str, optional
         The format of the HDF5 data string. Default is 'turtle'.
+    ont_graph : Union[str, rdflib.Graph, pathlib.Path], optional
+        Ontology graph to use during validation. If `merge_ont_graph_into_data`
+        is True, it is merged into the generated HDF RDF data graph before
+        validation. Otherwise it is passed to pySHACL as `ont_graph`.
+    ont_graph_format : str, optional
+        The format of the ontology graph string. Default is 'turtle'.
+    merge_ont_graph_into_data : bool, optional
+        If True, the ontology graph is merged into the generated HDF RDF data graph
+        before validation. This is useful for making ontology triples visible to
+        SHACL constraints.
     **pyshacl_kwargs
         Additional keyword arguments to pass to pyshacl.validate().
 
@@ -98,7 +128,7 @@ def validate_hdf(
     if hdf_data is not None:
         if isinstance(hdf_data, str):
             h5_graph = rdflib.Graph()
-            h5_graph.parse(hdf_data, format="turtle")
+            h5_graph.parse(data=hdf_data, format=hdf_data_format)
         elif isinstance(hdf_data, rdflib.Graph):
             h5_graph = hdf_data
         else:
@@ -117,6 +147,9 @@ def validate_hdf(
                     shacl_source=shacl_source,
                     hdf_file_uri=hdf_file_uri,
                     hdf_data_format=hdf_data_format,
+                    ont_graph=ont_graph,
+                    ont_graph_format=ont_graph_format,
+                    merge_ont_graph_into_data=merge_ont_graph_into_data,
                     **pyshacl_kwargs,
                 )
         if not isinstance(hdf_source, h5py.File):
@@ -126,6 +159,12 @@ def validate_hdf(
         h5_graph1 = get_hdf_ld(hdf_source, file_uri=hdf_file_uri, skipND=True)
         h5_graph2 = get_contextual_ld(hdf_source, file_uri=hdf_file_uri)
         h5_graph = h5_graph1 + h5_graph2
+
+    parsed_ont_graph = None
+    if ont_graph is not None:
+        parsed_ont_graph = _parse_ont_graph(ont_graph, ont_graph_format)
+        if merge_ont_graph_into_data:
+            h5_graph += parsed_ont_graph
 
     shacl_graph = None
     if shacl_data is not None:
@@ -144,7 +183,10 @@ def validate_hdf(
         shacl_graph.parse(source=shacl_source, format=shacl_format)
 
     conforms, results_graph, results_text = _validate_graphs(
-        h5_graph, shacl_graph, **pyshacl_kwargs
+        h5_graph,
+        shacl_graph,
+        ont_graph=None if merge_ont_graph_into_data else parsed_ont_graph,
+        **pyshacl_kwargs
     )
     return ValidationResult(
         conforms=conforms,
@@ -156,13 +198,14 @@ def validate_hdf(
 
 
 def _validate_graphs(
-    data_graph,
-    shacl_graph,
-    inference="rdfs",
-    abort_on_first=False,
-    meta_shacl=False,
-    advanced=False,
-    debug=False,
+        data_graph,
+        shacl_graph,
+        inference="rdfs",
+        abort_on_first=False,
+        meta_shacl=False,
+        advanced=False,
+        debug=False,
+        **pyshacl_kwargs
 ):
     """
     Validate a data graph against a SHACL shapes graph.
@@ -182,7 +225,6 @@ def _validate_graphs(
       - results_graph: An RDF graph with validation results.
       - results_text: A textual summary of the validation results.
     """
-
     conforms, results_graph, results_text = pyshacl_validate(
         data_graph,
         shacl_graph=shacl_graph,
@@ -191,6 +233,7 @@ def _validate_graphs(
         meta_shacl=meta_shacl,
         advanced=advanced,
         debug=debug,
+        **pyshacl_kwargs
     )
 
     return conforms, results_graph, results_text
@@ -208,7 +251,7 @@ def _get_messages(results_graph):
     """
     messages = []
     for s, p, o in results_graph.triples(
-        (None, rdflib.namespace.SH.resultMessage, None)
+            (None, rdflib.namespace.SH.resultMessage, None)
     ):
         messages.append(str(o))
     return messages

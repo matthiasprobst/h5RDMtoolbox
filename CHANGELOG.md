@@ -5,8 +5,10 @@ Log of changes in the versions
 ## v2.8.1
 
 - `h5tbx serve` now also supports serving RDF data and SPARQL queries, in addition to HDF5 files. This allows users to inspect the RDF metadata and run SPARQL queries through the web interface.
+- add large view on graph in served RDF browser
+- improve `h5tbx.validate_hdf(...)` by processing `onto_graph`, which will add triples to graph before validation
 
-## v2.8.0
+## v2.8.1
 
 - improve `h5tbx` CLI startup and linked-data commands
 - add `h5tbx ld dump` options for RDF output control:
