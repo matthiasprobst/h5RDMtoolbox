@@ -743,6 +743,13 @@ WHERE {
                     "label": "Velocity",
                     "has numerical value": "4.5",
                     "has unit": "http://qudt.org/vocab/unit/M-PER-SEC"
+                },
+                {
+                    "@id": "local:processing",
+                    "@type": "m4i:ProcessingStep",
+                    "label": "Processing",
+                    "has input": "local:velocity",
+                    "has output": "local:result"
                 }
             ]
         }
@@ -750,11 +757,21 @@ WHERE {
         with mock.patch("h5rdmtoolbox.utils.download_context", side_effect=RuntimeError("offline")):
             with h5tbx.File() as h5:
                 jsonld.to_hdf(grp=h5.create_group("metadata"), data=test_data)
-                grp = h5["metadata"]["Velocity"]
-                self.assertEqual(grp.rdf.type, "http://w3id.org/nfdi4ing/metadata4ing#NumericalVariable")
+                velocity = h5["metadata"]["Velocity"]
+                self.assertEqual(velocity.rdf.type, "http://w3id.org/nfdi4ing/metadata4ing#NumericalVariable")
                 self.assertEqual(
-                    grp.rdf.predicate["value"],
+                    velocity.rdf.predicate["value"],
                     "http://w3id.org/nfdi4ing/metadata4ing#hasNumericalValue"
+                )
+                processing = h5["metadata"]["Processing"]
+                self.assertEqual(processing.rdf.type, "http://w3id.org/nfdi4ing/metadata4ing#ProcessingStep")
+                self.assertEqual(
+                    processing.rdf.predicate["input"],
+                    "http://purl.obolibrary.org/obo/RO_0002233"
+                )
+                self.assertEqual(
+                    processing.rdf.predicate["output"],
+                    "http://purl.obolibrary.org/obo/RO_0002234"
                 )
 
     def test_to_hdf(self):
