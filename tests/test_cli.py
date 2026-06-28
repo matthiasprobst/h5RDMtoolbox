@@ -27,7 +27,6 @@ class TestCLI(unittest.TestCase):
         self.assertIn("ld", result.output)
         self.assertIn("metrics", result.output)
         self.assertIn("serve", result.output)
-        self.assertIn("server", result.output)
 
     def test_command_ld(self):
         runner = CliRunner()
@@ -161,12 +160,19 @@ class TestCLI(unittest.TestCase):
         self.assertTrue(run_server.call_args.kwargs["recursive"])
         self.assertTrue(run_server.call_args.kwargs["include_ttl"])
 
-    def test_server_alias(self):
+    def test_server_command_is_removed(self):
+        runner = CliRunner()
+        result = runner.invoke(h5tbx, ["server", "--help"])
+
+        self.assertIsNotNone(result.exception)
+        self.assertIn("No such command 'server'", result.output)
+
+    def test_serve_command(self):
         runner = CliRunner()
         with runner.isolated_filesystem():
             pathlib.Path("data").mkdir()
             with patch("h5rdmtoolbox.server.run_server") as run_server:
-                result = runner.invoke(h5tbx, ["server", "data", "--recursive", "--include-ttl"])
+                result = runner.invoke(h5tbx, ["serve", "data", "--recursive", "--include-ttl"])
 
         self.assertIsNone(result.exception)
         run_server.assert_called_once()

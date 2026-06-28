@@ -157,9 +157,6 @@ def serve(filenames, host, port, no_structural, no_contextual, file_uri, local_i
                graph_view=graph_view.lower())
 
 
-h5tbx.add_command(serve, name="server")
-
-
 @h5tbx.command()
 @click.argument('rdf_file', type=click.Path(exists=True))
 @click.option('--format', 'rdf_format', type=str, default='turtle', help='RDF format (turtle, xml, nt, json-ld)')
