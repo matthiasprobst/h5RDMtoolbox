@@ -14,6 +14,57 @@ __this_dir__ = pathlib.Path(__file__).parent
 
 class TestShacl(unittest.TestCase):
 
+    @staticmethod
+    def _ontology_shacl_test_data():
+        data_ttl = '''@prefix ex: <http://example.org/> .
+
+ex:file ex:hasUnit ex:Meter .
+ex:Meter a ex:LengthUnit .
+'''
+        shapes_ttl = '''@prefix ex: <http://example.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+ex:UnitShape
+    a sh:NodeShape ;
+    sh:targetNode ex:file ;
+    sh:property [
+        sh:path ex:hasUnit ;
+        sh:class ex:Unit ;
+        sh:message "The unit must be an ex:Unit." ;
+    ] .
+'''
+        ontology_ttl = '''@prefix ex: <http://example.org/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+ex:LengthUnit rdfs:subClassOf ex:Unit .
+'''
+        return data_ttl, shapes_ttl, ontology_ttl
+
+    def test_validate_hdf_merges_ontology_graph_into_data(self):
+        data_ttl, shapes_ttl, ontology_ttl = self._ontology_shacl_test_data()
+
+        res = validate_hdf(hdf_data=data_ttl, shacl_data=shapes_ttl)
+        self.assertFalse(res.conforms)
+
+        res = validate_hdf(
+            hdf_data=data_ttl,
+            shacl_data=shapes_ttl,
+            ont_graph=ontology_ttl,
+            merge_ont_graph_into_data=True,
+        )
+        self.assertTrue(res.conforms)
+
+    def test_validate_hdf_passes_ontology_graph_without_merging(self):
+        data_ttl, shapes_ttl, ontology_ttl = self._ontology_shacl_test_data()
+
+        res = validate_hdf(
+            hdf_data=data_ttl,
+            shacl_data=shapes_ttl,
+            ont_graph=ontology_ttl,
+            merge_ont_graph_into_data=False,
+        )
+        self.assertTrue(res.conforms)
+
     def test_all_subjects_must_have_created(self):
         with h5tbx.File() as h5:
             h5.attrs["created"] = "2025-01-10"

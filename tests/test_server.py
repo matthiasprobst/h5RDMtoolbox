@@ -768,8 +768,14 @@ def test_file_graph_endpoint_returns_interactive_page(hdf_filename):
     assert 'name="edge_width"' in response.text
     assert 'id="background-color"' in response.text
     assert 'name="background_color"' in response.text
+    assert '<details class="graph-settings" open>' in response.text
+    assert '<summary class="graph-settings-summary">' in response.text
+    assert '<span class="graph-settings-summary-label">Settings</span>' in response.text
+    assert '<div class="graph-settings-body">' in response.text
     assert 'class="graph-view-actions"' in response.text
     assert 'class="graph-view-link active"' in response.text
+    assert "Open full screen" not in response.text
+    assert "fullscreen=true" not in response.text
     assert "Initial view" in response.text
     assert "Graph view" in response.text
     assert "Color nodes by" in response.text
@@ -807,6 +813,7 @@ def test_file_graph_endpoint_returns_interactive_page(hdf_filename):
     assert '"nodeSize": 14' in response.text
     assert '"edgeWidth": 1' in response.text
     assert '"backgroundColor": "#ffffff"' in response.text
+    assert '"graphParams":' not in response.text
     assert '"group": "literal"' not in response.text
     assert '"group": "class:hdf:File"' in response.text
     assert '"group": "class:hdf:Group"' in response.text
@@ -856,6 +863,7 @@ def test_file_graph_endpoint_returns_interactive_page(hdf_filename):
     assert "selectedEdgeWidth" in graph_js.text
     assert "selectedBackgroundColor" in graph_js.text
     assert "applyGraphBackground" in graph_js.text
+    assert "config.graphParams" not in graph_js.text
     assert 'params.set("node_size"' in graph_js.text
     assert 'params.set("edge_width"' in graph_js.text
     assert 'params.set("background_color"' in graph_js.text
@@ -875,9 +883,66 @@ def test_file_graph_endpoint_returns_interactive_page(hdf_filename):
     graph_css = client.get("/static/graph.css")
     assert graph_css.status_code == 200
     assert "grid-template-columns: minmax(7rem, max-content) minmax(0, 1fr);" in graph_css.text
+    assert "overflow: hidden;" in graph_css.text
     assert "height: 100dvh;" in graph_css.text
+    assert "min-height: 0;" in graph_css.text
     assert "height: 100%;" in graph_css.text
     assert ".graph-status" in graph_css.text
+    assert ".graph-settings" in graph_css.text
+    assert ".graph-settings-summary" in graph_css.text
+    assert ".graph-settings-body" in graph_css.text
+    assert "max-height: min(46dvh, 460px);" in graph_css.text
+    assert "overflow: auto;" in graph_css.text
+    assert "overflow-wrap: anywhere;" in graph_css.text
+    assert "min-width: min(28rem, 100%);" in graph_css.text
+    assert "min-height: min(640px, calc(100dvh - 132px));" not in graph_css.text
+    assert "height: auto;" in graph_css.text
+    assert ".graph-fullscreen-main" not in graph_css.text
+    assert ".fullscreen-exit-link" not in graph_css.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_file_graph_endpoint_preserves_controls_in_collapsible_settings(hdf_filename):
+    from h5rdmtoolbox.server import create_app
+
+    client = TestClient(create_app(hdf_filename))
+    response = client.get(
+        "/server_test.h5/graph?mode=structural&q=grp&labels=off&view=3d"
+        "&color_by=namespace&color_scheme=light&node_size=20&edge_width=4"
+        "&background_color=%23ddeeff&include_ontology=false"
+    )
+
+    assert response.status_code == 200
+    assert '<details class="graph-settings" open>' in response.text
+    assert 'id="graph-form"' in response.text
+    assert 'id="network"' in response.text
+    assert 'name="mode" value="structural" checked' in response.text
+    assert 'value="grp"' in response.text
+    assert '<option value="off" selected>Off</option>' in response.text
+    assert '<option value="3d" selected' in response.text
+    assert '<option value="namespace" selected>Namespace</option>' in response.text
+    assert '<option value="light" selected>Light</option>' in response.text
+    assert 'id="node-size" min="6" max="36" step="1" value="20"' in response.text
+    assert 'id="edge-width" min="1" max="8" step="1" value="4"' in response.text
+    assert 'id="background-color" value="#ddeeff"' in response.text
+    assert "Open full screen" not in response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_combined_graph_endpoint_uses_collapsible_settings(hdf_filename):
+    from h5rdmtoolbox.server import create_app
+
+    client = TestClient(create_app(hdf_filename))
+    response = client.get("/combined/graph?view=2d&detail=compact")
+
+    assert response.status_code == 200
+    assert '<details class="graph-settings" open>' in response.text
+    assert '<summary class="graph-settings-summary">' in response.text
+    assert 'id="graph-form"' in response.text
+    assert '"graphDataUrl": "/combined/graph-data"' in response.text
+    assert '"graphView": "2d"' in response.text
+    assert '<option value="compact" selected>Compact preview</option>' in response.text
+    assert "Open full screen" not in response.text
 
 
 @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
@@ -1331,13 +1396,13 @@ def test_file_graph_uses_standard_prefixes_for_compact_labels(monkeypatch, hdf_f
     response = client.get("/server_test.h5/graph")
 
     assert response.status_code == 200
-    assert '"label": "doi:10.5281/zenodo.12345"' in response.text
+    assert '"label": "zen:12345"' in response.text
     assert '"label": "dcat:Dataset"' in response.text
     assert '"predicate": "foaf:name"' in response.text
     assert '"label": "qudt:unit"' in response.text
     assert '"label": "unit:M"' in response.text
     assert '"label": "dcterms:identifier"' in response.text
-    assert '"label": "zenodo:12345"' in response.text
+    assert '"label": "rzen:12345"' in response.text
 
 
 @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
@@ -1736,6 +1801,33 @@ def test_create_app_expands_folder_input(hdf_filename):
 
 
 @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_create_app_expands_folder_input_recursively(hdf_filename):
+    from h5rdmtoolbox.server import create_app
+
+    folder = hdf_filename.parent / "data"
+    nested = folder / "nested"
+    nested.mkdir(parents=True)
+    with h5py.File(folder / "top.h5", "w"):
+        pass
+    with h5py.File(nested / "nested.hdf5", "w"):
+        pass
+
+    non_recursive_client = TestClient(create_app(folder))
+    non_recursive_response = non_recursive_client.get("/")
+
+    assert non_recursive_response.status_code == 200
+    assert "top.h5" in non_recursive_response.text
+    assert "nested.hdf5" not in non_recursive_response.text
+
+    recursive_client = TestClient(create_app(folder, recursive=True))
+    recursive_response = recursive_client.get("/")
+
+    assert recursive_response.status_code == 200
+    assert "top.h5" in recursive_response.text
+    assert "nested.hdf5" in recursive_response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_create_app_filters_folder_input_by_extension(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
@@ -1769,3 +1861,66 @@ def test_create_app_supports_mixed_file_and_folder_inputs(hdf_filename):
     assert response.status_code == 200
     assert "from_folder.h5" in response.text
     assert "single.hdf5" in response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_create_app_includes_turtle_files_in_combined_graph(hdf_filename):
+    from h5rdmtoolbox.server import create_app
+
+    folder = hdf_filename.parent / "data"
+    folder.mkdir()
+    with h5py.File(folder / "data.h5", "w"):
+        pass
+    (folder / "metadata.ttl").write_text(
+        "@prefix ex: <https://example.org/> .\n"
+        "ex:subject ex:predicate \"external-value\" .\n",
+        encoding="utf-8",
+    )
+
+    without_ttl_client = TestClient(create_app(folder))
+    without_ttl_response = without_ttl_client.get("/combined/ttl?raw=true")
+
+    assert without_ttl_response.status_code == 200
+    assert "external-value" not in without_ttl_response.text
+
+    with_ttl_client = TestClient(create_app(folder, include_ttl=True))
+    with_ttl_response = with_ttl_client.get("/combined/ttl?raw=true")
+    resolve_response = with_ttl_client.get(
+        "/resolve",
+        params={"iri": "https://example.org/subject", "format": "ttl"},
+    )
+
+    assert with_ttl_response.status_code == 200
+    assert "external-value" in with_ttl_response.text
+    assert "metadata.ttl" not in with_ttl_client.get("/").text
+    assert resolve_response.status_code == 200
+    assert "external-value" in resolve_response.text
+    assert with_ttl_client.app.state.rdf_files == [str(folder / "metadata.ttl")]
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_create_app_includes_turtle_files_recursively(hdf_filename):
+    from h5rdmtoolbox.server import create_app
+
+    folder = hdf_filename.parent / "data"
+    nested = folder / "nested"
+    nested.mkdir(parents=True)
+    with h5py.File(folder / "data.h5", "w"):
+        pass
+    (nested / "metadata.ttl").write_text(
+        "@prefix ex: <https://example.org/> .\n"
+        "ex:nested ex:predicate \"nested-value\" .\n",
+        encoding="utf-8",
+    )
+
+    non_recursive_client = TestClient(create_app(folder, include_ttl=True))
+    non_recursive_response = non_recursive_client.get("/combined/ttl?raw=true")
+
+    assert non_recursive_response.status_code == 200
+    assert "nested-value" not in non_recursive_response.text
+
+    recursive_client = TestClient(create_app(folder, include_ttl=True, recursive=True))
+    recursive_response = recursive_client.get("/combined/ttl?raw=true")
+
+    assert recursive_response.status_code == 200
+    assert "nested-value" in recursive_response.text

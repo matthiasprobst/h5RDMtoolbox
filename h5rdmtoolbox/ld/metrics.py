@@ -25,6 +25,12 @@ STANDARD_PREFIXES = {
     "zenodo_record": "https://zenodo.org/record/",
 }
 
+ZENODO_COMPACT_PREFIXES = (
+    ("https://doi.org/10.5281/zenodo.", "zen"),
+    ("https://zenodo.org/records/", "rzen"),
+    ("https://zenodo.org/record/", "rzen"),
+)
+
 
 def bind_standard_prefixes(graph: rdflib.Graph) -> None:
     """Bind common namespaces without replacing prefixes already defined by the graph."""
@@ -37,6 +43,9 @@ def graph_label(value, rdf_graph: Optional[rdflib.Graph] = None) -> str:
     if isinstance(value, rdflib.URIRef):
         namespace_manager = rdf_graph.namespace_manager if rdf_graph is not None else rdflib.Graph().namespace_manager
         text = str(value)
+        for namespace, prefix in ZENODO_COMPACT_PREFIXES:
+            if text.startswith(namespace) and text != namespace:
+                return f"{prefix}:{text[len(namespace):]}"
         try:
             normalized = str(namespace_manager.normalizeUri(value))
             if not normalized.startswith("<") and not re.match(r"^ns\d+:", normalized):

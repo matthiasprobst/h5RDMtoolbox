@@ -110,7 +110,7 @@ class TestH5Mongo(unittest.TestCase):
 
         with h5py.File("test.h5", "w") as h5:
             h5.create_dataset("dataset0d", data=1)
-            h5.create_dataset("dataset", shape=(10, 20, 4))
+            h5.create_dataset("dataset", shape=(10, 20, 4), dtype="f4")
 
             mongoDBInterface.insert_dataset(h5["dataset0d"], axis=None)
             mongoDBInterface.insert_dataset(h5["dataset"], axis=None)
@@ -137,7 +137,7 @@ class TestH5Mongo(unittest.TestCase):
         self.client.drop_database("hdf_database_test")
         mongoDBInterface = MongoDB(collection=self.collection)
         with h5py.File("test.h5", "w") as h5:
-            h5.create_dataset("dataset", shape=(10, 20, 4))
+            h5.create_dataset("dataset", shape=(10, 20, 4), dtype="f4")
 
             mongoDBInterface.insert_dataset(h5["dataset"], axis=0)
         self.assertEqual(10, mongoDBInterface.collection.count_documents({}))
@@ -160,7 +160,7 @@ class TestH5Mongo(unittest.TestCase):
 
         with h5py.File("test.h5", "w") as h5:
             h5.create_dataset("grp/dataset0d", data=1)
-            h5.create_dataset("grp/subgrp/dataset", shape=(10, 20, 4))
+            h5.create_dataset("grp/subgrp/dataset", shape=(10, 20, 4), dtype="f4")
 
             mongoDBInterface.insert_group(h5["grp"], recursive=False)
 
@@ -171,7 +171,7 @@ class TestH5Mongo(unittest.TestCase):
         self.assertEqual(0, mongoDBInterface.collection.count_documents({}))
 
         with h5py.File("test.h5", "w") as h5:
-            h5.create_dataset("dataset", shape=(10, 20, 4))
+            h5.create_dataset("dataset", shape=(10, 20, 4), dtype="f4")
 
             mongoDBInterface.insert_dataset(h5["dataset"], axis=0)
 

@@ -74,6 +74,17 @@ enforcing a fixed schema.
 
 *Result: metadata that is interoperable, reusable, and ready to connect across domains.* *(Interoperable, Reusable)*
 
+Connecting to NFDI4Ing Services
+-------------------------------
+
+`h5rdmtoolbox` complements the `NFDI4Ing <https://nfdi4ing.de/>`_ service ecosystem
+for engineering research data. Application profiles created with
+`AIMS <https://profiles.nfdi4ing.de/#/editor>`_ can be used as SHACL constraints
+for validating HDF5 files, while terms from the
+`NFDI4Ing Terminology Service <https://terminology.nfdi4ing.de/>`_ can be referenced
+through RDF annotations and URI-based metadata. Many examples in this repo use the
+`Metadata4Ing (M4I) <https://nfdi4ing.pages.rwth-aachen.de/metadata4ing/metadata4ing/>`_ ontology.
+
 
 Why h5rdmtoolbox?
 -----------------
@@ -139,8 +150,8 @@ For scientists working with HDF5 data, h5rdmtoolbox addresses critical challenge
     Getting Started <gettingstarted/index>
     User Guide <userguide/index>
     Practical Examples <practical_examples/index>
-    HowTo <howto/index>
     Glossary <glossary/index>
+    FAQ <faq>
     API Reference <api>
     References <references>
 

@@ -2,6 +2,22 @@
 
 Log of changes in the versions
 
+## v2.8.1
+
+- improve `h5tbx serve` RDF browser
+  - add `--recursive` for recursive folder discovery
+  - add `--include-ttl` to include Turtle RDF files in the combined graph
+  - improve graph layout with collapsible settings and a larger usable graph view
+- refactor `h5tbx` CLI to Typer for improved help output and command-line ergonomics while preserving existing commands
+- improve SHACL validation with ontology graph support
+  - add `ont_graph`, `ont_graph_format`, and `merge_ont_graph_into_data` to `validate_hdf(...)`
+  - use `hdf_data_format` when parsing string RDF data passed to `validate_hdf(...)`
+- improve JSON-LD import handling before converting JSON-LD metadata to HDF5
+  - resolve `@import` contexts through the toolbox context cache before RDFLib processing
+  - update metadata4ing/m4i context URL handling, normalize legacy URLs, and provide an offline fallback context
+- improve RDF graph labels by using compact Zenodo prefixes `zen:` and `rzen:`
+- update FAQ, metadata4ing, and SHACL validation documentation
+
 ## v2.8.0
 
 - improve `h5tbx` CLI startup and linked-data commands

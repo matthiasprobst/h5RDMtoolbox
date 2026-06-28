@@ -1,10 +1,15 @@
 import json
+import contextlib
 import pathlib
+import tempfile
+import types
 import unittest
+from unittest import mock
 
 import numpy as np
 import ontolutils
 import rdflib
+import requests
 import ssnolib
 from ontolutils import namespaces, urirefs, Thing, QUDT_UNIT
 from ontolutils.ex import dcat
@@ -15,15 +20,29 @@ from rdflib import DCAT
 from rdflib.namespace import SKOS
 
 import h5rdmtoolbox as h5tbx
+from h5rdmtoolbox import UserDir
 from h5rdmtoolbox import __version__
 from h5rdmtoolbox.ld import hdf2jsonld, hdf2ttl
 from h5rdmtoolbox.ld import rdf
 from h5rdmtoolbox.ld.rdf import RDFError, RDF_FILE_PREDICATE_ATTR_NAME, RDF_TYPE_ATTR_NAME
+from h5rdmtoolbox.utils import download_context
+from h5rdmtoolbox.utils.download import M4I_CONTEXT_URL
 from h5rdmtoolbox.wrapper import jsonld
 
 logger = h5tbx.logger
 
 __this_dir__ = pathlib.Path(__file__).parent
+
+
+@contextlib.contextmanager
+def temporary_user_cache():
+    original_cache_dir = UserDir.user_dirs['cache']
+    with tempfile.TemporaryDirectory() as tmpdir:
+        try:
+            UserDir.user_dirs['cache'] = pathlib.Path(tmpdir)
+            yield UserDir['cache']
+        finally:
+            UserDir.user_dirs['cache'] = original_cache_dir
 
 EXCEPTION_PROPERTIES_NAMESPACES = {
     str(rdflib.OWL),
@@ -590,22 +609,129 @@ WHERE {
         h5.hdf_filename.unlink(missing_ok=True)
 
     def test_download_context(self):
-        from h5rdmtoolbox.utils import download_context
-        from h5rdmtoolbox import UserDir
-        url = "https://w3id.org/nfdi4ing/metadata4ing/m4i_context.jsonld"
-        cache_dir = UserDir['cache']
-        UserDir.clear_cache(delta_days=0)
-        self.assertEqual(len(list(cache_dir.glob('*'))), 0)
-        ctx = download_context(url)
-        self.assertEqual(ctx.vocab, "http://w3id.org/nfdi4ing/metadata4ing#")
-        self.assertEqual(len(list(cache_dir.glob('*'))), 1)
-        ctx = download_context(url)
-        self.assertEqual(ctx.vocab, "http://w3id.org/nfdi4ing/metadata4ing#")
+        url = M4I_CONTEXT_URL
+        with temporary_user_cache() as cache_dir:
+            self.assertEqual(len(list(cache_dir.glob('*'))), 0)
+            with mock.patch(
+                    "h5rdmtoolbox.utils.download._request_with_backoff",
+                    side_effect=requests.Timeout("m4i server timed out"),
+            ) as request_with_backoff:
+                ctx = download_context(url)
+            self.assertEqual(ctx.vocab, "http://w3id.org/nfdi4ing/metadata4ing#")
+            self.assertEqual(len(list(cache_dir.glob('*'))), 1)
+            request_with_backoff.assert_called_once_with(
+                "GET", M4I_CONTEXT_URL, timeout=30, max_retries=8
+            )
+            ctx = download_context(url)
+            self.assertEqual(ctx.vocab, "http://w3id.org/nfdi4ing/metadata4ing#")
+
+    def test_download_context_normalizes_legacy_m4i_url(self):
+        legacy_url = "https://w3id.org/nfdi4ing/metadata4ing/ontology.jsonld"
+        with temporary_user_cache() as cache_dir:
+            response = types.SimpleNamespace(
+                content=b'{"@context": {"@vocab": "http://w3id.org/nfdi4ing/metadata4ing#"}}',
+                raise_for_status=lambda: None,
+            )
+
+            with mock.patch(
+                    "h5rdmtoolbox.utils.download._request_with_backoff",
+                    return_value=response
+            ) as request_with_backoff:
+                ctx = download_context(legacy_url)
+
+            self.assertEqual(ctx.vocab, "http://w3id.org/nfdi4ing/metadata4ing#")
+            self.assertEqual(len(list(cache_dir.glob('*'))), 1)
+            request_with_backoff.assert_called_once_with(
+                "GET", M4I_CONTEXT_URL, timeout=30, max_retries=8
+            )
+
+    def test_download_context_uses_m4i_fallback_for_retryable_http_error(self):
+        with temporary_user_cache() as cache_dir:
+            response = types.SimpleNamespace(
+                status_code=503,
+                content=b"",
+            )
+
+            def raise_for_status():
+                raise requests.HTTPError("server unavailable", response=response)
+
+            response.raise_for_status = raise_for_status
+
+            with mock.patch(
+                    "h5rdmtoolbox.utils.download._request_with_backoff",
+                    return_value=response
+            ) as request_with_backoff:
+                ctx = download_context(M4I_CONTEXT_URL)
+
+            self.assertEqual(ctx.vocab, "http://w3id.org/nfdi4ing/metadata4ing#")
+            self.assertEqual(len(list(cache_dir.glob('*'))), 1)
+            request_with_backoff.assert_called_once_with(
+                "GET", M4I_CONTEXT_URL, timeout=30, max_retries=8
+            )
+
+    def test_download_context_uses_existing_cache_for_timeout(self):
+        context_url = "https://example.org/context.jsonld"
+        with temporary_user_cache() as cache_dir:
+            context_file = cache_dir / "context.jsonld"
+            context_file.write_text(
+                '{"@context": {"ex": "https://example.org/"}}',
+                encoding="utf-8",
+            )
+
+            with mock.patch(
+                    "h5rdmtoolbox.utils.download._request_with_backoff",
+                    side_effect=requests.Timeout("server timed out"),
+            ) as request_with_backoff:
+                ctx = download_context(context_url, force_download=True)
+
+            self.assertEqual(ctx._context_cache["https://example.org/context.jsonld"]["@context"]["ex"],
+                             "https://example.org/")
+            request_with_backoff.assert_called_once_with(
+                "GET", context_url, timeout=30, max_retries=8
+            )
+
+    def test_download_context_raises_for_timeout_without_cache_or_fallback(self):
+        context_url = "https://example.org/context.jsonld"
+        with temporary_user_cache():
+            with mock.patch(
+                    "h5rdmtoolbox.utils.download._request_with_backoff",
+                    side_effect=requests.Timeout("server timed out"),
+            ):
+                with self.assertRaises(RuntimeError):
+                    download_context(context_url)
+
+    def test_download_context_raises_for_non_timeout_m4i_request_error(self):
+        with temporary_user_cache():
+            with mock.patch(
+                    "h5rdmtoolbox.utils.download._request_with_backoff",
+                    side_effect=requests.ConnectionError("connection failed"),
+            ):
+                with self.assertRaises(RuntimeError):
+                    download_context(M4I_CONTEXT_URL)
+
+    def test_download_context_raises_for_non_retryable_m4i_http_error(self):
+        with temporary_user_cache():
+            response = types.SimpleNamespace(
+                status_code=404,
+                content=b"",
+            )
+
+            def raise_for_status():
+                raise requests.HTTPError("not found", response=response)
+
+            response.raise_for_status = raise_for_status
+
+            with mock.patch(
+                    "h5rdmtoolbox.utils.download._request_with_backoff",
+                    return_value=response
+            ):
+                with self.assertRaises(RuntimeError):
+                    download_context(M4I_CONTEXT_URL)
 
     def test_to_hdf_with_graph2(self):
         test_data = """{
   "@context": {
-    "@import": "https://w3id.org/nfdi4ing/metadata4ing/m4i_context.jsonld",
+    "@import": "https://w3id.org/nfdi4ing/metadata4ing/ontology.jsonld",
     "foaf": "http://xmlns.com/foaf/0.1/",
     "prov": "http://www.w3.org/ns/prov#",
     "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
@@ -663,6 +789,93 @@ WHERE {
         pathlib.Path('graph.json').unlink(missing_ok=True)
         h5.hdf_filename.unlink(missing_ok=True)
 
+    def test_to_hdf_resolves_imported_context_before_rdflib_context(self):
+        test_data = {
+            "@context": {
+                "@import": "https://example.org/ontology.jsonld",
+                "local": "https://local-domain.org/"
+            },
+            "@graph": [
+                {
+                    "@id": "local:velocity",
+                    "@type": "m4i:NumericalVariable",
+                    "label": "Velocity",
+                    "has numerical value": "4.5",
+                    "has unit": "http://qudt.org/vocab/unit/M-PER-SEC"
+                }
+            ]
+        }
+        imported_context = {
+            "@context": {
+                "m4i": "http://w3id.org/nfdi4ing/metadata4ing#",
+                "label": "http://www.w3.org/2000/01/rdf-schema#label",
+                "has numerical value": "http://w3id.org/nfdi4ing/metadata4ing#hasNumericalValue",
+                "has unit": "http://w3id.org/nfdi4ing/metadata4ing#hasUnit"
+            }
+        }
+        fake_context = types.SimpleNamespace(
+            _context_cache={"https://example.org/ontology.jsonld": imported_context}
+        )
+
+        with mock.patch("h5rdmtoolbox.utils.download_context", return_value=fake_context) as download_context:
+            with h5tbx.File() as h5:
+                jsonld.to_hdf(grp=h5.create_group("metadata"), data=test_data)
+                download_context.assert_called_once_with(
+                    "https://example.org/ontology.jsonld", timeout=10, max_retries=1
+                )
+                self.assertIn("Velocity", h5["metadata"])
+                grp = h5["metadata"]["Velocity"]
+                self.assertEqual(grp.attrs["value"], "4.5")
+                self.assertEqual(grp.rdf.type, "http://w3id.org/nfdi4ing/metadata4ing#NumericalVariable")
+                self.assertEqual(
+                    grp.rdf.predicate["unit"],
+                    "http://w3id.org/nfdi4ing/metadata4ing#hasUnit"
+                )
+
+    def test_to_hdf_uses_m4i_context_fallback_if_context_download_fails(self):
+        test_data = {
+            "@context": {
+                "@import": M4I_CONTEXT_URL,
+                "local": "https://local-domain.org/"
+            },
+            "@graph": [
+                {
+                    "@id": "local:velocity",
+                    "@type": "m4i:NumericalVariable",
+                    "label": "Velocity",
+                    "has numerical value": "4.5",
+                    "has unit": "http://qudt.org/vocab/unit/M-PER-SEC"
+                },
+                {
+                    "@id": "local:processing",
+                    "@type": "m4i:ProcessingStep",
+                    "label": "Processing",
+                    "has input": "local:velocity",
+                    "has output": "local:result"
+                }
+            ]
+        }
+
+        with mock.patch("h5rdmtoolbox.utils.download_context", side_effect=RuntimeError("offline")):
+            with h5tbx.File() as h5:
+                jsonld.to_hdf(grp=h5.create_group("metadata"), data=test_data)
+                velocity = h5["metadata"]["Velocity"]
+                self.assertEqual(velocity.rdf.type, "http://w3id.org/nfdi4ing/metadata4ing#NumericalVariable")
+                self.assertEqual(
+                    velocity.rdf.predicate["value"],
+                    "http://w3id.org/nfdi4ing/metadata4ing#hasNumericalValue"
+                )
+                processing = h5["metadata"]["Processing"]
+                self.assertEqual(processing.rdf.type, "http://w3id.org/nfdi4ing/metadata4ing#ProcessingStep")
+                self.assertEqual(
+                    processing.rdf.predicate["input"],
+                    "http://purl.obolibrary.org/obo/RO_0002233"
+                )
+                self.assertEqual(
+                    processing.rdf.predicate["output"],
+                    "http://purl.obolibrary.org/obo/RO_0002234"
+                )
+
     def test_to_hdf(self):
         test_data = """{"@context": {"foaf": "http://xmlns.com/foaf/0.1/", "prov": "http://www.w3.org/ns/prov#",
 "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
@@ -709,11 +922,12 @@ WHERE {
         self.assertEqual(data[0]['version'].replace("-rc.", "rc"), __version__)
         self.assertTrue('author' in data[0])
         self.assertIsInstance(data[0]['author'], list)
-        with h5tbx.File('test.hdf', 'w') as h5:
-            jsonld.to_hdf(grp=h5.create_group('person'), data=data[0],
-                          context={'@import': "https://doi.org/10.5063/schema/codemeta-2.0"})
-            self.assertEqual(h5['person']['author1'].attrs[rdf.RDF_PREDICATE_ATTR_NAME]['SELF'],
-                             'http://schema.org/author')
+        with temporary_user_cache():
+            with h5tbx.File('test.hdf', 'w') as h5:
+                jsonld.to_hdf(grp=h5.create_group('person'), data=data[0],
+                              context={'@import': "https://doi.org/10.5063/schema/codemeta-2.0"})
+                self.assertEqual(h5['person']['author1'].attrs[rdf.RDF_PREDICATE_ATTR_NAME]['SELF'],
+                                 'http://schema.org/author')
 
         h5tbx.dumps('test.hdf')
 
