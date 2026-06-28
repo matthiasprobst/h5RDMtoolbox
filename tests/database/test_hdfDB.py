@@ -327,7 +327,7 @@ class TestHDFDB(unittest.TestCase):
     def test_find_dict_attr(self):
         with h5tbx.File(mode="w") as h5:
             grp = h5.create_group("grp")
-            ds = h5.create_dataset("dataset", shape=(2, 3))
+            ds = h5.create_dataset("dataset", shape=(2, 3), dtype="f4")
             ds.attrs["a"] = 1
             grp.attrs["a"] = 1
             grp.attrs["b"] = {"c": 2}
@@ -463,7 +463,7 @@ class TestHDFDB(unittest.TestCase):
         ) as h5:
             grp = h5.create_group("grp")
             grp.attrs["a"] = 1
-            ds = h5.create_dataset("dataset", shape=(2, 3))
+            ds = h5.create_dataset("dataset", shape=(2, 3), dtype="f4")
             ds.attrs["a"] = 1
             ds.attrs["b"] = 2
 
@@ -494,7 +494,7 @@ class TestHDFDB(unittest.TestCase):
             grp = h5.create_group("grp")
             grp.attrs["a"] = 1
             grp.attrs["i am"] = "a group 1"
-            ds = h5.create_dataset("dataset", shape=(2, 3))
+            ds = h5.create_dataset("dataset", shape=(2, 3), dtype="f4")
             ds.attrs["a"] = 1
             ds.attrs["b"] = 2
             ds.attrs["i am"] = "a dataset"
@@ -503,7 +503,7 @@ class TestHDFDB(unittest.TestCase):
             grp = h5.create_group("grp")
             grp.attrs["a"] = 1
             grp.attrs["i am"] = "a group 2"
-            ds = h5.create_dataset("dataset", shape=(2, 3))
+            ds = h5.create_dataset("dataset", shape=(2, 3), dtype="f4")
             ds.attrs["a"] = 1
             ds.attrs["b"] = 2
             ds.attrs["c"] = "3"
