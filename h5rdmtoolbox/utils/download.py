@@ -67,6 +67,55 @@ def _normalize_context_url(url: str) -> str:
     return url
 
 
+def _context_fallback_for_url(original_url: str, resolved_url: str) -> Optional[Dict]:
+    if original_url in M4I_CONTEXT_URLS or resolved_url in M4I_CONTEXT_URLS:
+        return dict(M4I_CONTEXT_FALLBACK)
+    return None
+
+
+def _write_context_fallback(context_file: pathlib.Path, fallback_context: Dict) -> None:
+    with open(context_file, "w", encoding="utf-8") as f:
+        json.dump({"@context": fallback_context}, f)
+
+
+def _has_valid_context_cache(context_file: pathlib.Path) -> bool:
+    if not context_file.exists():
+        return False
+    try:
+        with open(context_file, encoding="utf-8") as f:
+            json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return False
+    return True
+
+
+def _handle_transient_context_download_error(
+        *,
+        context_file: pathlib.Path,
+        original_url: str,
+        resolved_url: str,
+        reason: str,
+) -> None:
+    if _has_valid_context_cache(context_file):
+        logger.warning("Using cached context file after %s while downloading %s", reason, resolved_url)
+        return
+
+    fallback_context = _context_fallback_for_url(original_url, resolved_url)
+    if fallback_context is not None:
+        logger.warning("Using built-in context fallback after %s while downloading %s", reason, resolved_url)
+        _write_context_fallback(context_file, fallback_context)
+        return
+
+    context_file.unlink(missing_ok=True)
+    raise _context_download_error(original_url, resolved_url, "download")
+
+
+def _context_download_error(original_url: str, resolved_url: str, reason: str = "download") -> RuntimeError:
+    if original_url == resolved_url:
+        return RuntimeError(f"Failed to {reason} context file from {resolved_url}")
+    return RuntimeError(f"Failed to {reason} context file from {original_url} via {resolved_url}")
+
+
 def download_context(
         url_source: Union[HttpUrl, List[HttpUrl]],
         force_download: bool = False,
@@ -74,30 +123,52 @@ def download_context(
         timeout: int = 30,
         max_retries: int = 8,
 ) -> Context:
-    """Download a context file from one URL or list of URLs.
-    Will check if a context file is already downloaded and use that one.
+    """Download one or more JSON-LD context files and return an RDFLib Context.
 
-    Parameters
-    ----------
-    url_source : HttpUrl or List[HttpUrl]
-        URL or list of URLs to download from.
-    force_download : bool, optional
-        Force download even if file exists, by default False.
-    timeout : int, optional
-        Request timeout in seconds, by default 30.
-    max_retries : int, optional
-        Maximum number of request retries, by default 8.
+     Context files are cached in ``UserDir["cache"]`` using the final URL path
+     component as filename. Existing cache files are reused unless
+     ``force_download`` is True.
 
-    Returns
-    -------
-    Context
-        RDFLib Context object.
+     If a transient download failure occurs, the function tries to keep context
+     resolution usable without hiding unrelated errors. For ``requests.Timeout``
+     and retryable HTTP responses (500, 502, 503, 504), an existing valid cached
+     context file is used. If no valid cache file exists and the URL has a
+     built-in fallback context, that fallback is written to the cache and used.
+     Currently, built-in fallback data is provided for known metadata4ing/m4i
+     context URLs.
 
-    Examples
-    --------
-    >>> from h5rdmtoolbox.utils import download_context
-    >>> context = download_context('https://raw.githubusercontent.com/codemeta/codemeta/2.0/codemeta.jsonld')
-    """
+     Non-transient request errors, non-retryable HTTP errors, and transient
+     failures without a valid cache or built-in fallback raise ``RuntimeError``.
+     Partial cache files are removed on non-fallback failures.
+
+     Parameters
+     ----------
+     url_source : HttpUrl or List[HttpUrl]
+         URL or list of URLs to download from.
+     force_download : bool, optional
+         Force download even if a cache file exists, by default False.
+     timeout : int, optional
+         Request timeout in seconds, by default 30.
+     max_retries : int, optional
+         Maximum number of retries for retryable HTTP responses, by default 8.
+
+     Returns
+     -------
+     Context
+         RDFLib Context object built from the downloaded, cached, or fallback
+         context data.
+
+     Raises
+     ------
+     RuntimeError
+         If a context cannot be downloaded and no valid cache or built-in
+         fallback can be used.
+
+     Examples
+     --------
+     >>> from h5rdmtoolbox.utils import download_context
+     >>> context = download_context('https://raw.githubusercontent.com/codemeta/codemeta/2.0/codemeta.jsonld')
+     """
     if not isinstance(url_source, list):
         url_source = [url_source]
 
@@ -108,28 +179,42 @@ def download_context(
         _url = _normalize_context_url(original_url)
         _fname = _url.rsplit("/", 1)[-1]
         context_file = user.UserDir["cache"] / _fname
-        print(context_file)
         if not context_file.exists() or force_download:
             logger.debug(f"Downloading context file from {_url} to {context_file}")
             try:
+                r = _request_with_backoff(
+                    "GET", _url, timeout=timeout, max_retries=max_retries
+                )
+                r.raise_for_status()
                 with open(context_file, "wb") as f:
-                    r = _request_with_backoff(
-                        "GET", _url, timeout=timeout, max_retries=max_retries
-                    )
-                    r.raise_for_status()
                     f.write(r.content)
-            except requests.RequestException:
-                if original_url in M4I_CONTEXT_URLS or _url in M4I_CONTEXT_URLS:
-                    with open(context_file, "w", encoding="utf-8") as f:
-                        json.dump({"@context": M4I_CONTEXT_FALLBACK}, f)
-                elif original_url == _url:
-                    raise RuntimeError(f"Failed to download context file from {_url}")
+            except requests.Timeout:
+                _handle_transient_context_download_error(
+                    context_file=context_file,
+                    original_url=original_url,
+                    resolved_url=_url,
+                    reason="timeout",
+                )
+            except requests.HTTPError as exc:
+                status_code = getattr(exc.response, "status_code", None)
+                if status_code in {500, 502, 503, 504}:
+                    _handle_transient_context_download_error(
+                        context_file=context_file,
+                        original_url=original_url,
+                        resolved_url=_url,
+                        reason=f"HTTP {status_code}",
+                    )
                 else:
-                    raise RuntimeError(f"Failed to download context file from {original_url} via {_url}")
+                    context_file.unlink(missing_ok=True)
+                    raise _context_download_error(original_url, _url, "download")
+            except requests.RequestException:
+                context_file.unlink(missing_ok=True)
+                raise _context_download_error(original_url, _url, "download")
         with open(context_file, encoding="utf-8") as f:
             context_data = json.load(f)
-        if original_url in M4I_CONTEXT_URLS or _url in M4I_CONTEXT_URLS:
-            context_data = dict(M4I_CONTEXT_FALLBACK)
+        fallback_context = _context_fallback_for_url(original_url, _url)
+        if fallback_context is not None:
+            context_data = fallback_context
         context_sources.append(context_data)
         context_cache[_url] = context_data
     context = Context(context_sources)

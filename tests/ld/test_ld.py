@@ -9,6 +9,7 @@ from unittest import mock
 import numpy as np
 import ontolutils
 import rdflib
+import requests
 import ssnolib
 from ontolutils import namespaces, urirefs, Thing, QUDT_UNIT
 from ontolutils.ex import dcat
@@ -611,9 +612,16 @@ WHERE {
         url = M4I_CONTEXT_URL
         with temporary_user_cache() as cache_dir:
             self.assertEqual(len(list(cache_dir.glob('*'))), 0)
-            ctx = download_context(url)
+            with mock.patch(
+                    "h5rdmtoolbox.utils.download._request_with_backoff",
+                    side_effect=requests.Timeout("m4i server timed out"),
+            ) as request_with_backoff:
+                ctx = download_context(url)
             self.assertEqual(ctx.vocab, "http://w3id.org/nfdi4ing/metadata4ing#")
             self.assertEqual(len(list(cache_dir.glob('*'))), 1)
+            request_with_backoff.assert_called_once_with(
+                "GET", M4I_CONTEXT_URL, timeout=30, max_retries=8
+            )
             ctx = download_context(url)
             self.assertEqual(ctx.vocab, "http://w3id.org/nfdi4ing/metadata4ing#")
 
@@ -636,6 +644,89 @@ WHERE {
             request_with_backoff.assert_called_once_with(
                 "GET", M4I_CONTEXT_URL, timeout=30, max_retries=8
             )
+
+    def test_download_context_uses_m4i_fallback_for_retryable_http_error(self):
+        with temporary_user_cache() as cache_dir:
+            response = types.SimpleNamespace(
+                status_code=503,
+                content=b"",
+            )
+
+            def raise_for_status():
+                raise requests.HTTPError("server unavailable", response=response)
+
+            response.raise_for_status = raise_for_status
+
+            with mock.patch(
+                    "h5rdmtoolbox.utils.download._request_with_backoff",
+                    return_value=response
+            ) as request_with_backoff:
+                ctx = download_context(M4I_CONTEXT_URL)
+
+            self.assertEqual(ctx.vocab, "http://w3id.org/nfdi4ing/metadata4ing#")
+            self.assertEqual(len(list(cache_dir.glob('*'))), 1)
+            request_with_backoff.assert_called_once_with(
+                "GET", M4I_CONTEXT_URL, timeout=30, max_retries=8
+            )
+
+    def test_download_context_uses_existing_cache_for_timeout(self):
+        context_url = "https://example.org/context.jsonld"
+        with temporary_user_cache() as cache_dir:
+            context_file = cache_dir / "context.jsonld"
+            context_file.write_text(
+                '{"@context": {"ex": "https://example.org/"}}',
+                encoding="utf-8",
+            )
+
+            with mock.patch(
+                    "h5rdmtoolbox.utils.download._request_with_backoff",
+                    side_effect=requests.Timeout("server timed out"),
+            ) as request_with_backoff:
+                ctx = download_context(context_url, force_download=True)
+
+            self.assertEqual(ctx._context_cache["https://example.org/context.jsonld"]["@context"]["ex"],
+                             "https://example.org/")
+            request_with_backoff.assert_called_once_with(
+                "GET", context_url, timeout=30, max_retries=8
+            )
+
+    def test_download_context_raises_for_timeout_without_cache_or_fallback(self):
+        context_url = "https://example.org/context.jsonld"
+        with temporary_user_cache():
+            with mock.patch(
+                    "h5rdmtoolbox.utils.download._request_with_backoff",
+                    side_effect=requests.Timeout("server timed out"),
+            ):
+                with self.assertRaises(RuntimeError):
+                    download_context(context_url)
+
+    def test_download_context_raises_for_non_timeout_m4i_request_error(self):
+        with temporary_user_cache():
+            with mock.patch(
+                    "h5rdmtoolbox.utils.download._request_with_backoff",
+                    side_effect=requests.ConnectionError("connection failed"),
+            ):
+                with self.assertRaises(RuntimeError):
+                    download_context(M4I_CONTEXT_URL)
+
+    def test_download_context_raises_for_non_retryable_m4i_http_error(self):
+        with temporary_user_cache():
+            response = types.SimpleNamespace(
+                status_code=404,
+                content=b"",
+            )
+
+            def raise_for_status():
+                raise requests.HTTPError("not found", response=response)
+
+            response.raise_for_status = raise_for_status
+
+            with mock.patch(
+                    "h5rdmtoolbox.utils.download._request_with_backoff",
+                    return_value=response
+            ):
+                with self.assertRaises(RuntimeError):
+                    download_context(M4I_CONTEXT_URL)
 
     def test_to_hdf_with_graph2(self):
         test_data = """{

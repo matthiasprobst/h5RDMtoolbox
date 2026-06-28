@@ -3,7 +3,6 @@ import sys
 from enum import Enum
 from typing import Annotated, List, Optional
 
-import click
 import typer
 import typer.rich_utils
 from typer.core import TyperGroup
@@ -80,7 +79,7 @@ class LegacyLDGroup(TyperGroup):
 
     def resolve_command(self, ctx, args):
         if args:
-            command_name = click.utils.make_str(args[0])
+            command_name = str(args[0])
             if self.get_command(ctx, command_name) is None:
                 args = ["dump", *args]
         return super().resolve_command(ctx, args)
