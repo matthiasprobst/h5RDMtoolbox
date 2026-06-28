@@ -6,6 +6,7 @@ import tempfile
 from unittest.mock import patch
 
 from typer.testing import CliRunner
+from typer.main import get_command
 
 from h5rdmtoolbox_cli import _graph_output_filename, _resolve_format, h5tbx
 
@@ -69,6 +70,19 @@ class TestCLI(unittest.TestCase):
         self.assertIn("--contextual", result.output)
         self.assertIn("--file-uri", result.output)
         self.assertIn("--graph", result.output)
+
+    def test_command_ld_dump_option_names(self):
+        command = get_command(h5tbx)
+        ld_command = command.get_command(None, "ld")
+        dump_command = ld_command.get_command(None, "dump")
+        opts_by_name = {param.name: param.opts for param in dump_command.params}
+
+        self.assertEqual(opts_by_name["output"], ["-o", "--output"])
+        self.assertEqual(opts_by_name["format"], ["--format"])
+        self.assertEqual(opts_by_name["structural"], ["--structural"])
+        self.assertEqual(opts_by_name["contextual"], ["--contextual"])
+        self.assertEqual(opts_by_name["file_uri"], ["--file-uri"])
+        self.assertEqual(opts_by_name["graph"], ["--graph"])
 
     def test_ld_format_resolution(self):
         self.assertEqual(_resolve_format(None, "out.jsonld"), "json-ld")

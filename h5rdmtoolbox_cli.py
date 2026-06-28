@@ -1,7 +1,7 @@
 import pathlib
 import sys
 from enum import Enum
-from typing import Annotated, List, Optional
+from typing import List, Optional
 
 import typer
 import typer.rich_utils
@@ -103,10 +103,11 @@ ld_app = typer.Typer(
 
 @app.callback()
 def main(
-        fairify: Annotated[
-            Optional[pathlib.Path],
-            typer.Option("--fairify", help="Starts the app helping you to make the file FAIRer."),
-        ] = None,
+        fairify: Optional[pathlib.Path] = typer.Option(
+            None,
+            "--fairify",
+            help="Starts the app helping you to make the file FAIRer.",
+        ),
 ):
     if fairify:
         from h5rdmtoolbox.gui.fairify import start
@@ -118,37 +119,42 @@ def main(
 
 @ld_app.command()
 def dump(
-        filename: Annotated[
-            pathlib.Path,
-            typer.Argument(exists=True, help="HDF5 file to serialize as linked data."),
-        ],
-        output: Annotated[
-            Optional[pathlib.Path],
-            typer.Option("-o", "--output", help="Filename to write the serialized linked-data output to."),
-        ] = None,
-        format: Annotated[
-            Optional[str],
-            typer.Option("--format", help="Output format: ttl, turtle, jsonld, json-ld, or json."),
-        ] = None,
-        structural: Annotated[
-            str,
-            typer.Option("--structural", help="Include structural HDF5 RDF data."),
-        ] = "true",
-        contextual: Annotated[
-            str,
-            typer.Option("--contextual", help="Include contextual/user RDF data."),
-        ] = "true",
-        file_uri: Annotated[
-            Optional[str],
-            typer.Option("--file-uri", help="Base file URI to use for RDF subjects."),
-        ] = None,
-        graph: Annotated[
-            bool,
-            typer.Option(
-                "--graph",
-                help="Generates a graph and stores it in FILENAME-graph.html. Uses pyvis and kglab.",
-            ),
-        ] = False,
+        filename: pathlib.Path = typer.Argument(
+            ...,
+            exists=True,
+            help="HDF5 file to serialize as linked data.",
+        ),
+        output: Optional[pathlib.Path] = typer.Option(
+            None,
+            "-o",
+            "--output",
+            help="Filename to write the serialized linked-data output to.",
+        ),
+        format: Optional[str] = typer.Option(
+            None,
+            "--format",
+            help="Output format: ttl, turtle, jsonld, json-ld, or json.",
+        ),
+        structural: str = typer.Option(
+            "true",
+            "--structural",
+            help="Include structural HDF5 RDF data.",
+        ),
+        contextual: str = typer.Option(
+            "true",
+            "--contextual",
+            help="Include contextual/user RDF data.",
+        ),
+        file_uri: Optional[str] = typer.Option(
+            None,
+            "--file-uri",
+            help="Base file URI to use for RDF subjects.",
+        ),
+        graph: bool = typer.Option(
+            False,
+            "--graph",
+            help="Generates a graph and stores it in FILENAME-graph.html. Uses pyvis and kglab.",
+        ),
 ):
     """Dump an HDF5 file as linked data."""
     structural_value = _parse_bool_option(structural, "--structural")
@@ -187,53 +193,62 @@ def _serialize(filename, fmt, structural=True, contextual=True, file_uri=None):
 
 @app.command()
 def serve(
-        filenames: Annotated[
-            Optional[List[pathlib.Path]],
-            typer.Argument(exists=True, help="HDF5 files or folders to serve."),
-        ] = None,
-        host: Annotated[
-            str,
-            typer.Option("--host", help="Host interface to bind the server to."),
-        ] = "127.0.0.1",
-        port: Annotated[
-            int,
-            typer.Option("--port", help="Port to run the server on."),
-        ] = 8000,
-        no_structural: Annotated[
-            bool,
-            typer.Option("--no-structural", help="Do not include structural RDF."),
-        ] = False,
-        no_contextual: Annotated[
-            bool,
-            typer.Option("--no-contextual", help="Do not include contextual RDF."),
-        ] = False,
-        file_uri: Annotated[
-            Optional[str],
-            typer.Option("--file-uri", help="Base file URI to use for RDF subjects (must end with # or /)."),
-        ] = None,
-        local_iri_pattern: Annotated[
-            Optional[List[str]],
-            typer.Option(
-                "--local-iri-pattern",
-                help='External IRI pattern to resolve locally, e.g. "https://doi.org/10.5281/zenodo.*".',
-            ),
-        ] = None,
-        h5ext: Annotated[
-            Optional[List[str]],
-            typer.Option("--h5ext", help='HDF5 extension to discover in folders, e.g. ".h5" or "hdf5".'),
-        ] = None,
-        recursive: Annotated[
-            bool,
-            typer.Option("--recursive", help="Recursively discover HDF5 files in folders."),
-        ] = False,
-        include_ttl: Annotated[
-            bool,
-            typer.Option("--include-ttl", help="Also include Turtle files in the combined RDF graph."),
-        ] = False,
-        graph_view: Annotated[
-            GraphView,
-            typer.Option("--graph-view", case_sensitive=False, help="Default graph visualization view."),
-        ] = GraphView.two_d,
+        filenames: Optional[List[pathlib.Path]] = typer.Argument(
+            None,
+            exists=True,
+            help="HDF5 files or folders to serve.",
+        ),
+        host: str = typer.Option(
+            "127.0.0.1",
+            "--host",
+            help="Host interface to bind the server to.",
+        ),
+        port: int = typer.Option(
+            8000,
+            "--port",
+            help="Port to run the server on.",
+        ),
+        no_structural: bool = typer.Option(
+            False,
+            "--no-structural",
+            help="Do not include structural RDF.",
+        ),
+        no_contextual: bool = typer.Option(
+            False,
+            "--no-contextual",
+            help="Do not include contextual RDF.",
+        ),
+        file_uri: Optional[str] = typer.Option(
+            None,
+            "--file-uri",
+            help="Base file URI to use for RDF subjects (must end with # or /).",
+        ),
+        local_iri_pattern: Optional[List[str]] = typer.Option(
+            None,
+            "--local-iri-pattern",
+            help='External IRI pattern to resolve locally, e.g. "https://doi.org/10.5281/zenodo.*".',
+        ),
+        h5ext: Optional[List[str]] = typer.Option(
+            None,
+            "--h5ext",
+            help='HDF5 extension to discover in folders, e.g. ".h5" or "hdf5".',
+        ),
+        recursive: bool = typer.Option(
+            False,
+            "--recursive",
+            help="Recursively discover HDF5 files in folders.",
+        ),
+        include_ttl: bool = typer.Option(
+            False,
+            "--include-ttl",
+            help="Also include Turtle files in the combined RDF graph.",
+        ),
+        graph_view: GraphView = typer.Option(
+            GraphView.two_d,
+            "--graph-view",
+            case_sensitive=False,
+            help="Default graph visualization view.",
+        ),
 ):
     """Serve HDF5 file RDF data over HTTP (FastAPI/uvicorn)."""
     structural = not no_structural
@@ -254,22 +269,46 @@ def serve(
 
 @app.command()
 def metrics(
-        rdf_file: Annotated[
-            pathlib.Path,
-            typer.Argument(exists=True, help="RDF file."),
-        ],
-        rdf_format: Annotated[
-            str,
-            typer.Option("--format", help="RDF format (turtle, xml, nt, json-ld)."),
-        ] = "turtle",
-        directed: Annotated[bool, typer.Option("--directed", help="Build directed graph.")] = False,
-        include_literals: Annotated[bool, typer.Option("--include-literals", help="Include literal values as nodes.")] = False,
-        ignore_rdf_type: Annotated[bool, typer.Option("--ignore-rdf-type", help="Ignore rdf:type predicates.")] = False,
-        top_n: Annotated[int, typer.Option("--top-n", help="Top N nodes for centrality.")] = 50,
-        output_dir: Annotated[pathlib.Path, typer.Option("--output-dir", help="Output directory for CSVs.")] = pathlib.Path(
-            "rdf_graph_metrics_output"
+        rdf_file: pathlib.Path = typer.Argument(
+            ...,
+            exists=True,
+            help="RDF file.",
         ),
-        large_threshold: Annotated[int, typer.Option("--large-threshold", help="Threshold to use approx algorithms.")] = 10000,
+        rdf_format: str = typer.Option(
+            "turtle",
+            "--format",
+            help="RDF format (turtle, xml, nt, json-ld).",
+        ),
+        directed: bool = typer.Option(
+            False,
+            "--directed",
+            help="Build directed graph.",
+        ),
+        include_literals: bool = typer.Option(
+            False,
+            "--include-literals",
+            help="Include literal values as nodes.",
+        ),
+        ignore_rdf_type: bool = typer.Option(
+            False,
+            "--ignore-rdf-type",
+            help="Ignore rdf:type predicates.",
+        ),
+        top_n: int = typer.Option(
+            50,
+            "--top-n",
+            help="Top N nodes for centrality.",
+        ),
+        output_dir: pathlib.Path = typer.Option(
+            pathlib.Path("rdf_graph_metrics_output"),
+            "--output-dir",
+            help="Output directory for CSVs.",
+        ),
+        large_threshold: int = typer.Option(
+            10000,
+            "--large-threshold",
+            help="Threshold to use approx algorithms.",
+        ),
 ):
     """Metrics command removed - placeholder to avoid CLI errors if invoked."""
     typer.echo('Error: The metrics command has been removed. Restore the metrics module if you need this functionality.',
