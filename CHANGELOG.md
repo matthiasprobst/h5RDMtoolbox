@@ -8,6 +8,7 @@ Log of changes in the versions
   - add `--recursive` for recursive folder discovery
   - add `--include-ttl` to include Turtle RDF files in the combined graph
   - improve graph layout with collapsible settings and a larger usable graph view
+- refactor `h5tbx` CLI to Typer for improved help output and command-line ergonomics while preserving existing commands
 - improve SHACL validation with ontology graph support
   - add `ont_graph`, `ont_graph_format`, and `merge_ont_graph_into_data` to `validate_hdf(...)`
   - use `hdf_data_format` when parsing string RDF data passed to `validate_hdf(...)`

@@ -1,5 +1,7 @@
 import json
+import contextlib
 import pathlib
+import tempfile
 import types
 import unittest
 from unittest import mock
@@ -29,6 +31,17 @@ from h5rdmtoolbox.wrapper import jsonld
 logger = h5tbx.logger
 
 __this_dir__ = pathlib.Path(__file__).parent
+
+
+@contextlib.contextmanager
+def temporary_user_cache():
+    original_cache_dir = UserDir.user_dirs['cache']
+    with tempfile.TemporaryDirectory() as tmpdir:
+        try:
+            UserDir.user_dirs['cache'] = pathlib.Path(tmpdir)
+            yield UserDir['cache']
+        finally:
+            UserDir.user_dirs['cache'] = original_cache_dir
 
 EXCEPTION_PROPERTIES_NAMESPACES = {
     str(rdflib.OWL),
@@ -596,35 +609,33 @@ WHERE {
 
     def test_download_context(self):
         url = M4I_CONTEXT_URL
-        cache_dir = UserDir['cache']
-        UserDir.clear_cache(delta_days=0)
-        self.assertEqual(len(list(cache_dir.glob('*'))), 0)
-        ctx = download_context(url)
-        self.assertEqual(ctx.vocab, "http://w3id.org/nfdi4ing/metadata4ing#")
-        self.assertEqual(len(list(cache_dir.glob('*'))), 1)
-        ctx = download_context(url)
-        self.assertEqual(ctx.vocab, "http://w3id.org/nfdi4ing/metadata4ing#")
+        with temporary_user_cache() as cache_dir:
+            self.assertEqual(len(list(cache_dir.glob('*'))), 0)
+            ctx = download_context(url)
+            self.assertEqual(ctx.vocab, "http://w3id.org/nfdi4ing/metadata4ing#")
+            self.assertEqual(len(list(cache_dir.glob('*'))), 1)
+            ctx = download_context(url)
+            self.assertEqual(ctx.vocab, "http://w3id.org/nfdi4ing/metadata4ing#")
 
     def test_download_context_normalizes_legacy_m4i_url(self):
         legacy_url = "https://w3id.org/nfdi4ing/metadata4ing/ontology.jsonld"
-        cache_dir = UserDir['cache']
-        UserDir.clear_cache(delta_days=0)
-        response = types.SimpleNamespace(
-            content=b'{"@context": {"@vocab": "http://w3id.org/nfdi4ing/metadata4ing#"}}',
-            raise_for_status=lambda: None,
-        )
+        with temporary_user_cache() as cache_dir:
+            response = types.SimpleNamespace(
+                content=b'{"@context": {"@vocab": "http://w3id.org/nfdi4ing/metadata4ing#"}}',
+                raise_for_status=lambda: None,
+            )
 
-        with mock.patch(
-                "h5rdmtoolbox.utils.download._request_with_backoff",
-                return_value=response
-        ) as request_with_backoff:
-            ctx = download_context(legacy_url)
+            with mock.patch(
+                    "h5rdmtoolbox.utils.download._request_with_backoff",
+                    return_value=response
+            ) as request_with_backoff:
+                ctx = download_context(legacy_url)
 
-        self.assertEqual(ctx.vocab, "http://w3id.org/nfdi4ing/metadata4ing#")
-        self.assertEqual(len(list(cache_dir.glob('*'))), 1)
-        request_with_backoff.assert_called_once_with(
-            "GET", M4I_CONTEXT_URL, timeout=30, max_retries=8
-        )
+            self.assertEqual(ctx.vocab, "http://w3id.org/nfdi4ing/metadata4ing#")
+            self.assertEqual(len(list(cache_dir.glob('*'))), 1)
+            request_with_backoff.assert_called_once_with(
+                "GET", M4I_CONTEXT_URL, timeout=30, max_retries=8
+            )
 
     def test_to_hdf_with_graph2(self):
         test_data = """{
@@ -820,11 +831,12 @@ WHERE {
         self.assertEqual(data[0]['version'].replace("-rc.", "rc"), __version__)
         self.assertTrue('author' in data[0])
         self.assertIsInstance(data[0]['author'], list)
-        with h5tbx.File('test.hdf', 'w') as h5:
-            jsonld.to_hdf(grp=h5.create_group('person'), data=data[0],
-                          context={'@import': "https://doi.org/10.5063/schema/codemeta-2.0"})
-            self.assertEqual(h5['person']['author1'].attrs[rdf.RDF_PREDICATE_ATTR_NAME]['SELF'],
-                             'http://schema.org/author')
+        with temporary_user_cache():
+            with h5tbx.File('test.hdf', 'w') as h5:
+                jsonld.to_hdf(grp=h5.create_group('person'), data=data[0],
+                              context={'@import': "https://doi.org/10.5063/schema/codemeta-2.0"})
+                self.assertEqual(h5['person']['author1'].attrs[rdf.RDF_PREDICATE_ATTR_NAME]['SELF'],
+                                 'http://schema.org/author')
 
         h5tbx.dumps('test.hdf')
 

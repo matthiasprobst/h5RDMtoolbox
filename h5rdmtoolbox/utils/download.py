@@ -108,6 +108,7 @@ def download_context(
         _url = _normalize_context_url(original_url)
         _fname = _url.rsplit("/", 1)[-1]
         context_file = user.UserDir["cache"] / _fname
+        print(context_file)
         if not context_file.exists() or force_download:
             logger.debug(f"Downloading context file from {_url} to {context_file}")
             try:
@@ -118,9 +119,13 @@ def download_context(
                     r.raise_for_status()
                     f.write(r.content)
             except requests.RequestException:
-                if original_url == _url:
+                if original_url in M4I_CONTEXT_URLS or _url in M4I_CONTEXT_URLS:
+                    with open(context_file, "w", encoding="utf-8") as f:
+                        json.dump({"@context": M4I_CONTEXT_FALLBACK}, f)
+                elif original_url == _url:
                     raise RuntimeError(f"Failed to download context file from {_url}")
-                raise RuntimeError(f"Failed to download context file from {original_url} via {_url}")
+                else:
+                    raise RuntimeError(f"Failed to download context file from {original_url} via {_url}")
         with open(context_file, encoding="utf-8") as f:
             context_data = json.load(f)
         if original_url in M4I_CONTEXT_URLS or _url in M4I_CONTEXT_URLS:
