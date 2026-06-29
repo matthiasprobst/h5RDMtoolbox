@@ -34,7 +34,7 @@ class TestCLI(unittest.TestCase):
 
     def test_entrypoint_help(self):
         runner = CliRunner()
-        result = runner.invoke(h5tbx, ['--help'])
+        result = runner.invoke(h5tbx, ['--help'], color=False)
 
         self.assertIsNone(result.exception)
         self.assertIn("Usage:", result.output)
@@ -42,7 +42,7 @@ class TestCLI(unittest.TestCase):
 
     def test_help(self):
         runner = CliRunner()
-        result = runner.invoke(h5tbx, ['--help', ])
+        result = runner.invoke(h5tbx, ['--help', ], color=False)
 
         self.assertIsNone(result.exception)
         self.assertIn("Usage:", result.output)
@@ -53,14 +53,14 @@ class TestCLI(unittest.TestCase):
 
     def test_command_ld(self):
         runner = CliRunner()
-        result = runner.invoke(h5tbx, ["ld", "--help"])
+        result = runner.invoke(h5tbx, ["ld", "--help"], color=False)
         self.assertIsNone(result.exception)
         self.assertIn("Usage:", result.output)
         self.assertIn("dump", result.output)
 
     def test_command_ld_dump_help(self):
         runner = CliRunner()
-        result = runner.invoke(h5tbx, ["ld", "dump", "--help"])
+        result = runner.invoke(h5tbx, ["ld", "dump", "--help"], color=False)
         self.assertIsNone(result.exception)
         self.assertIn("Usage:", result.output)
         self.assertIn("FILENAME", result.output)
