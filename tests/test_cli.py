@@ -2,6 +2,7 @@ import unittest
 import contextlib
 import os
 import pathlib
+import re
 import tempfile
 from unittest.mock import patch
 
@@ -9,6 +10,9 @@ from typer.testing import CliRunner
 from typer.main import get_command
 
 from h5rdmtoolbox_cli import _graph_output_filename, _resolve_format, h5tbx
+
+
+ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 
 
 @contextlib.contextmanager
@@ -30,46 +34,56 @@ def combined_output(result):
     return result.output + stderr
 
 
+def normalize_cli_output(text: str) -> str:
+    text = ANSI_ESCAPE_RE.sub("", text)
+    return " ".join(text.split())
+
+
 class TestCLI(unittest.TestCase):
 
     def test_entrypoint_help(self):
         runner = CliRunner()
         result = runner.invoke(h5tbx, ['--help'], color=False)
+        output = normalize_cli_output(result.output)
 
         self.assertIsNone(result.exception)
-        self.assertIn("Usage:", result.output)
-        self.assertIn("ld", result.output)
+        self.assertIn("Usage:", output)
+        self.assertIn("ld", output)
 
     def test_help(self):
         runner = CliRunner()
         result = runner.invoke(h5tbx, ['--help', ], color=False)
+        output = normalize_cli_output(result.output)
 
         self.assertIsNone(result.exception)
-        self.assertIn("Usage:", result.output)
-        self.assertIn("--fairify", result.output)
-        self.assertIn("ld", result.output)
-        self.assertIn("metrics", result.output)
-        self.assertIn("serve", result.output)
+        self.assertIn("Usage:", output)
+        self.assertIn("--fairify", output)
+        self.assertIn("ld", output)
+        self.assertIn("metrics", output)
+        self.assertIn("serve", output)
 
     def test_command_ld(self):
         runner = CliRunner()
         result = runner.invoke(h5tbx, ["ld", "--help"], color=False)
+        output = normalize_cli_output(result.output)
         self.assertIsNone(result.exception)
-        self.assertIn("Usage:", result.output)
-        self.assertIn("dump", result.output)
+        self.assertIn("Usage:", output)
+        self.assertIn("dump", output)
 
     def test_command_ld_dump_help(self):
         runner = CliRunner()
         result = runner.invoke(h5tbx, ["ld", "dump", "--help"], color=False)
+        output = normalize_cli_output(result.output)
         self.assertIsNone(result.exception)
-        self.assertIn("Usage:", result.output)
-        self.assertIn("FILENAME", result.output)
-        self.assertIn("--output", result.output)
-        self.assertIn("--format", result.output)
-        self.assertIn("--structural", result.output)
-        self.assertIn("--contextual", result.output)
-        self.assertIn("--file-uri", result.output)
-        self.assertIn("--graph", result.output)
+        self.assertIn("Usage:", output)
+        self.assertIn("FILENAME", output)
+        self.assertIn("--output", output)
+        self.assertIn("Filename to write the serialized", output)
+        self.assertIn("--format", output)
+        self.assertIn("--structural", output)
+        self.assertIn("--contextual", output)
+        self.assertIn("--file-uri", output)
+        self.assertIn("--graph", output)
 
     def test_command_ld_dump_option_names(self):
         command = get_command(h5tbx)
