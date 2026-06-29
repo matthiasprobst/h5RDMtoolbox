@@ -10,6 +10,10 @@
   const nodeDetails = document.getElementById("node-details");
   const hiddenNodeToggle = document.getElementById("hidden-node-toggle");
   const hiddenNodeList = document.getElementById("hidden-node-list");
+  const classList = document.getElementById("class-list");
+  const classSearch = document.getElementById("class-search");
+  const classEmpty = document.getElementById("class-empty");
+  const classClear = document.getElementById("class-clear");
   const labelModeInput = document.getElementById("label-mode");
   const colorByInput = document.getElementById("color-by");
   const colorSchemeInput = document.getElementById("color-scheme");
@@ -31,9 +35,11 @@
   const loadingNodeIds = new Set();
   const positionCache = new Map();
   const nodeById = allNodes;
+  let activeClassId = null;
   let hideNode = () => {};
   let unhideNode = () => {};
   let refreshVisibleGraph = () => {};
+  let navigateToNode = async () => {};
   let network = null;
   let nodes = null;
   let edges = null;
@@ -94,13 +100,48 @@
     return node.group || (node.namespace === "blank" ? "blank" : "resource");
   };
 
+  const nodeClassIds = (node) => {
+    if (Array.isArray(node.rdf_class_ids)) {
+      return node.rdf_class_ids;
+    }
+    return node.rdf_class ? [`class:${node.rdf_class}`] : [];
+  };
+
+  const nodeMatchesActiveClass = (node) => !activeClassId || nodeClassIds(node).includes(activeClassId);
+  const edgeTouchesActiveClass = (edge) => {
+    if (!activeClassId) {
+      return true;
+    }
+    const fromNode = nodeById.get(edge.from);
+    const toNode = nodeById.get(edge.to);
+    return Boolean(
+      (fromNode && nodeMatchesActiveClass(fromNode))
+      || (toNode && nodeMatchesActiveClass(toNode))
+    );
+  };
+
+  const groupColor = (node) => {
+    const group = allGroups[selectedNodeGroup(node)] || {};
+    if (typeof group.color === "string") {
+      return group.color;
+    }
+    return group.color?.background || "#0b6f85";
+  };
+
   const visibleNode = (node) => ({
     ...node,
     group: selectedNodeGroup(node),
     label: renderedLabelsEnabled() ? node.label : undefined,
     title: node.label,
-    borderWidth: node.expandable ? 3 : 1,
-    size: selectedNodeSize() + (node.expandable ? 3 : 0)
+    borderWidth: activeClassId && nodeMatchesActiveClass(node) ? 4 : (node.expandable ? 3 : 1),
+    size: selectedNodeSize() + (node.expandable ? 3 : 0) + (activeClassId && nodeMatchesActiveClass(node) ? 3 : 0),
+    color: activeClassId && !nodeMatchesActiveClass(node)
+      ? { background: "#edf1f5", border: "#d8dee6" }
+      : undefined,
+    font: activeClassId && !nodeMatchesActiveClass(node)
+      ? { color: "#98a2b3" }
+      : undefined,
+    shadow: Boolean(activeClassId && nodeMatchesActiveClass(node))
   });
 
   const visibleEdge = (edge) => ({
@@ -108,7 +149,11 @@
     id: edgeKey(edge),
     label: renderedLabelsEnabled() ? edge.label : undefined,
     title: edge.label,
-    width: selectedEdgeWidth()
+    width: activeClassId && edgeTouchesActiveClass(edge) ? selectedEdgeWidth() + 2 : selectedEdgeWidth(),
+    color: activeClassId && !edgeTouchesActiveClass(edge)
+      ? { color: "#e3e8ef", highlight: "#e3e8ef" }
+      : undefined,
+    dashes: Boolean(activeClassId && !edgeTouchesActiveClass(edge))
   });
 
   const applyGraphBackground = () => {
@@ -174,6 +219,85 @@
 
   addGraphPayload(graphData, "base");
 
+  const visibleGraphNodes = () => Array.from(allNodes.values()).filter((node) => !hiddenNodeIds.has(node.id));
+  const visibleGraphEdges = () => Array.from(allEdges.values())
+    .filter((edge) => !hiddenNodeIds.has(edge.from) && !hiddenNodeIds.has(edge.to));
+
+  const classRows = () => {
+    const byClass = new Map();
+    visibleGraphNodes().forEach((node) => {
+      const labels = Array.isArray(node.rdf_classes) ? node.rdf_classes : [];
+      nodeClassIds(node).forEach((classId, index) => {
+        const row = byClass.get(classId) || {
+          id: classId,
+          label: labels[index] || classId.replace(/^class:/, ""),
+          count: 0,
+          color: allGroups[classId]?.color || {}
+        };
+        row.count += 1;
+        byClass.set(classId, row);
+      });
+    });
+    return Array.from(byClass.values()).sort((left, right) => (
+      right.count - left.count || left.label.localeCompare(right.label)
+    ));
+  };
+
+  const renderClassList = () => {
+    if (!classList || !classEmpty || !classClear) {
+      return;
+    }
+    const rows = classRows();
+    const search = (classSearch?.value || "").trim().toLowerCase();
+    const filteredRows = search
+      ? rows.filter((row) => row.label.toLowerCase().includes(search) || row.id.toLowerCase().includes(search))
+      : rows;
+    classClear.classList.toggle("active", activeClassId === null);
+    classClear.setAttribute("aria-pressed", String(activeClassId === null));
+    classEmpty.textContent = rows.length === 0 ? "No RDF classes are visible." : "No classes match this search.";
+    classEmpty.classList.toggle("visible", filteredRows.length === 0);
+    classList.innerHTML = filteredRows.map((row) => {
+      const color = typeof row.color === "string" ? row.color : (row.color?.background || "#d8dee6");
+      const active = row.id === activeClassId;
+      return `<button type="button" role="option" aria-selected="${active}" class="${active ? "active" : ""}" data-class-id="${escapeHtml(row.id)}">
+        <span class="class-swatch" style="background-color:${escapeHtml(color)}"></span>
+        <span class="class-label">${escapeHtml(row.label)}</span>
+        <span class="class-count">${row.count}</span>
+      </button>`;
+    }).join("");
+  };
+
+  const activeClassNodeIds = () => visibleGraphNodes()
+    .filter(nodeMatchesActiveClass)
+    .map((node) => node.id);
+
+  const fitActiveClass = () => {
+    if (!activeClassId || !network) {
+      return;
+    }
+    const matchingNodeIds = activeClassNodeIds();
+    if (matchingNodeIds.length === 0) {
+      return;
+    }
+    if (activeGraphView === "3d" && typeof network.zoomToFit === "function") {
+      const matchingNodeIdSet = new Set(matchingNodeIds);
+      network.zoomToFit(500, 80, (node) => matchingNodeIdSet.has(node.id));
+      return;
+    }
+    if (typeof network.fit === "function") {
+      network.fit({ nodes: matchingNodeIds, animation: { duration: 450, easingFunction: "easeInOutQuad" } });
+    }
+  };
+
+  const selectClass = (classId, fit = false) => {
+    activeClassId = classId === activeClassId ? null : classId;
+    refreshVisibleGraph();
+    renderClassList();
+    if (fit) {
+      fitActiveClass();
+    }
+  };
+
   const updateHiddenNodeMenu = () => {
     const hiddenNodes = Array.from(hiddenNodeIds)
       .map((nodeId) => nodeById.get(nodeId))
@@ -192,23 +316,78 @@
       .join("");
   };
 
+  if (classList) {
+    classList.addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-class-id]");
+      if (!button) {
+        return;
+      }
+      selectClass(button.dataset.classId, true);
+    });
+  }
+
+  if (classClear) {
+    classClear.addEventListener("click", () => {
+      activeClassId = null;
+      refreshVisibleGraph();
+      renderClassList();
+    });
+  }
+
+  if (classSearch) {
+    classSearch.addEventListener("input", renderClassList);
+  }
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && activeClassId) {
+      activeClassId = null;
+      refreshVisibleGraph();
+      renderClassList();
+    }
+  });
+
   const showNodeDetails = (node) => {
     const literals = node.literals || [];
+    const outgoingLinks = node.outgoing_links || [];
+    const incomingLinks = node.incoming_links || [];
     const hiddenNeighborText = node.hidden_neighbor_count
       ? `<p class="no-literals">${node.hidden_neighbor_count} more connected node(s). Double-click to expand.</p>`
       : "";
     const literalRows = literals.length
       ? `<dl>${literals.map((literal) => `<dt>${escapeHtml(literal.predicate)}</dt><dd>${escapeHtml(literal.value)}</dd>`).join("")}</dl>`
       : '<p class="no-literals">No literal values are available for this node.</p>';
+    const outgoingRows = outgoingLinks.length
+      ? `<section class="outgoing-links-section"><h3>Outgoing connections</h3><dl>${outgoingLinks.map((link) => {
+          // prefer the provided label; convert "prefix:Local" -> "prefix.Local"
+          const displayLabel = link.target_label
+            ? String(link.target_label)
+            : String(link.target_id);
+          return `<dt>${escapeHtml(link.predicate)}</dt><dd><button type="button" class="outgoing-node-link" data-node-id="${escapeHtml(link.target_id)}" title="${escapeHtml(link.target_id)}">${escapeHtml(displayLabel)}</button></dd>`;
+        }).join("")}</dl></section>`
+      : "";
+    const incomingRows = incomingLinks.length
+      ? `<section class="outgoing-links-section"><h3>Incoming connections</h3><dl>${incomingLinks.map((link) => {
+          const displayLabel = link.source_label ? String(link.source_label) : String(link.source_id);
+          return `<dt>${escapeHtml(link.predicate)}</dt><dd><button type="button" class="outgoing-node-link" data-node-id="${escapeHtml(link.source_id)}" title="${escapeHtml(link.source_id)}">${escapeHtml(displayLabel)}</button></dd>`;
+        }).join("")}</dl></section>`
+      : "";
     const localLink = node.local_href
       ? `<a class="node-link" href="${escapeHtml(node.local_href)}" target="_blank" rel="noopener">Open local TTL</a>`
       : "";
-    nodeDetails.innerHTML = `<div class="node-details-header"><h2>${escapeHtml(node.label)}</h2><button type="button" class="hide-node-button">Hide</button></div>${localLink}${hiddenNeighborText}${literalRows}`;
+    nodeDetails.innerHTML = `<div class="node-details-header"><h2>${escapeHtml(node.label)}</h2><button type="button" class="hide-node-button">Hide</button></div>${localLink}${hiddenNeighborText}${literalRows}${outgoingRows}${incomingRows}`;
     nodeDetails.querySelector(".hide-node-button").addEventListener("click", () => {
       hideNode(node.id);
     });
     nodeDetails.style.display = "block";
   };
+
+  nodeDetails.addEventListener("click", (event) => {
+    const button = event.target.closest("button[data-node-id].outgoing-node-link, button[data-node-id].incoming-node-link");
+    if (!button) {
+      return;
+    }
+    navigateToNode(button.dataset.nodeId);
+  });
 
   hiddenNodeToggle.addEventListener("click", () => {
     const isOpen = hiddenNodeList.classList.toggle("open");
@@ -268,11 +447,13 @@
   }
 
   if (graphData.nodes.length === 0) {
+    renderClassList();
     emptyGraph.style.display = "block";
     return;
   }
 
   if (!window.vis) {
+    renderClassList();
     emptyGraph.textContent = "The 2D graph library could not be loaded.";
     emptyGraph.style.display = "block";
     return;
@@ -280,34 +461,25 @@
 
   const groups = allGroups;
 
-  const groupColor = (node) => {
-    const group = groups[selectedNodeGroup(node)] || {};
-    if (typeof group.color === "string") {
-      return group.color;
-    }
-    return group.color?.background || "#0b6f85";
-  };
-
   const visible3dNode = (node) => ({
     ...node,
     name: node.label,
-    val: (selectedNodeSize() / 14 * 3) + (node.expandable ? 2 : 0),
-    color: groupColor(node)
+    val: (selectedNodeSize() / 14 * 3) + (node.expandable ? 2 : 0) + (activeClassId && nodeMatchesActiveClass(node) ? 2 : 0),
+    color: activeClassId && !nodeMatchesActiveClass(node) ? "#d8dee6" : groupColor(node)
   });
 
   const visible3dLink = (edge) => ({
     ...edge,
     source: edge.from,
     target: edge.to,
-    width: selectedEdgeWidth()
+    width: activeClassId && edgeTouchesActiveClass(edge) ? selectedEdgeWidth() + 2 : selectedEdgeWidth(),
+    color: activeClassId && !edgeTouchesActiveClass(edge) ? "#e3e8ef" : "#9aa4b2"
   });
 
   const visible3dData = () => ({
-    nodes: Array.from(allNodes.values())
-      .filter((node) => !hiddenNodeIds.has(node.id))
+    nodes: visibleGraphNodes()
       .map(visible3dNode),
-    links: Array.from(allEdges.values())
-      .filter((edge) => !hiddenNodeIds.has(edge.from) && !hiddenNodeIds.has(edge.to))
+    links: visibleGraphEdges()
       .map(visible3dLink)
   });
 
@@ -315,20 +487,18 @@
     rememberPositions();
     network.setOptions({ groups });
     nodes.clear();
-    nodes.add(Array.from(allNodes.values())
-      .filter((node) => !hiddenNodeIds.has(node.id))
-      .map(visibleNodeWithPosition));
+    nodes.add(visibleGraphNodes().map(visibleNodeWithPosition));
     edges.clear();
-    edges.add(Array.from(allEdges.values())
-      .filter((edge) => !hiddenNodeIds.has(edge.from) && !hiddenNodeIds.has(edge.to))
-      .map(visibleEdge));
+    edges.add(visibleGraphEdges().map(visibleEdge));
     updateHiddenNodeMenu();
+    renderClassList();
   };
 
   const refresh3dGraph = () => {
     applyGraphBackground();
     network.graphData(visible3dData());
     updateHiddenNodeMenu();
+    renderClassList();
   };
 
   const hasWebGLSupport = () => {
@@ -360,6 +530,7 @@
       edges.remove(incidentEdgeIds);
       nodes.remove(nodeId);
       updateHiddenNodeMenu();
+      renderClassList();
     }
   };
 
@@ -373,11 +544,28 @@
       if (node) {
         nodes.update(visibleNodeWithPosition(node));
       }
-      const restoredEdges = Array.from(allEdges.values())
-        .filter((edge) => !hiddenNodeIds.has(edge.from) && !hiddenNodeIds.has(edge.to))
-        .map(visibleEdge);
+      const restoredEdges = visibleGraphEdges().map(visibleEdge);
       edges.update(restoredEdges);
       updateHiddenNodeMenu();
+      renderClassList();
+    }
+  };
+
+  const centerNode = (nodeId) => {
+    if (!network) {
+      return;
+    }
+    if (typeof network.selectNodes === "function") {
+      network.selectNodes([nodeId]);
+    }
+    if (activeGraphView === "3d" && typeof network.zoomToFit === "function") {
+      network.zoomToFit(500, 80, (node) => node.id === nodeId);
+      return;
+    }
+    if (typeof network.focus === "function") {
+      network.focus(nodeId, { scale: 1.1, animation: { duration: 450, easingFunction: "easeInOutQuad" } });
+    } else if (typeof network.fit === "function") {
+      network.fit({ nodes: [nodeId], animation: { duration: 450, easingFunction: "easeInOutQuad" } });
     }
   };
 
@@ -455,6 +643,49 @@
     }
   };
 
+  const loadFocusedNode = async (nodeId) => {
+    if (loadingNodeIds.has(nodeId)) {
+      return;
+    }
+    loadingNodeIds.add(nodeId);
+    setGraphStatus(`Loading ${nodeId}...`, "loading");
+    try {
+      const response = await fetch(`${graphDataUrl}?${expansionParams(nodeId).toString()}`);
+      if (!response.ok) {
+        throw new Error(`Graph navigation failed with HTTP ${response.status}`);
+      }
+      const payload = await response.json();
+      addGraphPayload(payload, `navigate:${nodeId}`);
+      refreshVisibleGraph();
+      setGraphStatus("");
+    } catch (error) {
+      setGraphStatus(error.message || "Graph navigation failed.", "error");
+    } finally {
+      loadingNodeIds.delete(nodeId);
+    }
+  };
+
+  navigateToNode = async (nodeId) => {
+    if (!nodeId) {
+      return;
+    }
+    if (hiddenNodeIds.has(nodeId)) {
+      unhideNode(nodeId);
+    }
+    if (!allNodes.has(nodeId)) {
+      await loadFocusedNode(nodeId);
+    }
+    const targetNode = nodeById.get(nodeId);
+    if (!targetNode) {
+      setGraphStatus(`Could not load ${nodeId}.`, "error");
+      return;
+    }
+    hiddenNodeIds.delete(nodeId);
+    refreshVisibleGraph();
+    centerNode(nodeId);
+    showNodeDetails(targetNode);
+  };
+
   const initialize3dGraph = () => {
     activeGraphView = "3d";
     refreshVisibleGraph = refresh3dGraph;
@@ -467,7 +698,7 @@
       .linkWidth((link) => link.width)
       .linkDirectionalArrowLength(3)
       .linkDirectionalArrowRelPos(1)
-      .linkColor(() => "#9aa4b2")
+      .linkColor((link) => link.color || "#9aa4b2")
       .backgroundColor(selectedBackgroundColor())
       .onBackgroundClick(() => {
         nodeDetails.style.display = "none";
@@ -565,4 +796,5 @@
 
   applyGraphBackground();
   updateHiddenNodeMenu();
+  renderClassList();
 }());

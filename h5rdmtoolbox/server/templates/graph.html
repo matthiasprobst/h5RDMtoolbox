@@ -113,14 +113,27 @@
     </div>
   </details>
   <section class="graph-panel">
-    <div class="hidden-node-menu">
-      <button type="button" id="hidden-node-toggle" aria-expanded="false">Hidden nodes (0)</button>
-      <div class="hidden-node-list" id="hidden-node-list"></div>
+    <aside class="class-panel" aria-labelledby="class-panel-title">
+      <div class="class-panel-header">
+        <h2 id="class-panel-title">Classes</h2>
+        <button type="button" id="class-clear" class="class-clear-button">All classes</button>
+      </div>
+      <label class="class-search-label">Search classes
+        <input type="search" id="class-search" placeholder="Class name">
+      </label>
+      <div class="class-list" id="class-list" role="listbox" aria-label="RDF classes"></div>
+      <p class="class-empty" id="class-empty">No RDF classes are visible.</p>
+    </aside>
+    <div class="graph-canvas">
+      <div class="hidden-node-menu">
+        <button type="button" id="hidden-node-toggle" aria-expanded="false">Hidden nodes (0)</button>
+        <div class="hidden-node-list" id="hidden-node-list"></div>
+      </div>
+      <div id="network"></div>
+      <p class="graph-status" id="graph-status" aria-live="polite"></p>
+      <aside class="node-details" id="node-details" aria-live="polite"></aside>
+      <p class="empty-graph" id="empty-graph">No RDF triples are available for this selection.</p>
     </div>
-    <div id="network"></div>
-    <p class="graph-status" id="graph-status" aria-live="polite"></p>
-    <aside class="node-details" id="node-details" aria-live="polite"></aside>
-    <p class="empty-graph" id="empty-graph">No RDF triples are available for this selection.</p>
   </section>
 </main>
 <script id="graph-data" type="application/json">{{ graph_json | safe }}</script>

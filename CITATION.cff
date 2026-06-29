@@ -13,5 +13,5 @@ authors:
 title: "h5rdmtoolbox - HDF5 Research Data Management Toolbox"
 version: 2.8.1
 doi: 10.5281/zenodo.20808948
-date-released: 2026-06-28
+date-released: 2026-06-29
 url: "https://github.com/matthiasprobst/h5rdmtoolbox"

@@ -755,6 +755,12 @@ def test_file_graph_endpoint_returns_interactive_page(hdf_filename):
     assert 'id="graph-status"' in response.text
     assert 'id="hidden-node-toggle"' in response.text
     assert 'id="hidden-node-list"' in response.text
+    assert 'class="class-panel"' in response.text
+    assert 'id="class-panel-title"' in response.text
+    assert 'id="class-clear"' in response.text
+    assert 'id="class-search"' in response.text
+    assert 'id="class-list"' in response.text
+    assert 'id="class-empty"' in response.text
     assert 'id="label-mode"' in response.text
     assert 'id="graph-detail"' in response.text
     assert 'id="graph-view"' in response.text
@@ -800,10 +806,15 @@ def test_file_graph_endpoint_returns_interactive_page(hdf_filename):
     assert "Double-click expansion depth" in response.text
     assert 'name="labels"' in response.text
     assert '<section class="graph-panel">' in response.text
+    assert '<div class="graph-canvas">' in response.text
     assert '"nodes":' in response.text
     assert '"edges":' in response.text
     assert '"groups":' in response.text
+    assert '"classes":' in response.text
     assert '"literals":' in response.text
+    assert '"outgoing_links":' in response.text
+    assert '"rdf_class_ids":' in response.text
+    assert '"rdf_classes":' in response.text
     assert '"expandable":' in response.text
     assert '"hidden_neighbor_count":' in response.text
     assert '"namespace":' in response.text
@@ -853,6 +864,22 @@ def test_file_graph_endpoint_returns_interactive_page(hdf_filename):
     assert "colorByInput" in graph_js.text
     assert "selectedColorMode" in graph_js.text
     assert "selectedNodeGroup" in graph_js.text
+    assert "classList" in graph_js.text
+    assert "activeClassId" in graph_js.text
+    assert "renderClassList" in graph_js.text
+    assert "selectClass" in graph_js.text
+    assert "nodeClassIds" in graph_js.text
+    assert "nodeMatchesActiveClass" in graph_js.text
+    assert "fitActiveClass" in graph_js.text
+    assert "outgoing_links" in graph_js.text
+    assert "Outgoing connections" in graph_js.text
+    assert "outgoing-node-link" in graph_js.text
+    assert "navigateToNode" in graph_js.text
+    assert "loadFocusedNode" in graph_js.text
+    assert "centerNode" in graph_js.text
+    assert "Graph navigation failed" in graph_js.text
+    assert "network.fit({ nodes: matchingNodeIds" in graph_js.text
+    assert "network.zoomToFit(500, 80" in graph_js.text
     assert 'params.set("color_by"' in graph_js.text
     assert "colorSchemeInput" in graph_js.text
     assert 'params.set("color_scheme"' in graph_js.text
@@ -891,6 +918,14 @@ def test_file_graph_endpoint_returns_interactive_page(hdf_filename):
     assert ".graph-settings" in graph_css.text
     assert ".graph-settings-summary" in graph_css.text
     assert ".graph-settings-body" in graph_css.text
+    assert ".class-panel" in graph_css.text
+    assert ".class-list" in graph_css.text
+    assert ".class-clear-button" in graph_css.text
+    assert ".class-swatch" in graph_css.text
+    assert ".class-empty.visible" in graph_css.text
+    assert ".outgoing-links-section" in graph_css.text
+    assert ".outgoing-node-link" in graph_css.text
+    assert "grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);" in graph_css.text
     assert "max-height: min(46dvh, 460px);" in graph_css.text
     assert "overflow: auto;" in graph_css.text
     assert "overflow-wrap: anywhere;" in graph_css.text
@@ -1069,6 +1104,91 @@ def test_file_graph_data_endpoint_supports_color_schemes(monkeypatch, hdf_filena
         "background": "#eceff3",
         "border": "#667085",
     }
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_file_graph_data_endpoint_includes_class_index(monkeypatch, hdf_filename):
+    import h5rdmtoolbox.server as server
+
+    graph = rdflib.Graph()
+    graph.bind("ex", rdflib.Namespace("https://example.org/ns#"))
+    alpha = rdflib.URIRef("https://example.org/ns#alpha")
+    beta = rdflib.URIRef("https://example.org/ns#beta")
+    graph.add((alpha, rdflib.RDF.type, rdflib.URIRef("https://example.org/ns#Sample")))
+    graph.add((alpha, rdflib.RDF.type, rdflib.URIRef("https://example.org/ns#Extra")))
+    graph.add((beta, rdflib.RDF.type, rdflib.URIRef("https://example.org/ns#Sample")))
+    graph.add((alpha, rdflib.URIRef("https://example.org/ns#linksTo"), beta))
+    monkeypatch.setattr(server, "get_ld", lambda *args, **kwargs: graph)
+    client = TestClient(server.create_app(hdf_filename))
+
+    response = client.get("/server_test.h5/graph-data")
+    payload = response.json()
+
+    assert response.status_code == 200
+    classes = {item["id"]: item for item in payload["classes"]}
+    assert classes["class:ex:Extra"]["label"] == "ex:Extra"
+    assert classes["class:ex:Extra"]["count"] == 1
+    assert classes["class:ex:Sample"]["label"] == "ex:Sample"
+    assert classes["class:ex:Sample"]["count"] == 2
+    assert classes["class:ex:Sample"]["color"] == payload["groups"]["class:ex:Sample"]["color"]
+
+    alpha_node = next(node for node in payload["nodes"] if node["id"] == str(alpha))
+    assert alpha_node["rdf_class"] == "ex:Extra"
+    assert alpha_node["rdf_classes"] == ["ex:Extra", "ex:Sample"]
+    assert alpha_node["rdf_class_ids"] == ["class:ex:Extra", "class:ex:Sample"]
+    assert alpha_node["group"] == "class:ex:Extra"
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_file_graph_data_endpoint_returns_empty_class_index_for_untyped_graph(monkeypatch, hdf_filename):
+    import h5rdmtoolbox.server as server
+
+    graph = rdflib.Graph()
+    graph.add((
+        rdflib.URIRef("https://example.org/alpha"),
+        rdflib.URIRef("https://example.org/linksTo"),
+        rdflib.URIRef("https://example.org/beta"),
+    ))
+    monkeypatch.setattr(server, "get_ld", lambda *args, **kwargs: graph)
+    client = TestClient(server.create_app(hdf_filename))
+
+    response = client.get("/server_test.h5/graph-data")
+    payload = response.json()
+
+    assert response.status_code == 200
+    assert payload["classes"] == []
+    assert all(node["rdf_class_ids"] == [] for node in payload["nodes"])
+    assert all(node["rdf_classes"] == [] for node in payload["nodes"])
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_file_graph_data_endpoint_includes_outgoing_links_for_unrendered_targets(monkeypatch, hdf_filename):
+    import h5rdmtoolbox.server as server
+
+    graph = rdflib.Graph()
+    graph.bind("ex", rdflib.Namespace("https://example.org/"))
+    alpha = rdflib.URIRef("https://example.org/alpha")
+    beta = rdflib.URIRef("https://example.org/beta")
+    gamma = rdflib.URIRef("https://example.org/gamma")
+    graph.add((alpha, rdflib.URIRef("https://example.org/name"), rdflib.Literal("Alpha")))
+    graph.add((alpha, rdflib.URIRef("https://example.org/linksTo"), beta))
+    graph.add((alpha, rdflib.URIRef("https://example.org/relatedTo"), gamma))
+    monkeypatch.setattr(server, "get_ld", lambda *args, **kwargs: graph)
+    client = TestClient(server.create_app(hdf_filename))
+
+    response = client.get("/server_test.h5/graph-data?limit_nodes=1&limit_edges=0&include_isolated=true")
+    payload = response.json()
+
+    assert response.status_code == 200
+    assert [node["id"] for node in payload["nodes"]] == [str(alpha)]
+    alpha_node = payload["nodes"][0]
+    assert alpha_node["literals"] == [{"predicate": "ex:name", "value": "Alpha"}]
+    outgoing_links = {
+        (link["predicate"], link["target_id"], link["target_label"], link["target_is_visible"])
+        for link in alpha_node["outgoing_links"]
+    }
+    assert ("ex:linksTo", str(beta), "ex:beta", False) in outgoing_links
+    assert ("ex:relatedTo", str(gamma), "ex:gamma", False) in outgoing_links
 
 
 @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")

@@ -17,6 +17,7 @@ Log of changes in the versions
   - update metadata4ing/m4i context URL handling, normalize legacy URLs, and provide an offline fallback context
 - improve RDF graph labels by using compact Zenodo prefixes `zen:` and `rzen:`
 - update FAQ, metadata4ing, and SHACL validation documentation
+- improve popup in the served graph view, allowing to jump between ingoing and outgoing edges of a node
 
 ## v2.8.0
 

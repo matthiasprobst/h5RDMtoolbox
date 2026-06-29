@@ -1554,9 +1554,17 @@ LIMIT 100"""
         color_scheme_config = GRAPH_COLOR_SCHEMES[color_scheme]
         class_palette = color_scheme_config["palette"]
         neutral_background, neutral_border = color_scheme_config["neutral"]
+        type_labels_by_node = {}
+        for subject, obj in rdf_graph.subject_objects(rdflib.RDF.type):
+            type_labels_by_node.setdefault(str(subject), set()).add(_graph_label(obj, rdf_graph))
+        type_labels_by_node = {
+            subject_id: sorted(class_labels)
+            for subject_id, class_labels in type_labels_by_node.items()
+        }
         type_by_node = {
-            str(subject): _graph_label(obj, rdf_graph)
-            for subject, obj in rdf_graph.subject_objects(rdflib.RDF.type)
+            subject_id: class_labels[0]
+            for subject_id, class_labels in type_labels_by_node.items()
+            if class_labels
         }
         node_terms = set()
         resource_edges = []
@@ -1660,8 +1668,13 @@ LIMIT 100"""
             node_terms_to_render.add(focus_term)
         dropped_isolated_visible_nodes = len(selected_terms - node_terms_to_render)
 
+        rendered_class_labels = sorted({
+            class_label
+            for term in node_terms_to_render
+            for class_label in type_labels_by_node.get(str(term), [])
+        })
         class_groups = {}
-        for index, class_label in enumerate(sorted(set(type_by_node.values()))):
+        for index, class_label in enumerate(rendered_class_labels):
             background, border = class_palette[index % len(class_palette)]
             class_groups[f"class:{class_label}"] = {
                 "color": {"background": background, "border": border},
@@ -1688,14 +1701,40 @@ LIMIT 100"""
                 return f"class:{class_label}"
             return "resource" if isinstance(value, rdflib.URIRef) else "blank"
 
+        outgoing_links_by_node = {}
+        for subject, predicate, obj in resource_edges:
+            outgoing_links_by_node.setdefault(subject, []).append({
+                "predicate": _graph_label(predicate, rdf_graph),
+                "target_id": str(obj),
+                "target_label": _graph_label(obj, rdf_graph),
+                "target_is_visible": obj in node_terms_to_render,
+            })
+        for links in outgoing_links_by_node.values():
+            links.sort(key=lambda item: (item["predicate"], item["target_label"], item["target_id"]))
+
+        incoming_links_by_node = {}
+        for subject, predicate, obj in resource_edges:
+            incoming_links_by_node.setdefault(obj, []).append({
+                "predicate": _graph_label(predicate, rdf_graph),
+                "source_id": str(subject),
+                "source_label": _graph_label(subject, rdf_graph),
+                "source_is_visible": subject in node_terms_to_render,
+            })
+        # sort incoming lists the same way as outgoing (by predicate, label, id)
+        for links in incoming_links_by_node.values():
+            links.sort(key=lambda item: (item["predicate"], item["source_label"], item["source_id"]))
+
         for subject in sorted(node_terms_to_render, key=lambda term: _graph_label(term, rdf_graph)):
             subject_id = str(subject)
             namespace = _term_namespace(subject)
+            rdf_classes = type_labels_by_node.get(subject_id, [])
             nodes.setdefault(subject_id, {
                 "id": subject_id,
                 "label": _graph_label(subject, rdf_graph),
                 "group": node_group(subject),
                 "rdf_class": type_by_node.get(subject_id, ""),
+                "rdf_class_ids": [f"class:{class_label}" for class_label in rdf_classes],
+                "rdf_classes": rdf_classes,
                 "namespace": namespace,
                 "namespace_label": _namespace_label(namespace, rdf_graph),
                 "local_href": _local_iri_href(subject_id) if isinstance(subject, rdflib.URIRef) else "",
@@ -1704,6 +1743,8 @@ LIMIT 100"""
                 "hidden_neighbor_count": 0,
                 "expandable": False,
                 "literals": [],
+                "outgoing_links": outgoing_links_by_node.get(subject, []),
+                "incoming_links": incoming_links_by_node.get(subject, []),
             })
             for predicate, obj in literal_values.get(subject, []):
                 nodes[subject_id]["literals"].append({
@@ -1722,10 +1763,26 @@ LIMIT 100"""
         rendered_labels = labels
         if rendered_labels == "auto":
             rendered_labels = "off" if len(nodes) > 250 or len(edges) > 500 else "on"
+        class_counts = {class_label: 0 for class_label in rendered_class_labels}
+        for node in nodes.values():
+            for class_label in node["rdf_classes"]:
+                class_counts[class_label] = class_counts.get(class_label, 0) + 1
+        classes = [
+            {
+                "id": f"class:{class_label}",
+                "label": class_label,
+                "group": f"class:{class_label}",
+                "count": class_counts[class_label],
+                "color": groups[f"class:{class_label}"]["color"],
+            }
+            for class_label in rendered_class_labels
+            if class_counts.get(class_label, 0) > 0
+        ]
         return {
             "nodes": list(nodes.values()),
             "edges": edges,
             "groups": groups,
+            "classes": classes,
             "summary": {
                 "total_nodes": total_nodes,
                 "shown_nodes": len(nodes),
