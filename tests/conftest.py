@@ -1,7 +1,19 @@
+import atexit
 import os
 import pathlib
+import shutil
+import tempfile
 
 import pytest
+
+# Tests exercise destructive user-directory reset operations. Configure all
+# application directories before importing the package so those operations are
+# confined to a unique temporary directory.
+_TEST_RUNTIME_ROOT = pathlib.Path(tempfile.mkdtemp(prefix="h5rdmtoolbox-tests-"))
+os.environ["H5RDMTOOLBOX_USER_DATA_DIR"] = str(_TEST_RUNTIME_ROOT / "data")
+os.environ["H5RDMTOOLBOX_CACHE_DIR"] = str(_TEST_RUNTIME_ROOT / "cache")
+os.environ["H5RDMTOOLBOX_LOG_DIR"] = str(_TEST_RUNTIME_ROOT / "log")
+atexit.register(shutil.rmtree, _TEST_RUNTIME_ROOT, ignore_errors=True)
 
 import h5rdmtoolbox as h5tbx
 
@@ -17,11 +29,6 @@ def pytest_collection_modifyitems(config, items):
     for item in items:
         if "wikidata" in item.keywords:
             item.add_marker(skip_wikidata)
-
-
-@pytest.fixture(scope="session", autouse=True)
-def _force_cache_dir_for_tests():
-    os.environ.setdefault("MYPACKAGE_CACHE_DIR", str(pathlib.Path(".cache/zenodo")))
 
 
 @pytest.fixture(autouse=True)

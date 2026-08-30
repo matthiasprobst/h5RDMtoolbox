@@ -2,19 +2,33 @@
 
 Log of changes in the versions
 
+## v2.8.2
+
+- security and reliability hardening
+    - prevent server-side request forgery when resolving external ontology URLs, escape external IRIs in HTML, and limit
+      SPARQL request bodies
+    - validate convention names and generated type expressions; remote Python validator modules now require explicit
+      opt-in with `allow_python_validators=True`
+    - send Zenodo credentials in authorization headers, restrict token-file permissions, and verify download checksums
+      before atomically caching files
+    - sanitize repository download filenames and produce valid, escaped JSON-LD for repository files
+    - isolate test cache, data, and log directories from user directories
+- fix `Convention.validate()` for open HDF5 files and improve combined graph metrics caching
+- raise minimum security versions to `pymongo>=4.6.3` and `jinja2>=3.1.6`
+
 ## v2.8.1
 
 - improve `h5tbx serve` RDF browser
-  - add `--recursive` for recursive folder discovery
-  - add `--include-ttl` to include Turtle RDF files in the combined graph
-  - improve graph layout with collapsible settings and a larger usable graph view
+    - add `--recursive` for recursive folder discovery
+    - add `--include-ttl` to include Turtle RDF files in the combined graph
+    - improve graph layout with collapsible settings and a larger usable graph view
 - refactor `h5tbx` CLI to Typer for improved help output and command-line ergonomics while preserving existing commands
 - improve SHACL validation with ontology graph support
-  - add `ont_graph`, `ont_graph_format`, and `merge_ont_graph_into_data` to `validate_hdf(...)`
-  - use `hdf_data_format` when parsing string RDF data passed to `validate_hdf(...)`
+    - add `ont_graph`, `ont_graph_format`, and `merge_ont_graph_into_data` to `validate_hdf(...)`
+    - use `hdf_data_format` when parsing string RDF data passed to `validate_hdf(...)`
 - improve JSON-LD import handling before converting JSON-LD metadata to HDF5
-  - resolve `@import` contexts through the toolbox context cache before RDFLib processing
-  - update metadata4ing/m4i context URL handling, normalize legacy URLs, and provide an offline fallback context
+    - resolve `@import` contexts through the toolbox context cache before RDFLib processing
+    - update metadata4ing/m4i context URL handling, normalize legacy URLs, and provide an offline fallback context
 - improve RDF graph labels by using compact Zenodo prefixes `zen:` and `rzen:`
 - update FAQ, metadata4ing, and SHACL validation documentation
 - improve popup in the served graph view, allowing to jump between ingoing and outgoing edges of a node
@@ -23,18 +37,18 @@ Log of changes in the versions
 
 - improve `h5tbx` CLI startup and linked-data commands
 - add `h5tbx ld dump` options for RDF output control:
-  - `--structural=false`
-  - `--contextual=false`
-  - `--file-uri`
-  - `--prefix`
+    - `--structural=false`
+    - `--contextual=false`
+    - `--file-uri`
+    - `--prefix`
 - add `h5tbx serve` for local browser-based HDF5/RDF inspection
-  - serves discovered files and folders with configurable HDF5 extensions
-  - adds RDF serialization, resource, graph, SPARQL, metrics, and SHACL browser views
-  - adds combined graph views, lazy RDF enrichment, and local IRI resolution
+    - serves discovered files and folders with configurable HDF5 extensions
+    - adds RDF serialization, resource, graph, SPARQL, metrics, and SHACL browser views
+    - adds combined graph views, lazy RDF enrichment, and local IRI resolution
 - add reusable RDF graph metrics API:
-  - `h5rdmtoolbox.compute_metrics(filename)`
-  - `h5rdmtoolbox.File(...).metrics()`
-  - `h5rdmtoolbox.ld.metrics.compute_graph_metrics(graph)`
+    - `h5rdmtoolbox.compute_metrics(filename)`
+    - `h5rdmtoolbox.File(...).metrics()`
+    - `h5rdmtoolbox.ld.metrics.compute_graph_metrics(graph)`
 - update README and linked-data documentation for CLI, web viewer, and graph metrics usage
 
 ## v2.7.4
@@ -42,19 +56,20 @@ Log of changes in the versions
 - add `shacl()` as method to query an HDF5 file
 - lazy loading conventions
 - housekeeping and bugfixes
-  - decouple wrapper form convention module
-  - split utils into submodules
-  - added user-agent header to sparqlstore
-  - improve testing
-  - eliminated code duplications
-  - remove global mutable state in get_rootparent function
-  - fixed duplicated super().__init__() call in File
+    - decouple wrapper form convention module
+    - split utils into submodules
+    - added user-agent header to sparqlstore
+    - improve testing
+    - eliminated code duplications
+    - remove global mutable state in get_rootparent function
+    - fixed duplicated super().__init__() call in File
 - updated and improved documentation
 
 ## v2.7.3
 
 - bugfixes in user rdf serialization
-- add option to add predicate for dataset value, i.e. linking the dataset RDF instance with the value, e.g. using `m4i:hasNumericalValue`
+- add option to add predicate for dataset value, i.e. linking the dataset RDF instance with the value, e.g. using
+  `m4i:hasNumericalValue`
 
 ## v2.7.2
 

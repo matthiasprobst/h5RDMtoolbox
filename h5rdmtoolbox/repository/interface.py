@@ -1,4 +1,5 @@
 import abc
+import json
 import logging
 import pathlib
 from typing import Callable, Union, Optional, Dict
@@ -76,29 +77,25 @@ class RepositoryFile:
 
     def jsonld(self) -> str:
         """Returns the JSONLD representation of the file"""
-        jsonld_str = f"""{{
-    "@context": {{
-        "schema": "https://schema.org",
-        "dcat": "http://www.w3.org/ns/dcat#",
-        "spdx": "http://spdx.org/rdf/terms#"
-    }},
-    "@id": "{self.identifier_url}",
-    "@type": "dcat:Distribution"
-    "schema:identifier": "{self.identifier}",
-"""
-
-        if self.size:
-            jsonld_str += f',\n    "dcat:byteSize": "{self.size}"'
-        if self.access_url:
-            jsonld_str += f',\n    "dcat:accessURL": "{self.access_url}"'
-        if self.download_url:
-            jsonld_str += f',\n    "dcat:downloadURL": "{self.download_url}"'
-        if self.checksum:
-            jsonld_str += f',\n    "spdx:checksum": "{self.checksum}"'
-        if self.media_type:
-            jsonld_str += f',\n    "dcat:mediaType": "{self.media_type}"'
-        jsonld_str += '\n}'
-        return jsonld_str
+        data = {
+            "@context": {
+                "schema": "https://schema.org",
+                "dcat": "http://www.w3.org/ns/dcat#",
+                "spdx": "http://spdx.org/rdf/terms#",
+            },
+            "@id": self.identifier_url,
+            "@type": "dcat:Distribution",
+            "schema:identifier": self.identifier,
+        }
+        optional_values = {
+            "dcat:byteSize": self.size,
+            "dcat:accessURL": self.access_url,
+            "dcat:downloadURL": self.download_url,
+            "spdx:checksum": self.checksum,
+            "dcat:mediaType": self.media_type,
+        }
+        data.update({key: value for key, value in optional_values.items() if value is not None})
+        return json.dumps(data, indent=4)
 
     @property
     def suffix(self) -> str:

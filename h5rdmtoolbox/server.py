@@ -1,5 +1,7 @@
 import pathlib
 import re
+import ipaddress
+import socket
 import urllib.parse
 import urllib.request
 import urllib.error
@@ -71,8 +73,64 @@ GRAPH_EDGE_WIDTH_DEFAULT = 1
 GRAPH_EDGE_WIDTH_MIN = 1
 GRAPH_EDGE_WIDTH_MAX = 8
 GRAPH_BACKGROUND_COLOR_DEFAULT = "#ffffff"
+MAX_SPARQL_REQUEST_BYTES = 1024 * 1024
+MAX_EXTERNAL_REDIRECTS = 5
 PREFIX_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_.-]*$")
 HEX_COLOR_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
+
+
+class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Expose redirects so every destination can be validated before use."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def _validate_public_http_url(url: str) -> str:
+    """Return *url* when it targets a public HTTP(S) address."""
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+        raise ValueError("Only absolute HTTP(S) URLs are supported")
+    try:
+        addresses = socket.getaddrinfo(
+            parsed.hostname,
+            parsed.port or (443 if parsed.scheme == "https" else 80),
+            type=socket.SOCK_STREAM,
+        )
+    except socket.gaierror as exc:
+        raise ValueError(f"Could not resolve external host {parsed.hostname!r}") from exc
+    for address in addresses:
+        ip = ipaddress.ip_address(address[4][0])
+        if not ip.is_global:
+            raise ValueError(f"External URL resolves to a non-public address: {ip}")
+    return url
+
+
+def _open_public_url(request_or_url, timeout: int):
+    """Open a public URL while validating every redirect destination."""
+    if isinstance(request_or_url, urllib.request.Request):
+        url = request_or_url.full_url
+        headers = dict(request_or_url.header_items())
+    else:
+        url = str(request_or_url)
+        headers = {}
+    opener = urllib.request.build_opener(_NoRedirectHandler())
+    for _ in range(MAX_EXTERNAL_REDIRECTS + 1):
+        _validate_public_http_url(url)
+        request = urllib.request.Request(url, headers=headers)
+        try:
+            return opener.open(request, timeout=timeout)
+        except urllib.error.HTTPError as exc:
+            if exc.code not in {301, 302, 303, 307, 308}:
+                raise
+            location = exc.headers.get("Location")
+            exc.close()
+            if not location:
+                raise urllib.error.URLError("Redirect response has no Location header")
+            url = urllib.parse.urljoin(url, location)
+    raise urllib.error.URLError("Too many redirects while loading external URL")
+
+
 RDF_FORMATS = {
     "ttl": ("turtle", "text/turtle; charset=utf-8", "Turtle"),
     "jsonld": ("json-ld", "application/ld+json; charset=utf-8", "JSON-LD"),
@@ -318,7 +376,7 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
     This function intentionally returns a *minimal* ASGI app using FastAPI if available.
     """
     try:
-        from fastapi import FastAPI, Request, Response, HTTPException, Form
+        from fastapi import FastAPI, Request, Response, HTTPException
         from fastapi.responses import HTMLResponse, PlainTextResponse, JSONResponse
         from fastapi.staticfiles import StaticFiles
         from starlette.responses import Response as StarletteResponse
@@ -364,7 +422,14 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
 
     # mount static directory
     try:
-        app.mount("/static", StaticFiles(directory=pathlib.Path(__file__).parent / "server" / "static"), name="static")
+        app.mount(
+            "/static",
+            StaticFiles(
+                directory=pathlib.Path(__file__).parent / "server" / "static",
+                follow_symlink=True,
+            ),
+            name="static",
+        )
     except Exception:
         # best-effort; package data should include static files
         pass
@@ -688,11 +753,13 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
             },
         )
         try:
-            with urllib.request.urlopen(request, timeout=15) as response:
+            with _open_public_url(request, timeout=15) as response:
                 data = response.read()
                 response_url = response.geturl() if hasattr(response, "geturl") else document_url
                 content_type = response.headers.get("Content-Type", "") if hasattr(response, "headers") else ""
                 logger.info("Loaded ontology document %s via %s, content-type=%s, bytes=%d", document_url, response_url, content_type, len(data))
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e)) from e
         except (urllib.error.URLError, TimeoutError) as e:
             logger.warning("Could not load ontology document %s: %s", document_url, e)
             ontology_graph_cache[document_url] = None
@@ -702,12 +769,12 @@ def create_app(hdf_filename: Optional[Union[str, pathlib.Path, Sequence[Union[st
             for rdf_url in _rdf_links_from_html(data, response_url):
                 logger.info("Loading linked RDF serialization %s from ontology page %s", rdf_url, document_url)
                 try:
-                    with urllib.request.urlopen(rdf_url, timeout=15) as rdf_response:
+                    with _open_public_url(rdf_url, timeout=15) as rdf_response:
                         rdf_data = rdf_response.read()
                         rdf_response_url = rdf_response.geturl() if hasattr(rdf_response, "geturl") else rdf_url
                         rdf_content_type = rdf_response.headers.get("Content-Type", "") if hasattr(rdf_response, "headers") else ""
                         logger.info("Loaded linked RDF serialization %s via %s, content-type=%s, bytes=%d", rdf_url, rdf_response_url, rdf_content_type, len(rdf_data))
-                except (urllib.error.URLError, TimeoutError) as e:
+                except (urllib.error.URLError, TimeoutError, ValueError) as e:
                     logger.warning("Could not load RDF serialization %s linked from %s: %s", rdf_url, document_url, e)
                     continue
                 graph_from_doc = _parse_rdf_bytes(rdf_data, rdf_response_url)
@@ -909,7 +976,17 @@ LIMIT 100"""
         return HTMLResponse(page)
 
     def _external_iri_fallback_html(iri: str) -> HTMLResponse:
-        iri_json = json.dumps(iri)
+        parsed_iri = urllib.parse.urlparse(iri)
+        if parsed_iri.scheme not in {"http", "https"} or not parsed_iri.netloc:
+            raise HTTPException(status_code=400, detail="External IRI must be an absolute HTTP(S) URL")
+        iri_json = (
+            json.dumps(iri)
+            .replace("<", "\\u003c")
+            .replace(">", "\\u003e")
+            .replace("&", "\\u0026")
+            .replace("\u2028", "\\u2028")
+            .replace("\u2029", "\\u2029")
+        )
         page = f"""<!doctype html>
 <html>
 <head>
@@ -2455,8 +2532,11 @@ LIMIT 100"""
     def _combined_graph_metrics() -> dict[str, object]:
         nonlocal combined_metrics_cache
         cache_key = (server_graph_version, len(server_graph))
-        if combined_metrics_cache is not None and combined_metrics_cache[:2] == cache_key:
-            return combined_metrics_cache[2]
+        cached_metrics = combined_metrics_cache
+        if cached_metrics is not None:
+            cached_version, cached_size, cached_value = cached_metrics
+            if (cached_version, cached_size) == cache_key:
+                return cached_value
         metrics = _graph_metrics(
             server_graph,
             compute_distances=True,
@@ -3213,7 +3293,12 @@ LIMIT 100"""
     async def sparql(request: Request):
         # robust parsing of body according to content-type
         content_type = request.headers.get("content-type", "")
-        raw = await request.body()
+        raw_buffer = bytearray()
+        async for chunk in request.stream():
+            if len(raw_buffer) + len(chunk) > MAX_SPARQL_REQUEST_BYTES:
+                raise HTTPException(status_code=413, detail="SPARQL request body is too large")
+            raw_buffer.extend(chunk)
+        raw = bytes(raw_buffer)
         query = None
         # If the client sent a raw SPARQL query in the body
         if raw and ("application/sparql-query" in content_type or content_type.strip().startswith("sparql-query") or content_type.strip().startswith("application/sparql-query")):
@@ -3233,17 +3318,18 @@ LIMIT 100"""
                 except Exception:
                     # fall back to form parsing below
                     query = None
-            # if not yet found, try form-encoded
-            if query is None:
+            if query is None and "application/x-www-form-urlencoded" in content_type:
                 try:
-                    form = await request.form()
-                    if hasattr(form, "get"):
-                        query = form.get("query")
-                except Exception:
-                    # try query param
-                    qp = request.query_params.get("query")
-                    if qp:
-                        query = qp
+                    parsed_form = urllib.parse.parse_qs(
+                        raw.decode("utf-8"),
+                        keep_blank_values=True,
+                        max_num_fields=10,
+                    )
+                    query = (parsed_form.get("query") or [None])[0]
+                except (UnicodeDecodeError, ValueError) as exc:
+                    raise HTTPException(status_code=400, detail="Invalid form-encoded SPARQL request") from exc
+            if query is None:
+                query = request.query_params.get("query")
         if not query:
             raise HTTPException(status_code=400, detail="Missing SPARQL query")
         try:
