@@ -1,5 +1,6 @@
 """Module to generate a convention Python file from a YAML file"""
 import ast
+import keyword
 import logging
 import pathlib
 import re
@@ -20,7 +21,66 @@ regex_counter = count()
 INDENT = '    '
 
 
-def write_convention_module_from_yaml(yaml_filename: pathlib.Path, name=None):
+def normalize_convention_name(name: str) -> str:
+    """Return a safe Python module name for a convention."""
+    if not isinstance(name, str):
+        raise TypeError("Convention name must be a string")
+    normalized = name.lower().replace("-", "_")
+    if not normalized.isidentifier() or keyword.iskeyword(normalized):
+        raise ValueError(
+            "Convention name must contain only letters, digits, '-' or '_' "
+            "and may not start with a digit"
+        )
+    return normalized
+
+
+def _validate_identifier(value: str, label: str) -> str:
+    if not value.isidentifier() or keyword.iskeyword(value):
+        raise ValueError(f"{label} must be a valid Python identifier: {value!r}")
+    return value
+
+
+def _validate_annotation(expression: str) -> str:
+    """Allow type expressions without calls, operators, or attribute access."""
+    try:
+        tree = ast.parse(expression, mode="eval")
+    except SyntaxError as exc:
+        raise ValueError(f"Invalid validator type expression: {expression!r}") from exc
+    allowed_nodes = (
+        ast.Expression,
+        ast.Name,
+        ast.Subscript,
+        ast.Tuple,
+        ast.Load,
+        ast.Attribute,
+        ast.Constant,
+    )
+    for node in ast.walk(tree):
+        if not isinstance(node, allowed_nodes):
+            raise ValueError(f"Unsafe validator type expression: {expression!r}")
+        if isinstance(node, ast.Name) and node.id.startswith("_"):
+            raise ValueError(f"Unsafe validator type expression: {expression!r}")
+        if isinstance(node, ast.Attribute) and not (
+            isinstance(node.value, ast.Name)
+            and node.value.id == "toolbox_validators"
+            and node.attr == "validators"
+        ):
+            raise ValueError(f"Unsafe validator type expression: {expression!r}")
+    return expression
+
+
+def _validate_default_literal(expression: str) -> str:
+    try:
+        return repr(ast.literal_eval(expression))
+    except (SyntaxError, ValueError) as exc:
+        raise ValueError(f"Unsafe validator default value: {expression!r}") from exc
+
+
+def write_convention_module_from_yaml(
+        yaml_filename: pathlib.Path,
+        name=None,
+        allow_python_validators: bool = True,
+):
     """Generates a python file based on the inputted yaml file.
     The convention python file is written to the directory `UserDir.user_dirs['convention']`.
 
@@ -30,6 +90,8 @@ def write_convention_module_from_yaml(yaml_filename: pathlib.Path, name=None):
         The convention YAML file
     name: str, optional
         The name of the convention. If not given, the name is taken from the filename (stem of the file).
+    allow_python_validators: bool, optional
+        Whether to copy and execute an adjacent ``*_vfuncs.py`` module.
     """
     yaml_filename = pathlib.Path(yaml_filename)
     if name is None:
@@ -40,7 +102,7 @@ def write_convention_module_from_yaml(yaml_filename: pathlib.Path, name=None):
                  yaml_filename, convention_name)
     # create the convention directory where to build the validators
 
-    convention_name = convention_name.lower().replace("-", "_")
+    convention_name = normalize_convention_name(convention_name)
 
     convention_dir = UserDir.user_dirs['convention'] / convention_name
     convention_dir.mkdir(parents=True, exist_ok=True)
@@ -61,7 +123,7 @@ def write_convention_module_from_yaml(yaml_filename: pathlib.Path, name=None):
     # If such a file exists, it is copied to the convention directory.
     # If not, an empty file is created.
     user_validator_functions = yaml_filename.parent / f'{yaml_filename.stem}_vfuncs.py'
-    if user_validator_functions.exists():
+    if allow_python_validators and user_validator_functions.exists():
         logger.debug('A validator function file for the convention exists: "%s". Copying it to "%s"',
                      user_validator_functions, py_filename)
         shutil.copy(user_validator_functions, py_filename)
@@ -121,15 +183,17 @@ def write_convention_module_from_yaml(yaml_filename: pathlib.Path, name=None):
     with open(py_filename, 'a') as f:
         f.write('from typing_extensions import Literal\n')
         for k, v in literal_definition.items():
-            _literal_values = [f'\n{INDENT}"{x}"' if isinstance(x, str) else str(x) for x in v]
-            f.write(f'\n{k[1:]} = Literal[{", ".join(_literal_values)}\n]\n')
+            literal_name = _validate_identifier(k[1:], "Literal name")
+            _literal_values = [f'\n{INDENT}{x!r}' for x in v]
+            f.write(f'\n{literal_name} = Literal[{", ".join(_literal_values)}\n]\n')
             # f.write(f'{k} = Literal[{", ".join(v)}]\n')
 
         # write base classes
         for k, v in class_definitions.items():
-            f.write(f'\nclass {k[1:]}(BaseModel):')
+            class_name = _validate_identifier(k[1:], "Class name")
+            f.write(f'\nclass {class_name}(BaseModel):')
             description = v.get('description', k[1:])
-            f.write(f'\n{INDENT}"""{description}"""\n')
+            f.write(f'\n{INDENT}{description!r}\n')
             validator = {}
             _validator_default = {}
             for kk, vv in v.items():
@@ -160,12 +224,14 @@ def write_convention_module_from_yaml(yaml_filename: pathlib.Path, name=None):
                         validator[kk] = f'toolbox_validators.validators["{validator_name}"]'
                         used_toolbox_validators[validator_name] = f'toolbox_validators.validators["{validator_name}"]'
                 else:
-                    validator[kk] = vv
+                    validator[kk] = _validate_annotation(validator_name)
             for ak, av in validator.items():
+                _validate_identifier(ak, "Class field name")
                 validator_value, validator_default = _validator_default[ak]
                 if validator_default is not None:
                     f.write(
-                        f'{INDENT}{ak}: {used_toolbox_validators.get(validator_name, validator_value)} = {validator_default}\n')
+                        f'{INDENT}{ak}: {used_toolbox_validators.get(validator_value, validator_value)} = '
+                        f'{_validate_default_literal(validator_default)}\n')
                 else:
                     f.write(f'{INDENT}{ak}: {av}\n')
             # f.write(f'\n{INDENT}'.join([f'{ak}: {av}' for ak, av in validator.items()]))
@@ -196,10 +262,12 @@ def write_convention_module_from_yaml(yaml_filename: pathlib.Path, name=None):
             # However, it was needed to have standard attribute with the same name for different methods
             class_name = k.replace('-', '_')
             attr_name = k.rsplit('-', 1)[0]
+            _validate_identifier(class_name, "Standard attribute class name")
+            _validate_identifier(attr_name, "Standard attribute field name")
             f.write(f'\nclass {class_name}(BaseModel):')
             description = v.get('description', k)
-            f.write(f'\n{INDENT}"""{description}"""')
-            f.write(f'\n{INDENT}{attr_name}: {_validator}')
+            f.write(f'\n{INDENT}{description!r}')
+            f.write(f'\n{INDENT}{attr_name}: {_validate_annotation(_validator)}')
             # f.write(f'\n{INDENT}default_value: "{_default_value}"')
             # f.write(f'\n{INDENT}description: "{description}"\n{INDENT}')
             # f.write('\n\t'.join([f'{ak}: {av}' for ak, av in v.items()]))
@@ -223,11 +291,10 @@ def write_convention_module_from_yaml(yaml_filename: pathlib.Path, name=None):
             _default_value = _process_paths(vv.get('default_value', None), relative_to=yaml_filename.parent)
             if _default_value is None:
                 _default_value_str = 'None'
-            elif isinstance(_default_value, str):
-                if _default_value.startswith('r"'):
-                    _default_value_str = f"{_default_value}"
-                else:
-                    _default_value_str = f"'{_default_value}'"
+            elif isinstance(_default_value, str) and _default_value.startswith('r"'):
+                _default_value_str = _default_value
+            else:
+                _default_value_str = repr(_default_value)
 
             validator = vv['validator']
             if validator in used_toolbox_validators:
@@ -266,9 +333,7 @@ def _str_getter(_dict, key, default=None) -> str:
     val = _dict.get(key, default)
     if val is None:
         return 'None'
-    if isinstance(val, str):
-        return f'"{val}"'
-    return f'{val}'
+    return repr(val)
 
 
 def extract_function_info(node) -> List:
@@ -378,7 +443,7 @@ class RegexProcessor:
         """Write validator lines to file"""
         file.writelines(f'\n\nimport re\n\n')
         file.writelines(f'\ndef {self.name}(value, handler):')
-        file.writelines(f"\n    pattern = re.compile(r'{self.re_pattern}')")
+        file.writelines(f"\n    pattern = re.compile({self.re_pattern!r})")
         file.writelines("\n    if not pattern.match(value):")
         file.writelines("\n        raise ValueError('Invalid format for pattern')")
         file.writelines("\n    return value")
