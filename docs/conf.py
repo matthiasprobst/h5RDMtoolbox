@@ -10,10 +10,10 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-import os
+import pathlib
 import sys
 
-sys.path.insert(0, os.path.abspath(".."))
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
 # -- Project information -----------------------------------------------------
 
@@ -39,6 +39,34 @@ extensions = [
     "sphinx_design",
     "myst_nb",
     "sphinxcontrib.bibtex",
+]
+
+# Execute self-contained examples on every build in an isolated temporary
+# directory. Examples that intentionally need network access, credentials,
+# external services, or optional visualization packages retain their checked-in
+# outputs and are explicitly excluded from execution.
+nb_execution_mode = "force"
+nb_execution_in_temp = True
+nb_execution_timeout = 60
+nb_execution_excludepatterns = [
+    "**/gettingstarted/quickoverview.ipynb",
+    "**/practical_examples/knowledge_graph.ipynb",
+    "**/practical_examples/metadata4ing.ipynb",
+    "**/practical_examples/nexus.ipynb",
+    "**/practical_examples/photon_hdf5.ipynb",
+    "**/userguide/catalog/catalog.ipynb",
+    "**/userguide/convention/creating_a_new_convention.ipynb",
+    "**/userguide/database/mongoDB.ipynb",
+    "**/userguide/misc/Visualization.ipynb",
+    "**/userguide/repository/zenodo.ipynb",
+    "**/userguide/wrapper/FAIRAttributes.ipynb",
+]
+
+# These sites reject automated HEAD requests or are stale links inherited from
+# h5py docstrings. They are not actionable documentation links in this project.
+linkcheck_ignore = [
+    r"https://en\.wikipedia\.org/.*",
+    r"https://(?:portal|support)\.hdfgroup\.org/display/HDF5/.*",
 ]
 
 # path to the bibtex file:

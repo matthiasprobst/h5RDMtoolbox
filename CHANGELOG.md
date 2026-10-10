@@ -15,6 +15,15 @@ Log of changes in the versions
     - isolate test cache, data, and log directories from user directories
 - fix `Convention.validate()` for open HDF5 files and improve combined graph metrics caching
 - raise minimum security versions to `pymongo>=4.6.3` and `jinja2>=3.1.6`
+- restore the documented `h5tbx ld dump --prefix` option, including prefix validation and the requirement to provide
+  `--file-uri`
+- fix tutorial database generation by attaching RDF unit predicates to the generated datasets
+- improve documentation reliability and consistency
+    - correct installation extras, commands, supported Python versions, and stale or broken links
+    - update Zenodo examples to the current API and require explicit environment-based opt-in for uploads
+    - execute self-contained notebooks in isolated temporary directories while excluding examples that require network
+      access, credentials, external services, or optional visualization packages
+    - add a strict documentation build workflow for pull requests and supported branches
 
 ## v2.8.1
 

@@ -2,36 +2,28 @@
 
 # Documentation
 
-Make sure to have installed all required dependencies in order to build the documentation
+Run these commands from the repository root. First install the documentation dependencies:
 
 ```bash
-pip install -e .[docs]
+pip install -e .[complete-with-docs]
 ```
 
-https://www.sphinx-doc.org/en/master/usage/installation.html
+Then build the HTML documentation, treating warnings as errors:
 
-Run
+```bash
+python -m sphinx -W -b html docs docs/_build/html
+```
 
-    make clean
-
-to remove the build directory.
-
-Next, run
-
-    sphinx-build -b html . _build
-
-to create `index.html` in the `_build/` folder (You may need to install the theme first: `pip install sphinx_rtd_theme`)
+Open `docs/_build/html/index.html` in your browser.
 
 To update the pdf, run
 
-    sphinx-build -b latex . _build
+    python -m sphinx -b latex docs docs/_build/latex
 
-and after that run the make file in the source folder to build the actual pdf.
-
-View `_build/index.html` with your browser.
+and then run the generated make file in `docs/_build/latex` to build the PDF.
 
 ## Troubleshooting
 
-* error message: ```no theme named 'sphinx_rtd_theme' found (missing theme.conf?)```
-  <br>Maybe theme is not installed. Try: ```python3 -m pip install sphinx_rtd_theme```
+* If the configured theme is missing, reinstall the documentation dependencies with
+  `python -m pip install -e .[complete-with-docs]`.
 * quickref of rst files: https://docutils.sourceforge.io/docs/user/rst/quickref.html
