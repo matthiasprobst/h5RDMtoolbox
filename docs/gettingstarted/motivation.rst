@@ -8,7 +8,7 @@ with meta-information and to make it usable again or, even worse, the data is lo
 costs time and money.
 
 The FAIR principles (Findable, Accessible, Interoperable and Re-usable) are a set of principles that guide users towards
-good practices to make data more reusable. The principles are described in detail `here <https://www.go-fair.org/fair-principles/>`_.
+good practices to make data more reusable. The principles are described in detail `here <https://www.gofair.foundation/fair-principles>`_.
 
 This python package is designed as a toolbox, which assists users and even projects, communities or collaborations
 during data generation, processing and exploration. The package is based on the scientific file format

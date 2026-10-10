@@ -1,4 +1,5 @@
 import pathlib
+import re
 import sys
 from enum import Enum
 from typing import List, Optional
@@ -31,6 +32,7 @@ _VALID_OUTPUT_EXTENSIONS = {
     ".ttl": "ttl",
     ".turtle": "ttl",
 }
+_PREFIX_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_.-]*$")
 
 
 class GraphView(str, Enum):
@@ -72,6 +74,23 @@ def _resolve_format(fmt, output):
 def _graph_output_filename(filename):
     path = pathlib.Path(filename)
     return path.with_name(f"{path.stem}-graph.html")
+
+
+def _validate_prefix(prefix: Optional[str], file_uri: Optional[str]) -> Optional[str]:
+    if prefix is None:
+        return None
+    if file_uri is None:
+        raise typer.BadParameter(
+            "--prefix requires --file-uri.",
+            param_hint="'--prefix'",
+        )
+    if not _PREFIX_PATTERN.fullmatch(prefix):
+        raise typer.BadParameter(
+            "Prefix must start with a letter or underscore and contain only "
+            "letters, digits, underscores, dots, or hyphens.",
+            param_hint="'--prefix'",
+        )
+    return prefix
 
 
 class LegacyLDGroup(TyperGroup):
@@ -150,6 +169,11 @@ def dump(
             "--file-uri",
             help="Base file URI to use for RDF subjects.",
         ),
+        prefix: Optional[str] = typer.Option(
+            None,
+            "--prefix",
+            help="Namespace prefix to bind to --file-uri in the RDF output.",
+        ),
         graph: bool = typer.Option(
             False,
             "--graph",
@@ -159,6 +183,7 @@ def dump(
     """Dump an HDF5 file as linked data."""
     structural_value = _parse_bool_option(structural, "--structural")
     contextual_value = _parse_bool_option(contextual, "--contextual")
+    prefix = _validate_prefix(prefix, file_uri)
     if not structural_value and not contextual_value:
         typer.echo("Error: At least one of structural or contextual must be True.", err=True)
         raise typer.Exit(code=1)
@@ -172,11 +197,13 @@ def dump(
                 f"Output filename must use one of: {valid_extensions}",
                 param_hint="'--output'",
             )
-        content = _serialize(filename, fmt, structural=structural_value, contextual=contextual_value, file_uri=file_uri)
+        content = _serialize(filename, fmt, structural=structural_value, contextual=contextual_value,
+                             file_uri=file_uri, prefix=prefix)
         with open(output, "w", encoding="utf-8") as f:
             f.write(content)
     else:
-        content = _serialize(filename, fmt, structural=structural_value, contextual=contextual_value, file_uri=file_uri)
+        content = _serialize(filename, fmt, structural=structural_value, contextual=contextual_value,
+                             file_uri=file_uri, prefix=prefix)
         typer.echo(content)
 
     if graph:
@@ -185,9 +212,11 @@ def dump(
         build_pyvis_graph(filename, output_filename=_graph_output_filename(filename))
 
 
-def _serialize(filename, fmt, structural=True, contextual=True, file_uri=None):
+def _serialize(filename, fmt, structural=True, contextual=True, file_uri=None, prefix=None):
     from h5rdmtoolbox import serialize
 
+    if prefix is not None:
+        file_uri = {prefix: file_uri}
     return serialize(filename, fmt=fmt, indent=2, structural=structural, contextual=contextual, file_uri=file_uri)
 
 
