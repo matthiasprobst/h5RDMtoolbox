@@ -26,17 +26,13 @@ def isolated_filesystem():
             os.chdir(cwd)
 
 
-def combined_output(result):
-    try:
-        stderr = result.stderr
-    except ValueError:
-        stderr = ""
-    return result.output + stderr
-
-
 def normalize_cli_output(text: str) -> str:
     text = ANSI_ESCAPE_RE.sub("", text)
     return " ".join(text.split())
+
+
+def combined_output(result):
+    return normalize_cli_output(result.output)
 
 
 class TestCLI(unittest.TestCase):
