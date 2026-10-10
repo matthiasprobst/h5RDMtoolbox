@@ -567,6 +567,61 @@ def test_resolve_unknown_iri_returns_external_fallback_for_html(hdf_filename):
 
 
 @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_resolve_external_fallback_escapes_inline_script(hdf_filename):
+    from h5rdmtoolbox.server import create_app
+
+    iri = "https://example.org/</script><script>alert(1)</script>"
+    client = TestClient(create_app(hdf_filename, file_uri="https://example.org/not-this#"))
+    response = client.get("/resolve", params={"iri": iri}, headers={"accept": "text/html"})
+
+    assert response.status_code == 200
+    assert "</script><script>alert(1)</script>" not in response.text
+    assert r"\u003c/script\u003e\u003cscript\u003ealert(1)\u003c/script\u003e" in response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_resolve_rejects_private_ontology_url(hdf_filename):
+    from h5rdmtoolbox.server import create_app
+
+    client = TestClient(create_app(hdf_filename, file_uri="https://example.org/not-this#"))
+    response = client.get(
+        "/resolve",
+        params={"iri": "http://127.0.0.1/private#item", "format": "ttl"},
+    )
+
+    assert response.status_code == 400
+    assert "non-public address" in response.text
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_sparql_accepts_small_urlencoded_form(hdf_filename):
+    from h5rdmtoolbox.server import create_app
+
+    client = TestClient(create_app(hdf_filename))
+    response = client.post(
+        "/sparql",
+        data={"query": "SELECT * WHERE { ?s ?p ?o } LIMIT 1"},
+    )
+
+    assert response.status_code == 200
+    assert "results" in response.json()
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+def test_sparql_rejects_oversized_body(hdf_filename):
+    from h5rdmtoolbox.server import MAX_SPARQL_REQUEST_BYTES, create_app
+
+    client = TestClient(create_app(hdf_filename))
+    response = client.post(
+        "/sparql",
+        content=b"x" * (MAX_SPARQL_REQUEST_BYTES + 1),
+        headers={"content-type": "application/sparql-query"},
+    )
+
+    assert response.status_code == 413
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_resolve_uses_ontology_document_for_fragment_iri(monkeypatch, caplog, hdf_filename):
     import h5rdmtoolbox.server as server
 
@@ -595,7 +650,7 @@ def test_resolve_uses_ontology_document_for_fragment_iri(monkeypatch, caplog, hd
             return OntologyResponse(ttl.encode("utf-8"))
         raise AssertionError(f"Unexpected download: {url}")
 
-    monkeypatch.setattr(server.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(server, "_open_public_url", fake_urlopen)
     client = TestClient(server.create_app(hdf_filename, file_uri="https://example.org/not-this#"))
     response = client.get("/resolve", params={"iri": iri, "format": "ttl"})
 

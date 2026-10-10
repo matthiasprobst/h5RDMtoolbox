@@ -116,3 +116,7 @@ def set_api_token(sandbox: bool,
     config[section]['access_token'] = access_token
     with open(zenodo_ini_filename, 'w') as f:
         config.write(f)
+    try:
+        zenodo_ini_filename.chmod(0o600)
+    except OSError:
+        logger.warning("Could not restrict permissions on token file %s", zenodo_ini_filename)

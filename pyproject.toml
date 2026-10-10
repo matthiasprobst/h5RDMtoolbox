@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "h5rdmtoolbox"
-version = "2.8.1"
+version = "2.8.2"
 description = "Supporting a FAIR Research Data lifecycle using Python and HDF5."
 readme = "README.md"
 requires-python = ">=3.9, <3.14"
@@ -51,7 +51,7 @@ dependencies = [
 
 [project.optional-dependencies]
 database = [
-    "pymongo>=4.2.0, <=4.10.1"
+    "pymongo>=4.6.3, <=4.10.1"
 ]
 layout_validation = [
     "tabulate>=0.8.10, <=0.9.0"
@@ -103,7 +103,7 @@ complete-with-docs = [
 server = [
     "fastapi>=0.95",
     "uvicorn[standard]>=0.22",
-    "jinja2>=3.1"
+    "jinja2>=3.1.6"
 ]
 
 [project.urls]
