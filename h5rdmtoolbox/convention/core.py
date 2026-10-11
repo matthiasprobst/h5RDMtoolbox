@@ -306,7 +306,10 @@ class Convention(AbstractConvention):
 
     @classmethod
     def from_yaml(
-        cls, yaml_filename: Union[str, pathlib.Path], overwrite: bool = False
+        cls,
+        yaml_filename: Union[str, pathlib.Path],
+        overwrite: bool = False,
+        allow_python_validators: bool = True,
     ):
         """Create a convention from a yaml file.
         The YAML file must have the following structure:
@@ -333,6 +336,8 @@ class Convention(AbstractConvention):
             path to the yaml file
         overwrite: bool
             if True, overwrite an existing (registered) convention with the same name
+        allow_python_validators: bool
+            Whether to copy and execute an adjacent ``*_vfuncs.py`` module.
 
         Returns
         -------
@@ -364,8 +369,10 @@ class Convention(AbstractConvention):
                 f'YAML file {yaml_filename} does not contain "__contact__". Is the file a valid convention?'
             )
 
+        from . import generate
+
         # check if name already exists!
-        convention_name = attrs["__name__"].lower().replace("-", "_")
+        convention_name = generate.normalize_convention_name(attrs["__name__"])
         if convention_name in [d.name for d in CV_DIR.glob("*")]:
             if not overwrite:
                 return _get_convention_from_dir(attrs["__name__"])
@@ -375,10 +382,10 @@ class Convention(AbstractConvention):
                 f'Convention exists and overwrite is True: Deleting convention "{convention_name}"'
             )
 
-        from . import generate
-
         generate.write_convention_module_from_yaml(
-            yaml_filename, name=attrs["__name__"]
+            yaml_filename,
+            name=attrs["__name__"],
+            allow_python_validators=allow_python_validators,
         )
 
         # add_convention(yaml_filename, name=attrs['__name__'])
@@ -504,9 +511,6 @@ class Convention(AbstractConvention):
         """
         from ..wrapper.core import File
 
-        if not isinstance(file_or_filename, (str, pathlib.Path)):
-            with File(file_or_filename, "r") as f:
-                return self.check(f)
         failed = []
 
         convention = self
@@ -575,12 +579,18 @@ class Convention(AbstractConvention):
                                         )
                                     )
 
-        with File(file_or_filename, "r") as f:
+        def _validate_file(f):
             logger.debug(
                 f"Checking file {file_or_filename} for compliance with convention {self.name}"
             )
             _validate_convention("/", f)
             f.visititems(_validate_convention)
+
+        if isinstance(file_or_filename, (str, pathlib.Path)):
+            with File(file_or_filename, "r") as f:
+                _validate_file(f)
+        else:
+            _validate_file(file_or_filename)
 
         return failed
 
@@ -621,8 +631,9 @@ def _import_convention(convention_name) -> "module":
 
 
 def _get_convention_from_dir(convention_name: str) -> "Convention":
-    _convention_name = convention_name.lower().replace("-", "_")
-    assert "-" not in _convention_name
+    from .generate import normalize_convention_name
+
+    _convention_name = normalize_convention_name(convention_name)
     if _convention_name in get_registered_conventions():
         return get_registered_conventions()[convention_name]
     _convention_py_filename = CV_DIR / f"{_convention_name}" / f"{_convention_name}.py"
@@ -799,19 +810,22 @@ def delete(convention: Union[str, Convention]):
         convention_name = convention.name
     else:
         convention_name = convention
-    cv_dir = CV_DIR / convention_name
+    from .generate import normalize_convention_name
+
+    safe_convention_name = normalize_convention_name(convention_name)
+    cv_dir = CV_DIR / safe_convention_name
     if cv_dir.exists():
-        shutil.rmtree(CV_DIR / convention_name)
+        shutil.rmtree(cv_dir)
     cfg._registered_conventions.pop(convention_name, None)
     if convention_name in sys.modules:
         # if the convention (py script) already has been imported, remove it from the list of imported modules:
         del sys.modules[convention_name]
 
 
-def from_file(filename) -> Convention:
+def from_file(filename, allow_python_validators: bool = True) -> Convention:
     """Load a convention from a file. Currently yaml and json files are supported"""
     if filename.suffix == ".yaml":
-        return from_yaml(filename)
+        return from_yaml(filename, allow_python_validators=allow_python_validators)
     elif filename.suffix == ".json":
         return from_json(filename)
     else:
@@ -819,11 +833,17 @@ def from_file(filename) -> Convention:
 
 
 def from_yaml(
-    filename: Union[str, pathlib.Path], overwrite: bool = False
+    filename: Union[str, pathlib.Path],
+    overwrite: bool = False,
+    allow_python_validators: bool = True,
 ) -> Convention:
     """Load a convention from a YAML file. See Convention.from_yaml() for details"""
     logger.debug(f"Reading Convention from yaml file: {filename}")
-    return Convention.from_yaml(filename, overwrite=overwrite)
+    return Convention.from_yaml(
+        filename,
+        overwrite=overwrite,
+        allow_python_validators=allow_python_validators,
+    )
 
 
 def from_json(
@@ -833,7 +853,11 @@ def from_json(
     return Convention.from_json(filename, overwrite=overwrite)
 
 
-def from_repo(repo_interface: RepositoryInterface, name: str):
+def from_repo(
+        repo_interface: RepositoryInterface,
+        name: str,
+        allow_python_validators: bool = False,
+):
     """Download a YAML file from a repository
 
     Parameters
@@ -842,6 +866,9 @@ def from_repo(repo_interface: RepositoryInterface, name: str):
         The repository interface to use for downloading the file
     name: str
         Name of the file to download
+    allow_python_validators: bool
+        Whether to download and execute a repository-provided ``*_vfuncs.py``
+        file. Disabled by default because it is executable code.
     """
     logger.debug(f"Downloading file {name} from repository {repo_interface}")
 
@@ -849,19 +876,20 @@ def from_repo(repo_interface: RepositoryInterface, name: str):
     _suffix = pathlib.Path(name).suffix
     vfunc_filename = name.split(_suffix, 1)
     has_vfunc = False
-    if len(vfunc_filename) == 2:
+    downloaded_vfunc_filename = None
+    if allow_python_validators and len(vfunc_filename) == 2:
         vfunc_filename = f"{vfunc_filename[0]}_vfuncs.py"
         try:
             downloaded_vfunc_filename = repo_interface.download_file(vfunc_filename)
             has_vfunc = True
         except Exception as e:
             logger.debug(f"No vfuncs file found for {name}: {e}")
-    if has_vfunc:
+    if has_vfunc and downloaded_vfunc_filename is not None:
         shutil.copy(
             downloaded_vfunc_filename, filename.parent / downloaded_vfunc_filename.name
         )
     logger.debug(f"File downloaded to {filename}. Now loading convention from file.")
-    return from_file(filename)
+    return from_file(filename, allow_python_validators=allow_python_validators)
 
 
 def from_zenodo(
@@ -869,6 +897,7 @@ def from_zenodo(
     name: str = None,
     overwrite: bool = False,
     force_download: bool = False,
+    allow_python_validators: bool = False,
 ) -> Convention:
     """Download a YAML file from a zenodo repository
 
@@ -885,6 +914,9 @@ def from_zenodo(
         Whether to overwrite existing convention with the same name. Default is False
     force_download: bool
         Whether to force download the file even if it is already cached. Default is False
+    allow_python_validators: bool
+        Whether to download and execute repository-provided validator Python.
+        Disabled by default.
 
     Returns
     -------
@@ -910,10 +942,18 @@ def from_zenodo(
             yaml_matches = [
                 file for file in filenames if pathlib.Path(file).suffix == ".yaml"
             ]
-            vfuns_matches = [file for file in filenames if file.endswith("vfuncs.py")]
+            vfuns_matches = (
+                [file for file in filenames if file.endswith("vfuncs.py")]
+                if allow_python_validators
+                else []
+            )
         else:
             yaml_matches = [file for file in filenames if file == name]
-            vfuns_matches = [file for file in filenames if file == f"{name}_vfuncs.py"]
+            vfuns_matches = (
+                [file for file in filenames if file == f"{name}_vfuncs.py"]
+                if allow_python_validators
+                else []
+            )
             if len(yaml_matches) == 0:
                 raise ValueError(
                     f'No file with name "{name}" found in record {doi_or_recid}'
@@ -927,7 +967,11 @@ def from_zenodo(
             )
             shutil.move(_filename, match)
 
-    return from_yaml(yaml_matches[0], overwrite=overwrite)
+    return from_yaml(
+        yaml_matches[0],
+        overwrite=overwrite,
+        allow_python_validators=allow_python_validators,
+    )
 
 
 def yaml2jsonld(

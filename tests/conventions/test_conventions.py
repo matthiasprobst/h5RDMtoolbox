@@ -2,6 +2,7 @@ import logging
 import pathlib
 import shutil
 import sys
+import tempfile
 import unittest
 import warnings
 from datetime import datetime
@@ -553,6 +554,32 @@ def validate_f1(a, b, c=3, d=2):
         with self.assertRaises(TypeError):
             h5tbx.convention.from_yaml([f1, f2])
 
+    def test_from_yaml_rejects_unsafe_module_name(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            filename = pathlib.Path(tmpdir) / "unsafe.yaml"
+            filename.write_text(
+                "__name__: ../outside\n__contact__: me\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "Convention name"):
+                h5tbx.convention.from_yaml(filename)
+
+    def test_from_yaml_rejects_callable_validator_expression(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            filename = pathlib.Path(tmpdir) / "unsafe.yaml"
+            filename.write_text(
+                """__name__: unsafe-validator
+__contact__: me
+value:
+  target_method: __init__
+  validator: __import__('os').getcwd()
+  description: unsafe
+""",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "Unsafe validator"):
+                h5tbx.convention.from_yaml(filename, overwrite=True)
+
     def test_cv_h5tbx(self):
         h5tbx.use(None)
         self.assertTupleEqual((), h5tbx.wrapper.ds_decoder.decoder_names)
@@ -803,6 +830,7 @@ def validate_f1(a, b, c=3, d=2):
         with h5tbx.File() as h5:
             h5.create_string_dataset("ds_str", data="a string")
             h5.create_dataset("ds_int", data=123, units="m/s")
+            self.assertEqual(cv.validate(h5), [])
         cv.validate(h5.hdf_filename)
 
         h5py_filename = h5tbx.utils.generate_temporary_filename(suffix=".hdf")

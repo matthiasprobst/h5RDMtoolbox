@@ -224,11 +224,12 @@ class Database:
                                       attach_scales=(None, None, None, 'x', None))
                     g = h5.create_group('timeAverages',
                                         attrs=dict(long_name='time averaged data'))
-                    g.create_dataset('u', attrs={'units': 'm/s', 'long_name': 'mean u-component'},
-                                     shape=(zplanes, 64, 86, 2))
-                    g.create_dataset('v', attrs={'units': 'm/s', 'long_name': 'mean v-component'},
-                                     shape=(zplanes, 64, 86, 2))
-                    g.rdf['units'].name = 'http://qudt.org/schema/qudt/Unit'
+                    u_mean = g.create_dataset('u', attrs={'units': 'm/s', 'long_name': 'mean u-component'},
+                                              shape=(zplanes, 64, 86, 2))
+                    v_mean = g.create_dataset('v', attrs={'units': 'm/s', 'long_name': 'mean v-component'},
+                                              shape=(zplanes, 64, 86, 2))
+                    u_mean.rdf['units'].predicate = 'http://qudt.org/schema/qudt/Unit'
+                    v_mean.rdf['units'].predicate = 'http://qudt.org/schema/qudt/Unit'
 
     @staticmethod
     def generate_test_files(n_files: int = 5) -> List[pathlib.Path]:

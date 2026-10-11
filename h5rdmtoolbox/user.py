@@ -10,9 +10,18 @@ import importlib_resources
 
 from ._version import __version__
 
-USER_LOG_DIR = pathlib.Path(appdirs.user_log_dir('h5rdmtoolbox', version=__version__))
-USER_DATA_DIR = pathlib.Path(appdirs.user_data_dir('h5rdmtoolbox', version=__version__))
-CACHE_DIR = pathlib.Path(appdirs.user_cache_dir('h5rdmtoolbox'))
+USER_LOG_DIR = pathlib.Path(
+    os.environ.get("H5RDMTOOLBOX_LOG_DIR")
+    or appdirs.user_log_dir('h5rdmtoolbox', version=__version__)
+)
+USER_DATA_DIR = pathlib.Path(
+    os.environ.get("H5RDMTOOLBOX_USER_DATA_DIR")
+    or appdirs.user_data_dir('h5rdmtoolbox', version=__version__)
+)
+CACHE_DIR = pathlib.Path(
+    os.environ.get("H5RDMTOOLBOX_CACHE_DIR")
+    or appdirs.user_cache_dir('h5rdmtoolbox')
+)
 USER_LOG_DIR.mkdir(parents=True, exist_ok=True)
 USER_DATA_DIR.mkdir(parents=True, exist_ok=True)
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
@@ -39,14 +48,10 @@ def _create_session_tmp_dir(tmp_root: pathlib.Path) -> pathlib.Path:
 
 
 def default_cache_dir(__version__: str) -> pathlib.Path:
-    # Your current approach
-    return USER_DATA_DIR / "cache"
+    return CACHE_DIR
 
 
 def cache_dir(__version__: str) -> pathlib.Path:
-    override = os.environ.get("H5RDMTOOLBOX_CACHE_DIR")
-    if override:
-        return pathlib.Path(override)
     return default_cache_dir(__version__)
 
 
@@ -67,7 +72,7 @@ class DirManger:
                           'layouts': USER_DATA_DIR / 'layouts',
                           'repository': USER_DATA_DIR / 'repository',
                           'standard_name_tables': USER_DATA_DIR / 'standard_name_tables',
-                          'cache': USER_DATA_DIR / 'cache'}
+                          'cache': CACHE_DIR}
         self.clear_cache(6)
 
     def __str__(self):

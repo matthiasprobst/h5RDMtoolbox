@@ -26,17 +26,13 @@ def isolated_filesystem():
             os.chdir(cwd)
 
 
-def combined_output(result):
-    try:
-        stderr = result.stderr
-    except ValueError:
-        stderr = ""
-    return result.output + stderr
-
-
 def normalize_cli_output(text: str) -> str:
     text = ANSI_ESCAPE_RE.sub("", text)
     return " ".join(text.split())
+
+
+def combined_output(result):
+    return normalize_cli_output(result.output)
 
 
 class TestCLI(unittest.TestCase):
@@ -83,6 +79,7 @@ class TestCLI(unittest.TestCase):
         self.assertIn("--structural", output)
         self.assertIn("--contextual", output)
         self.assertIn("--file-uri", output)
+        self.assertIn("--prefix", output)
         self.assertIn("--graph", output)
 
     def test_command_ld_dump_option_names(self):
@@ -96,6 +93,7 @@ class TestCLI(unittest.TestCase):
         self.assertEqual(opts_by_name["structural"], ["--structural"])
         self.assertEqual(opts_by_name["contextual"], ["--contextual"])
         self.assertEqual(opts_by_name["file_uri"], ["--file-uri"])
+        self.assertEqual(opts_by_name["prefix"], ["--prefix"])
         self.assertEqual(opts_by_name["graph"], ["--graph"])
 
     def test_ld_format_resolution(self):
@@ -155,6 +153,57 @@ class TestCLI(unittest.TestCase):
 
         self.assertIsNone(result.exception)
         self.assertIn("<https://example.org/data#tmp", result.output)
+
+    def test_ld_dump_with_file_uri_and_prefix(self):
+        from h5rdmtoolbox import File
+
+        with File() as h5:
+            pass
+        runner = CliRunner()
+        result = runner.invoke(
+            h5tbx,
+            [
+                "ld",
+                "dump",
+                f"{h5.hdf_filename}",
+                "--file-uri=https://example.org/data#",
+                "--prefix=ex",
+            ],
+        )
+
+        self.assertIsNone(result.exception)
+        self.assertIn("@prefix ex: <https://example.org/data#>", result.output)
+
+    def test_ld_dump_prefix_requires_file_uri(self):
+        from h5rdmtoolbox import File
+
+        with File() as h5:
+            pass
+        runner = CliRunner()
+        result = runner.invoke(h5tbx, ["ld", "dump", f"{h5.hdf_filename}", "--prefix=ex"])
+
+        self.assertIsNotNone(result.exception)
+        self.assertIn("--prefix requires --file-uri", combined_output(result))
+
+    def test_ld_dump_rejects_invalid_prefix(self):
+        from h5rdmtoolbox import File
+
+        with File() as h5:
+            pass
+        runner = CliRunner()
+        result = runner.invoke(
+            h5tbx,
+            [
+                "ld",
+                "dump",
+                f"{h5.hdf_filename}",
+                "--file-uri=https://example.org/data#",
+                "--prefix=invalid prefix",
+            ],
+        )
+
+        self.assertIsNotNone(result.exception)
+        self.assertIn("Prefix must start with a letter or underscore", combined_output(result))
 
     def test_serve_without_filenames_discovers_files(self):
         runner = CliRunner()

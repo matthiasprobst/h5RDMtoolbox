@@ -172,7 +172,7 @@ h5tbx serve data/ --h5ext=.h5 --h5ext=.hdf5
 ```
 This allows you to serve a single HDF5 file or a directory of HDF5 files, and view their metadata and structure in a web interface.
 
-You may before SPARQL queries or view the File in a graph as shown below:
+You may perform SPARQL queries or view the file as a graph, as shown below:
 
 <p align="center">
   <img src="docs/_static/screenshot-served-hdf5-as-graph.png" alt="Serve UI screenshot" width="640">
@@ -233,7 +233,7 @@ module implements the main interface between the user and the HDF5 file. It
 extends the features of the underlying `h5py` library. Some of the features are implemented in other modules, hence the
 wrapper module depends on the convention, database and linked data (ld) module.
 
-<a href="https://h5rdmtoolbox.readthedocs.io/en/latest/"><img src="docs/_static/h5tbx_modules.svg" alt="H5TBX modules" style="widht:600px;"></a>
+<a href="https://h5rdmtoolbox.readthedocs.io/en/latest/"><img src="docs/_static/h5tbx_modules.svg" alt="H5TBX modules" style="width:600px;"></a>
 
 Current implementation highlights in the modules:
 
@@ -247,7 +247,7 @@ Current implementation highlights in the modules:
 - For the **repository** module, a Zenodo interface is implemented. Zenodo is a repository, which allows to upload and
   download data with a persistent identifier.
 - For the **convention** module,
-  the [standard attributes](https://h5rdmtoolbox.readthedocs.io/en/latest/conventions/standard_attributes_and_conventions.html)
+  the [standard attributes](https://h5rdmtoolbox.readthedocs.io/en/latest/userguide/convention/index.html)
   are implemented.
 - The **layout** module allows to define expectations on the internal layout (object names, location, attributes,
   properties) of HDF5 files.
@@ -271,7 +271,7 @@ A paper is published in the journal [inggrid](https://preprints.inggrid.org/repo
 
 ## Installation
 
-Use python 3.9 or higher (automatic testing is performed until 3.13). If you are a regular user, you can install the
+Use Python 3.9 through 3.13. If you are a regular user, you can install the
 package via pip:
 
     pip install h5RDMtoolbox
@@ -280,7 +280,7 @@ package via pip:
 
 Developers may clone the repository and install the package from source. Clone the repository first:
 
-    git clone https://github.com/matthiasprobst/h5RDMtoolbox.git@main
+    git clone --branch main https://github.com/matthiasprobst/h5RDMtoolbox.git
 
 Then, run
 
@@ -302,6 +302,7 @@ specific to the features of the package:
 - `numpy`: Scientific computing, handling of arrays
 - `matplotlib`: Plotting
 - `appdirs`: Managing user and application directories
+- `importlib_resources`: Accessing package resources consistently
 - `packaging`: Version handling
 - `IPython`: Pretty display of data in notebooks
 - `regex`: Working with regular expressions
@@ -314,14 +315,17 @@ specific to the features of the package:
 - `pint`: Allows working with units
 - `pint_xarray`: Working with units for usage with xarray
 - `python-forge`: Used to update function signatures when using
-  the [standard attributes](https://h5rdmtoolbox.readthedocs.io/en/latest/conventions/standard_attributes_and_conventions.html)
+  the [standard attributes](https://h5rdmtoolbox.readthedocs.io/en/latest/userguide/convention/index.html)
 - `pydantic`: Used to
-  validate [standard attributes](https://h5rdmtoolbox.readthedocs.io/en/latest/conventions/standard_attributes_and_conventions.html)
+  validate [standard attributes](https://h5rdmtoolbox.readthedocs.io/en/latest/userguide/convention/index.html)
 - `pyyaml`: Reading and writing of yaml files, e.g. metadata definitions (conventions). Note, lower versions
   collide with python 3.11
 - `requests`: Used to download files from the internet or validate URLs, e.g. metadata definitions (conventions)
 - `rdflib`: Used to enable working with RDF
 - `ontolutils`: Required to work with RDF and derive semantic description of HDF5 file content
+- `cftime`: Handling non-standard calendars and time coordinates
+- `pyshacl`: Validating RDF graphs against SHACL shapes
+- `typer`: Providing the `h5tbx` command-line interface
 
 #### Optional dependencies
 
@@ -329,9 +333,9 @@ To run unit tests or to enable certain features, additional dependencies must be
 
 Install optional dependencies by specifying them in square brackets after the package name, e.g.:
 
-    pip install h5RDMtoolbox[mongodb]
+    pip install h5RDMtoolbox[database]
 
-[mongodb]
+[database]
 
 - `pymongo`: Database solution for HDF5 files
 
@@ -345,6 +349,10 @@ Install optional dependencies by specifying them in square brackets after the pa
 - `tabulate`: Pretty printing of tables
 - `python-gitlab`: Access to gitlab repositories
 - `pypandoc`: Conversion of markdown files to html
+
+Other supported extras are `layout_validation`, `catalog`, `gui`, `server`, `test`, `docs`, `complete`, and
+`complete-with-docs`. See the [installation guide](https://h5rdmtoolbox.readthedocs.io/en/latest/gettingstarted/installation.html)
+for their purpose. The authoritative dependency lists and version constraints are in [`pyproject.toml`](./pyproject.toml).
 
 ## Citing the package
 
@@ -378,10 +386,10 @@ Here is the BibTeX entry:
 Feel free to contribute. Make sure to write `docstrings` to your methods and classes and please write tests and use PEP
 8 (https://peps.python.org/pep-0008/)
 
-Please write tests for your code and put them into the `test/` folder. Visit the [README file](./tests/README.md) in the
-test-folder for more information.
+Please write tests for your code and put them into the `tests/` folder. Visit the [README file](./tests/README.md) in the
+tests folder for more information.
 
-Pleas also add a jupyter notebook in the `docs/` folder in order to document your code. Please visit
+Please also add a Jupyter notebook in the `docs/` folder in order to document your code. Please visit
 the [README file](./docs/README.md) in the docs-folder for more information on how to compile the documentation.
 
 Please use the **numpy style for the docstrings**:

@@ -12,7 +12,7 @@ It specifically supports the five main steps of
  1. Planning (defining a domain- or problem-specific metadata convention and a layout defining the internal structure of HDF5 files)
  2. Collecting data (creating HDF5 files from scratch or converting to HDF5 files from other sources)
  3. :doc:`Analyzing and processing data <../userguide/wrapper/index>` (Plotting, processing data while keeping the HDF5 attributes by using
-    `xarray <https://xarray.pydata.org/>`_)
+    `xarray <https://docs.xarray.dev/en/stable/>`_)
  4. Sharing data (either into a repository like e.g. `Zenodo <https://zenodo.org>`_ or into a database)
  5. Reusing data (Searching data in databases, local file structures or online repositories
     like `Zenodo <https://zenodo.org>`_).

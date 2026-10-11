@@ -43,6 +43,15 @@ USER_AGENT_HEADER = {
 }
 
 
+def _auth_headers(access_token: Optional[str], headers: Optional[Dict] = None) -> Dict:
+    """Build request headers without exposing credentials in the URL."""
+    merged = dict(USER_AGENT_HEADER)
+    merged.update(headers or {})
+    if access_token:
+        merged["Authorization"] = f"Bearer {access_token}"
+    return merged
+
+
 def _get_media_type(filename: Optional[str]):
     if filename is None:
         return None
@@ -148,8 +157,7 @@ class ZenodoRecord(RepositoryInterface):
                 r = requests.get(
                     source,
                     allow_redirects=True,
-                    params={"access_token": self.access_token},
-                    headers={"Content-Type": "application/json"}
+                    headers=_auth_headers(None, {"Content-Type": "application/json"}),
                 )
                 r.raise_for_status()
                 # the redirected url contains the ID:
@@ -159,8 +167,7 @@ class ZenodoRecord(RepositoryInterface):
             r = requests.post(
                 self.depositions_url,
                 json={},
-                params={"access_token": self.access_token},
-                headers={"Content-Type": "application/json"}.update(USER_AGENT_HEADER)
+                headers=_auth_headers(self.access_token, {"Content-Type": "application/json"}),
             )
             r.raise_for_status()
             rec_id = r.json()['id']
@@ -216,7 +223,7 @@ class ZenodoRecord(RepositoryInterface):
 
         if authenticate:
             access_token = self.access_token
-            r = requests.get(url, params={"access_token": access_token})
+            r = requests.get(url, headers=_auth_headers(access_token))
             r.raise_for_status()
             return r.json()
 
@@ -224,7 +231,7 @@ class ZenodoRecord(RepositoryInterface):
         r = requests.get(record_url, headers=USER_AGENT_HEADER)
         if r.status_code == 404:
             access_token = self.access_token
-            r = requests.get(url, params={"access_token": access_token})
+            r = requests.get(url, headers=_auth_headers(access_token))
         r.raise_for_status()
         return r.json()
 
@@ -243,8 +250,7 @@ class ZenodoRecord(RepositoryInterface):
         r = requests.put(
             url_latest_draft,
             data=json.dumps(dict(metadata=metadata.model_dump(exclude_none=True))),
-            params={"access_token": self.access_token},
-            headers=USER_AGENT_HEADER
+            headers=_auth_headers(self.access_token),
             # headers={"Content-Type": "application/json"}
         )
         if r.status_code == 400:
@@ -271,7 +277,7 @@ class ZenodoRecord(RepositoryInterface):
         r = requests.get(record_url, headers=USER_AGENT_HEADER)
         if r.status_code == 404:
             access_token = self.access_token
-            r = requests.get(url, params={"access_token": access_token}, headers=USER_AGENT_HEADER)
+            r = requests.get(url, headers=_auth_headers(access_token))
         return r.ok
 
     def is_published(self) -> bool:
@@ -302,7 +308,11 @@ class ZenodoRecord(RepositoryInterface):
                     identifier=data.get('id', None),
                     identifier_url=None,
                     size=data.get('size', None),
-                    checksum=data.get('checksum').strip("md5:") if data.get('checksum') else None,
+                    checksum=(
+                        data['checksum'].split(':', 1)[-1]
+                        if data.get('checksum')
+                        else None
+                    ),
                     checksum_algorithm=data.get('checksum_algorithm', "md5"),
                 )
             return dict(
@@ -345,8 +355,7 @@ class ZenodoRecord(RepositoryInterface):
         """Delete the deposit."""
         r = requests.delete(
             f"{self.depositions_url}/{self.rec_id}",
-            params={"access_token": self.access_token},
-            headers=USER_AGENT_HEADER
+            headers=_auth_headers(self.access_token),
         )
         if r.status_code == 405:
             logger.error(f'Only unpublished records can be deleted. Record "{self.rec_id}" is published.')
@@ -397,10 +406,7 @@ class ZenodoRecord(RepositoryInterface):
 
         new_vers_url = self.get_actions_url("newversion")
 
-        r = requests.post(new_vers_url,
-                          headers=USER_AGENT_HEADER,
-                          params={'access_token': self.access_token},
-                          )
+        r = requests.post(new_vers_url, headers=_auth_headers(self.access_token))
 
         r.raise_for_status()
         latest_draft = r.json()['links']['latest_draft']
@@ -419,8 +425,7 @@ class ZenodoRecord(RepositoryInterface):
         r = requests.post(
             url,
             # data=json.dumps({'publication_date': '2024-03-03', 'version': '1.2.3'}),
-            params={'access_token': self.access_token},
-            headers=USER_AGENT_HEADER,
+            headers=_auth_headers(self.access_token),
         )
         r.raise_for_status()
 
@@ -567,8 +572,8 @@ class ZenodoRecord(RepositoryInterface):
         jdata = self._get(authenticate=True)
         r = requests.post(
             jdata['links']['discard'],
-            params={'access_token': self.access_token},
-            headers=USER_AGENT_HEADER, )
+            headers=_auth_headers(self.access_token),
+        )
         r.raise_for_status()
 
         self.rec_id = self._original_rec_id
@@ -586,9 +591,7 @@ class ZenodoRecord(RepositoryInterface):
         if edit_url is None:
             raise APIError('Unable to unlock the record. Please check your permission of the Zenodo API Token.')
 
-        r = requests.post(edit_url,
-                          params={'access_token': self.access_token},
-                          headers=USER_AGENT_HEADER, )
+        r = requests.post(edit_url, headers=_auth_headers(self.access_token))
         if r.status_code == 400:
             print(f'Cannot publish data. This might be because metadata is missing. Check on the website, which '
                   f'fields are required!')
@@ -623,8 +626,7 @@ class ZenodoRecord(RepositoryInterface):
         with open(filename, "rb") as fp:
             r = requests.put(f"{bucket_url}/{filename.name}",
                              data=fp,
-                             params={"access_token": self.access_token},
-                             headers=USER_AGENT_HEADER,
+                             headers=_auth_headers(self.access_token),
                              )
             if r.status_code == 403:
                 logger.critical(
@@ -649,8 +651,7 @@ class ZenodoRecord(RepositoryInterface):
                          headers=USER_AGENT_HEADER, )
         if r.status_code == 404:
             access_token = self.access_token
-            r = requests.get(export_url, params={"access_token": access_token},
-                             headers=USER_AGENT_HEADER, )
+            r = requests.get(export_url, headers=_auth_headers(access_token))
         r.raise_for_status()
         with open(target_filename, 'wb') as f:
             f.write(r.content)

@@ -2,7 +2,6 @@ import hashlib
 import logging
 import pathlib
 import uuid
-import warnings
 from typing import Optional, Union, Dict
 
 import requests
@@ -22,6 +21,10 @@ def download_file(file_url,
     from ..utils import DownloadFileManager
     dfm = DownloadFileManager()
 
+    filename = pathlib.Path(filename).name
+    if not filename or filename in {".", ".."}:
+        raise ValueError("A safe download filename is required")
+
     existing_filename = dfm.get(checksum=checksum, filename=filename)
     if existing_filename:
         # checksum has been verified before because file is in cache
@@ -34,8 +37,12 @@ def download_file(file_url,
         logger.debug(f'A target folder was specified. Downloading file to this folder: {target_folder}')
         target_folder = pathlib.Path(target_folder)
 
+    target_folder = pathlib.Path(target_folder)
     if checksum:
-        target_filename = target_folder / checksum / filename
+        checksum_dir = checksum.split(":", 1)[-1].strip().lower()
+        if not checksum_dir.isalnum():
+            checksum_dir = hashlib.sha256(checksum.encode("utf-8")).hexdigest()
+        target_filename = target_folder / checksum_dir / filename
     else:
         target_filename = target_folder / f"{uuid.uuid4().hex}" / filename
 
@@ -80,17 +87,6 @@ def download_file(file_url,
         # 1) try with headers (Authorization if available)
         r = sess.get(url, stream=stream, headers=h, timeout=timeout, allow_redirects=True)
 
-        # 2) if forbidden/unauthorized and we have a token, try query param fallback
-        if r.status_code in (401, 403) and access_token:
-            r.close()
-            r = sess.get(
-                url,
-                stream=stream,
-                params={"access_token": access_token},
-                headers=h,
-                timeout=timeout,
-                allow_redirects=True,
-            )
         return r
 
     def _resolve_content_url(sess: requests.Session, url: str, h: Dict) -> str:
@@ -164,24 +160,20 @@ def download_file(file_url,
                     if hasher:
                         hasher.update(chunk)
 
-        # Move into place only after success
-        tmp_filename.replace(target_filename)
-
-        assert target_filename.exists(), f"File {target_filename} does not exist."
-        logger.debug("Download successful.")
-
         if hasher:
             file_checksum = hasher.hexdigest().lower()
             if expected_checksum_value and file_checksum != expected_checksum_value:
-                warnings.warn(
-                    f"Checksum mismatch for {target_filename}: expected {expected_checksum_value}, got {file_checksum}",
-                    RuntimeWarning
+                raise ValueError(
+                    f"Checksum mismatch for {target_filename}: "
+                    f"expected {expected_checksum_value}, got {file_checksum}"
                 )
-                logger.error(
-                    f"Checksum mismatch for {target_filename}: expected {expected_checksum_value}, got {file_checksum}"
-                )
-            else:
-                logger.debug("Checksum verification successful.")
+            logger.debug("Checksum verification successful.")
+
+        # Move into place only after download and checksum verification succeed.
+        tmp_filename.replace(target_filename)
+        if not target_filename.exists():
+            raise FileNotFoundError(f"File {target_filename} does not exist")
+        logger.debug("Download successful.")
 
     finally:
         # Cleanup partial file if it exists

@@ -3,7 +3,7 @@
 Installation
 ============
 
-The package requires Python 3.9 or higher (automatic testing is performed for Python 3.9-3.13).
+The package supports Python 3.9 through 3.13.
 
 .. code:: sh
 
@@ -23,8 +23,11 @@ You may want to install optional dependencies:
    # install dependencies needed to build this documentation
    pip install h5RDMtoolbox[docs]
 
-   # install all above dependencies
+   # install GUI and test extras (including database, CSV, SNT, and catalog)
    pip install h5RDMtoolbox[complete]
+
+   # install the complete extra plus documentation dependencies
+   pip install h5RDMtoolbox[complete-with-docs]
 
    # install dependencies for CSV support
    pip install h5RDMtoolbox[csv]
@@ -34,3 +37,9 @@ You may want to install optional dependencies:
 
    # install dependencies for catalog/SPARQL queries
    pip install h5RDMtoolbox[catalog]
+
+   # install dependencies for layout-validation tables
+   pip install h5RDMtoolbox[layout_validation]
+
+   # install the web server and viewer
+   pip install h5RDMtoolbox[server]
