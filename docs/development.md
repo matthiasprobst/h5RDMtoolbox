@@ -113,8 +113,8 @@ probe a local server, with mongomock fallback on Python below 3.13. There is no
 single offline marker covering all external I/O. Check individual test modules
 and skip reasons before choosing a local verification set.
 
-The latest full coverage run on Windows/CPython 3.12.4 after the test-isolation
-changes produced **444 passed, 27 skipped, and no failures**. Live uploads and
+The latest full coverage run on Windows/CPython 3.12.4 after the CI and artifact
+fixes produced **457 passed, 27 skipped, and no failures**. Live uploads and
 Wikidata opt-ins were disabled; other public resource downloads still ran.
 An earlier run exposed an unguarded Sandbox upload returning HTTP 403 without
 a token. Live upload tests now carry the `zenodo_upload` marker and require both explicit
@@ -196,8 +196,9 @@ The two-agent review and parent verification are recorded in
 reports. They identified additional correctness gaps that the editable-install
 test suite does not expose: automatic account-wide Sandbox cleanup in CI,
 missing installed metadata/resources, and same-instance Convention restoration.
-The default CI write/cleanup issue has since been addressed below. Repair
-installed metadata before undertaking a larger concurrency redesign. The reports
+The default CI write/cleanup and installed metadata issues have since been
+addressed below. Correct sequential convention restoration before undertaking a
+larger concurrency redesign. The reports
 preserve baseline evidence, alternatives, and acceptance checks; see completed
 changes here for subsequent fixes.
 
@@ -205,6 +206,17 @@ The pinned Sphinx 8 documentation environment requires Python 3.10+, independent
 of the base package's Python 3.9 support.
 
 ### Completed refactorings
+
+`get_package_meta()` now reads package data in a built distribution, with an
+editable-checkout fallback to the canonical root metadata. A small setuptools
+build command (`_build.py`) copies that one source into the built package; the
+sdist includes the source and command. The convention HTML template declaration
+uses its actual singular directory. The distribution regression builds from a
+fresh source copy through sdist to wheel, inspects metadata/resources/license,
+and exercises the artifact's metadata API and HDF5 read in isolated Python.
+Test extras include the frontend/backend tools so this check needs no build
+dependency downloads. Release builds should use clean sources rather than old
+working-tree `build/lib` output. The review's wheel failures describe the baseline.
 
 The test workflow now includes pull requests and manual dispatch, uses read-only
 repository permissions, disables live upload/Wikidata opt-ins, and receives no

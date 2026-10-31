@@ -17,6 +17,15 @@ coverage files named `.coverage.*` are ignored local artifacts. Choose focused t
 python -m pylint h5rdmtoolbox --rcfile=.pylintrc --output=.pylint
 ```
 
+## Distribution regression
+
+`python -m pytest tests/test_distribution.py -q` builds an sdist from a fresh
+source copy, builds its wheel with the current interpreter's backend, checks
+metadata/resources/license, and imports the extracted wheel in an isolated
+process outside the checkout. `.[test]` includes `build`, setuptools matching the
+build-system minimum, and `wheel`; this test does not download build dependencies.
+It avoids existing `build/` output and rejects archived experiment content.
+
 ## Isolation and external resources
 
 `tests/conftest.py` configures unique temporary application data, cache, and log

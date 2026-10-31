@@ -72,6 +72,10 @@ gui = [
     "PyQt5==5.15.10"
 ]
 test-core = [
+    "build>=1.2",
+    # Artifact tests build without downloading dependencies into isolated envs.
+    "setuptools>=78.1.1",
+    "wheel",
     "toml>0.10.0",
     "pytest>=8.3.3",
     "pytest-cov>=5.0.0",
@@ -119,6 +123,9 @@ h5tbx = "h5rdmtoolbox_cli:h5tbx"
 include-package-data = true
 py-modules = ["h5rdmtoolbox_cli"]
 
+[tool.setuptools.cmdclass]
+build_py = "_build.BuildPy"
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["h5rdmtoolbox*"]
@@ -132,7 +139,7 @@ h5rdmtoolbox = [
     "data/EmptyLayout.hdf",
     "data/style.css",
     "tests/data/*",
-    "conventions/html/template.html",
+    "convention/html/template.html",
     "server/templates/*",
     "server/static/*"
 ]

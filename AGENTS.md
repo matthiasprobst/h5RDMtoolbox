@@ -159,6 +159,10 @@ entry point is `h5tbx`, mapped to `h5rdmtoolbox_cli:h5tbx`.
   and first-use behavior in a fresh process.
 - Required dependencies and feature extras are defined in `pyproject.toml`.
   Reuse existing extras and pins; avoid silently changing installation contracts.
+- For metadata, packaging, or resource changes, run
+  `python -m pytest tests/test_distribution.py -q`. It checks an sdist-built wheel
+  outside the checkout. Keep root `codemeta.json` authoritative; `_build.py`
+  generates its package-resource copy. Never maintain a second JSON copy by hand.
 
 ## Credentials and generated files
 

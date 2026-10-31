@@ -424,6 +424,19 @@ Internally, wrappers and shared utilities access configuration through its
 defining module; public configuration helpers remain available on `h5tbx`.
 Utility logging continues to use the shared `h5rdmtoolbox` logger and handlers.
 
+Distribution builds copy the canonical root `codemeta.json` into package data,
+so `h5tbx.get_package_meta()` also works outside an editable checkout. The test
+extra includes the build frontend and backend needed to verify an sdist-built
+wheel without downloading build dependencies during the test:
+
+```bash
+python -m pytest tests/test_distribution.py -q
+```
+
+This check builds from a fresh source copy, verifies metadata and runtime assets,
+and imports the resulting package outside the checkout. Use clean source trees
+for release builds so stale local build files cannot enter a distribution.
+
 From the repository root, install the test dependencies and run the local smoke checks:
 
 ```bash
