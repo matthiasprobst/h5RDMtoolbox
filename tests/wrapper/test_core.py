@@ -714,10 +714,11 @@ class TestCore(unittest.TestCase):
                     self.assertEqual(
                         f"{obj.attrs['mean_with_unit'].to_pint()}", "1.2 m"
                     )
-                    self.assertEqual(attrs_with_unit, h5tbx.get_ureg()(test_val))
+                    expected_quantity = h5tbx.get_ureg().Quantity(1.2, 'm')
+                    self.assertEqual(attrs_with_unit, expected_quantity)
                     obj.attrs["mean_with_unit"] = attrs_with_unit
                     self.assertEqual(
-                        obj.attrs["mean_with_unit"], str(h5tbx.get_ureg()(test_val))
+                        obj.attrs["mean_with_unit"], str(expected_quantity)
                     )
 
                 self.assertEqual(obj.attrs.get("non_existing_attribute"), None)

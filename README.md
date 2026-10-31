@@ -381,6 +381,12 @@ Here is the BibTeX entry:
 }
 ```
 
+## Attribute quantities
+
+Quantity-valued attribute strings keep their original HDF5 text.
+`attribute.to_pint()` accepts plain, parenthesized, and square-bracket unit
+annotations such as `1.2 m`, `1.2 (m)`, and `1.2 [m]`, including newer Pint parsers.
+
 ## Convention contexts
 
 `with convention:` restores the preceding convention on exit, including when

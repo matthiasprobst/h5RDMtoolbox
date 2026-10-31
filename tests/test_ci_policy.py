@@ -67,6 +67,7 @@ def test_default_ci_has_pr_checks_and_no_zenodo_writes():
     assert 'zenodo_cleanup' not in workflow['jobs']
     assert 'clean_zenodo_sandbox.py' not in text
     assert 'secrets.ZENODO' not in text
+    assert workflow['jobs']['test']['strategy']['fail-fast'] == 'false'
     assert workflow['jobs']['test']['strategy']['matrix']['python-version'] == [
         '3.9', '3.10', '3.11', '3.12', '3.13',
     ]

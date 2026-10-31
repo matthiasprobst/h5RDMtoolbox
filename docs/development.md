@@ -114,7 +114,7 @@ single offline marker covering all external I/O. Check individual test modules
 and skip reasons before choosing a local verification set.
 
 The latest full coverage run on Windows/CPython 3.12.4 with required server
-validation produced **476 passed, 27 skipped, and no failures**. Live uploads and
+validation produced **497 passed, 27 skipped, and no failures**. Live uploads and
 Wikidata opt-ins were disabled; other public resource downloads still ran.
 An earlier run exposed an unguarded Sandbox upload returning HTTP 403 without
 a token. Live upload tests now carry the `zenodo_upload` marker and require both explicit
@@ -206,6 +206,19 @@ The pinned Sphinx 8 documentation environment requires Python 3.10+, independent
 of the base package's Python 3.9 support.
 
 ### Completed refactorings
+
+The first hosted server job passed, while the core matrix on macOS/Python 3.13
+exposed a Pint 0.26.2 parsing incompatibility in `AttributeString.to_pint()`.
+That failure was reproduced locally using an isolated copy of the same Pint
+version. Square-bracket annotations now normalize to parentheses only for
+parsing, preserving existing attribute storage and quantity semantics. New
+regressions cover file/group/dataset attributes, compound units, powers, negative
+scientific notation, and unchanged stored text. The matrix now keeps independent
+jobs running after a failure, so one result does not hide the other combinations.
+Focused checks passed with both Pint 0.25.2 (76 tests) and Pint 0.26.2 (74 tests);
+the selections included the attribute regressions and existing wrapper tests.
+See hosted baseline run
+[41222928487](https://github.com/matthiasprobst/h5RDMtoolbox/actions/runs/41222928487).
 
 Optional server tests now have a single missing-dependency boundary instead of
 82 repeated skip annotations. Missing FastAPI/HTTPX can skip optional runs;

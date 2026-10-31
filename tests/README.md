@@ -97,6 +97,9 @@ the supported Python/OS matrix, uses read-only repository permissions, and does
 not receive Zenodo credentials. Upload and Wikidata opt-ins are explicitly off.
 Coverage upload is restricted to push events. Public resource reads still occur;
 these checks are not an offline test selection.
+Matrix jobs have fail-fast disabled so independent platform/Python results remain
+visible even when one combination fails. Quantity-attribute regressions include
+square-bracket notation to protect compatibility with newer Pint releases.
 The configured checkout/setup-python/cache versions use Node 24 and require
 Actions Runner 2.327.1 or newer if the workflow is reused on self-hosted runners.
 
