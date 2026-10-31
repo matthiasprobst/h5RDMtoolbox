@@ -196,15 +196,23 @@ The two-agent review and parent verification are recorded in
 reports. They identified additional correctness gaps that the editable-install
 test suite does not expose: automatic account-wide Sandbox cleanup in CI,
 missing installed metadata/resources, and same-instance Convention restoration.
-Contain default CI writes and repair installed metadata before undertaking a
-larger concurrency redesign. The reports include evidence, alternatives, and
-acceptance checks; their baseline findings are not claims that these gaps have
-already been fixed.
+The default CI write/cleanup issue has since been addressed below. Repair
+installed metadata before undertaking a larger concurrency redesign. The reports
+preserve baseline evidence, alternatives, and acceptance checks; see completed
+changes here for subsequent fixes.
 
 The pinned Sphinx 8 documentation environment requires Python 3.10+, independently
 of the base package's Python 3.9 support.
 
 ### Completed refactorings
+
+The test workflow now includes pull requests and manual dispatch, uses read-only
+repository permissions, disables live upload/Wikidata opt-ins, and receives no
+Zenodo write credentials. Automatic account-wide cleanup was removed. The manual
+cleanup tool now validates an explicit list of positive deposition IDs, deletes
+only those IDs at the fixed Sandbox endpoint with a timeout, and stops on errors.
+Mock-based ownership and workflow tests pass without deleting remote records.
+Hosted GitHub execution has not been triggered or verified locally.
 
 Catalog tests now keep generated HDF5 data and local databases under per-test
 `tmp_path` directories. Checked-in metadata remains read-only, and individual
@@ -263,7 +271,7 @@ and existing RDF behavior remain compatibility constraints.
 | 3. Decoder correctness | Configuration validation and format restoration have been corrected. Decoder cleanup still contains adjacent `'DATA_SCALE' 'DATA_OFFSET'` literals. Address this with an explicit regression test in a separate behavior-fix commit. | Assert decoder output attributes in wrapper tests. Keep behavior changes separate from serialization and import refactors. |
 | 4. Convention state isolation | `convention/cfg.py` has a context-local pointer, while `convention/core.py` mutates signatures and `wrapper/ds_decoder.py` keeps global decoder selection. Define the supported concurrency contract before changing storage. | Start with nested convention and decoder restoration tests. If task/thread isolation becomes a goal, add concurrent tests that exercise different conventions and signatures; do not infer isolation from `ContextVar` alone. |
 | 5. Compatibility shims and installation boundaries | Both `utils.py` and the `utils/` package exist; the package also re-exports split helpers. `utils.py` announces removal in 3.0. Audit actual callers and distribution contents before consolidating. | Run utility tests and import smoke checks from an installed wheel. Retain supported imports in 2.x. Check minimal installation and feature extras before proposing dependency changes. |
-| 6. Contributor checks and CI | The testing guide is current and live uploads are opt-in. The test workflow still triggers on pushes only; local checks and external-service reads remain mixed. | Add pull-request coverage with an explicit credential/service policy and a discoverable local test selection. Verify Python/OS coverage and make missing integrations visible rather than treating skipped tests as coverage. |
+| 6. Contributor checks and CI | PR/push/manual checks now exclude Zenodo write credentials and automatic cleanup. Local checks and public-resource reads remain mixed; explicit server and artifact coverage still need attention. | Add deliberate optional-feature and artifact checks plus a discoverable local test selection. Verify actual Python/OS execution in hosted CI and make missing integrations visible rather than treating skipped tests as coverage. |
 
 Two serialization differences need particular care: `ld.get_ld` accepts base
 URIs ending in `#` or `/`, while the wrapper JSON-LD path has a stricter check;

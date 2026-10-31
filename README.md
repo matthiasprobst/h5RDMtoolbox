@@ -439,6 +439,11 @@ Live Zenodo uploads are opt-in: tests marked `zenodo_upload` require both
 Ordinary test runs skip these remote writes, even if a token is available.
 See the [testing guide](./tests/README.md) for commands and skip reasons.
 
+CI runs on pushes, pull requests, and manual dispatch with read-only repository
+permissions and without Zenodo write credentials or automatic account cleanup.
+Manual Sandbox cleanup requires an explicit list of deposition IDs; it never
+enumerates or deletes all drafts in an account.
+
 Catalog tests generate their HDF5 files and local indexes in per-test temporary
 directories, keeping checked-in sample data read-only and avoiding shared state
 between test cases.

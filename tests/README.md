@@ -58,6 +58,29 @@ Existing Python-version restrictions still apply; inspect skip reasons. Keep
 credentials out of version control. The test application directories are
 isolated, so local user `zenodo.ini` files are not reused by the suite.
 
+## CI and manual cleanup
+
+The test workflow runs on pushes, pull requests, and manual dispatch. It preserves
+the supported Python/OS matrix, uses read-only repository permissions, and does
+not receive Zenodo credentials. Upload and Wikidata opt-ins are explicitly off.
+Coverage upload is restricted to push events. Public resource reads still occur;
+these checks are not an offline test selection.
+
+There is no automatic Sandbox cleanup job. Opted-in integration tests clean their
+own records in `finally` blocks. If manual cleanup is needed, first identify and
+verify the specific Sandbox deposition IDs you own, configure Sandbox credentials
+locally, then run:
+
+```bash
+python -m tests.clean_zenodo_sandbox 12345 67890
+```
+
+The example IDs are placeholders, not records to delete. The tool rejects empty
+or invalid selections before making requests, deletes duplicate IDs only once,
+uses a fixed Sandbox endpoint with a timeout, and stops on HTTP errors. It never
+lists account drafts or follows arbitrary deletion URLs. Its automated tests
+mock all requests; they perform no real deletion.
+
 ## Wikidata and MongoDB
 
 Wikidata Query Service tests require `H5RDMTOOLBOX_RUN_WIKIDATA_TESTS=1`; select

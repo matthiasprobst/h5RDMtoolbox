@@ -123,6 +123,10 @@ entry point is `h5tbx`, mapped to `h5rdmtoolbox_cli:h5tbx`.
   Supplying credentials alone does not enable remote writes. Check skip reasons
   with `python -m pytest -m zenodo_upload -rs`; existing Python-version skips
   still apply. See `tests/README.md` for the integration-test workflow.
+- Ordinary CI runs on push/PR/manual dispatch with read-only repository
+  permissions and no Zenodo write tokens. Do not reintroduce account-wide
+  cleanup. The manual cleanup tool requires explicit owned deposition IDs;
+  validate changes using mocked requests in `tests/test_ci_policy.py`.
 - MongoDB tests probe a local server and can fall back to mongomock on Python
   below 3.13. Optional server tests may skip when their dependencies are absent.
   Install the relevant extra for changes in those areas and check skip reasons.
