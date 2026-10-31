@@ -93,7 +93,8 @@ new findings. Preserve the current tools and formatting style unless changing
 them is part of the task.
 
 For prose and navigation changes, install docs dependencies and build HTML
-without executing notebooks:
+without executing notebooks. The current Sphinx 8 documentation environment
+requires Python 3.10+, while the base package continues to support Python 3.9:
 
 ```bash
 python -m pip install -e ".[docs]"

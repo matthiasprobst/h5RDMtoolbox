@@ -409,6 +409,10 @@ Approved architecture, quality, feature, or difficult-problem discussions are
 documented under `.work/<topic>/`, with evidence, alternatives, and a final
 recommendation. See the repository guidelines for the delegation workflow.
 
+The [architecture and quality review](./.work/architecture-quality/README.md)
+records independently reviewed CI, installed-wheel, test-coverage, and convention
+state findings, with reproductions and prioritized follow-up checks.
+
 The toolbox loads the SHACL validation engine and notebook HTML display support
 when those features are first used. A normal package import avoids loading them;
 both remain included in the required dependencies. See the developer overview

@@ -191,6 +191,19 @@ do not mix those numbers with the process benchmark.
 
 ## Prioritized maintenance backlog
 
+The two-agent review and parent verification are recorded in
+`.work/architecture-quality/README.md`, with separate architecture and quality
+reports. They identified additional correctness gaps that the editable-install
+test suite does not expose: automatic account-wide Sandbox cleanup in CI,
+missing installed metadata/resources, and same-instance Convention restoration.
+Contain default CI writes and repair installed metadata before undertaking a
+larger concurrency redesign. The reports include evidence, alternatives, and
+acceptance checks; their baseline findings are not claims that these gaps have
+already been fixed.
+
+The pinned Sphinx 8 documentation environment requires Python 3.10+, independently
+of the base package's Python 3.9 support.
+
 ### Completed refactorings
 
 Catalog tests now keep generated HDF5 data and local databases under per-test
@@ -243,7 +256,7 @@ The following are proposed follow-up steps, each suitable for independent,
 verified commits. Public import paths, Python 3.9–3.13 support, HDF5 semantics,
 and existing RDF behavior remain compatibility constraints.
 
-| Order | Evidence and proposed change | Verification and completion criteria |
+| Maintenance area | Evidence and proposed change | Verification and completion criteria |
 | --- | --- | --- |
 | 1. Startup and import boundaries | Validation/display engines are now deferred. Scientific initialization, facade back-imports, and database package initialization remain candidates for profiling. Replace avoidable facade back-imports with imports from defining modules and defer further measured costs where initialization contracts allow it. | Repeat the startup protocol; check CLI help and first-use costs. Run startup, configuration, wrapper, convention, extension, representation, CLI, and SHACL tests. Preserve registry identity, exported symbols, convention activation, and registrations. Report measured improvements before setting a target. |
 | 2. Serialization follow-up | Shared graph-to-text behavior has been consolidated. Review remaining argument normalization and graph-building duplication only where semantics agree. | Run `tests/ld/`, wrapper serialization tests, and `tests/test_cli.py`. Compare graph semantics and separately assert documented formatting. Preserve URI validation, `skipND`, prefixes, format aliases, and current `rdf_mappings` handling. |
