@@ -1,7 +1,7 @@
 # Developer overview and maintenance priorities
 
-This overview describes the active repository at the start of the modernization
-branch, based on version 2.8.2 (`30b6970f`). It is intended for contributors and
+This overview describes the active repository on the modernization branch,
+based on version 2.8.2 (`30b6970f`) and updated with the changes below. It is intended for contributors and
 coding agents. The root `AGENTS.md` contains the day-to-day working instructions.
 
 ## What the toolbox does
@@ -175,7 +175,19 @@ do not mix those numbers with the process benchmark.
 
 ## Prioritized maintenance backlog
 
-The first modernization stage changes workspace organization and documentation.
+### Completed refactorings
+
+RDF graph-to-text serialization now has one internal implementation in
+`ld/utils.py`. File methods, facade JSON-LD output, and metadata-file exporters
+share context optimization and RDFLib formatting. Graph construction and each
+entry point's URI validation remain at their original boundaries. The new local
+`tests/ld/test_serialization.py` checks graph equivalence across these entry
+points, all three structural/contextual modes, custom JSON-LD context, and the
+existing difference in URI validation.
+
+### Remaining work
+
+The first modernization stage changed workspace organization and documentation.
 The following are proposed follow-up steps, each suitable for independent,
 verified commits. Public import paths, Python 3.9–3.13 support, HDF5 semantics,
 and existing RDF behavior remain compatibility constraints.
@@ -183,7 +195,7 @@ and existing RDF behavior remain compatibility constraints.
 | Order | Evidence and proposed change | Verification and completion criteria |
 | --- | --- | --- |
 | 1. Startup and import boundaries | The facade eagerly reaches scientific, display, validation, and database code. Start by replacing avoidable facade back-imports with imports from defining modules, then defer measured costly feature imports where initialization contracts allow it. Keep the CLI's existing command-local imports. | Repeat the startup protocol; check CLI help and first-use costs. Run configuration, wrapper, convention, extension, representation, CLI, and SHACL tests. Preserve registry identity, exported symbols, convention activation, and registrations. Report the actual improvement before setting a target. |
-| 2. Serialization duplication | `ld._serialize_graph` and `wrapper.core._serialize_ld_graph` both optimize context and call RDFLib serialization; facade helpers have related logic. Extract only the shared graph-to-text behavior into a neutral internal helper. | Characterize public entry points before changing them; run `tests/ld/`, wrapper serialization tests, and `tests/test_cli.py`. Compare graph semantics and separately assert documented formatting. Preserve URI validation, `skipND`, prefixes, format aliases, and current `rdf_mappings` handling. |
+| 2. Serialization follow-up | Shared graph-to-text behavior has been consolidated. Review remaining argument normalization and graph-building duplication only where semantics agree. | Run `tests/ld/`, wrapper serialization tests, and `tests/test_cli.py`. Compare graph semantics and separately assert documented formatting. Preserve URI validation, `skipND`, prefixes, format aliases, and current `rdf_mappings` handling. |
 | 3. Small correctness fixes | `_cfg.py` validates plotting-name order using list truthiness and rejects `None` compression values despite `None` defaults. Decoder cleanup contains adjacent `'DATA_SCALE' 'DATA_OFFSET'` literals. Address each with an explicit regression test in a separate behavior-fix commit. | Add valid/invalid configuration cases to `tests/test_config.py` and assert decoder output attributes in wrapper tests. Do not combine these behavior changes with serialization or import refactors. |
 | 4. Convention state isolation | `convention/cfg.py` has a context-local pointer, while `convention/core.py` mutates signatures and `wrapper/ds_decoder.py` keeps global decoder selection. Define the supported concurrency contract before changing storage. | Start with nested convention and decoder restoration tests. If task/thread isolation becomes a goal, add concurrent tests that exercise different conventions and signatures; do not infer isolation from `ContextVar` alone. |
 | 5. Compatibility shims and installation boundaries | Both `utils.py` and the `utils/` package exist; the package also re-exports split helpers. `utils.py` announces removal in 3.0. Audit actual callers and distribution contents before consolidating. | Run utility tests and import smoke checks from an installed wheel. Retain supported imports in 2.x. Check minimal installation and feature extras before proposing dependency changes. |

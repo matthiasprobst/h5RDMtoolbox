@@ -383,16 +383,33 @@ Here is the BibTeX entry:
 
 ## Contribution
 
-Feel free to contribute. Make sure to write `docstrings` to your methods and classes and please write tests and use PEP
-8 (https://peps.python.org/pep-0008/)
+Start with the [developer overview](./docs/development.md) for module responsibilities,
+initialization behavior, startup measurements, and maintenance priorities. The
+[repository guidelines](./AGENTS.md) map code areas to focused tests and describe
+the Git workflow. Work on a dedicated branch and keep changes in coherent commits.
 
-Please write tests for your code and put them into the `tests/` folder. Visit the [README file](./tests/README.md) in the
-tests folder for more information.
+From the repository root, install the test dependencies and run the local smoke checks:
 
-Please also add a Jupyter notebook in the `docs/` folder in order to document your code. Please visit
-the [README file](./docs/README.md) in the docs-folder for more information on how to compile the documentation.
+```bash
+python -m pip install -e ".[test]"
+python -m pytest tests/test_version.py tests/test_config.py tests/test_cli.py -q
+```
 
-Please use the **numpy style for the docstrings**:
-https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_numpy.html#example-numpy
+Add regression tests in `tests/` for changed behavior and run the relevant test
+modules. The full suite includes downloads and external integrations; the developer
+overview explains test isolation and service requirements. Use existing code style
+and **NumPy-style docstrings** for public APIs.
+
+Keep this README, API documentation, affected guides, and developer instructions
+up to date in the same commit as the change. Add or update notebooks when they help
+explain user-facing behavior. See the [documentation guide](./docs/README.md) for
+build requirements. For prose-only changes, a build without notebook execution is:
+
+```bash
+python -m sphinx -W -b html -D nb_execution_mode=off docs docs/_build/html
+```
+
+For notebook behavior changes, omit `-D nb_execution_mode=off` to use the configured
+execution policy.
 
 

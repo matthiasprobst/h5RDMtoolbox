@@ -168,11 +168,6 @@ def compute_metrics(
     )
 
 
-def _optimize_ld_context(graph: rdflib.Graph, context: Optional[Dict]) -> Dict:
-    from .ld import optimize_context
-    return optimize_context(graph, context or {})
-
-
 def _resolve_serialize_format(fmt: str, kwargs: Dict) -> str:
     return kwargs.pop("format", fmt)
 
@@ -192,12 +187,8 @@ def dump_jsonld(
                    contextual=contextual,
                    file_uri=file_uri,
                    skipND=skipND)
-    return graph.serialize(
-        format="json-ld",
-        indent=indent,
-        auto_compact=True,
-        context=_optimize_ld_context(graph, context)
-    )
+    from .ld.utils import _serialize_graph
+    return _serialize_graph(graph, fmt="json-ld", indent=indent, context=context)
 
 
 # def shacl_validate(

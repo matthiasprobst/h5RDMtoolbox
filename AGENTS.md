@@ -26,6 +26,10 @@ and the prioritized maintenance backlog.
   commits on the agreed non-main branch without asking for confirmation.
 - Report completed checks and any failures or skips. Pushes, merges, and releases
   require a task that calls for them.
+- Keep documentation, including `README.md`, current with every change. Review
+  the README alongside affected API docstrings, user guides, developer overview,
+  and agent instructions; update them in the same commit
+  whenever behavior, architecture, or development workflows change.
 
 ## Source map and focused tests
 
