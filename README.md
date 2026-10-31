@@ -388,6 +388,11 @@ initialization behavior, startup measurements, and maintenance priorities. The
 [repository guidelines](./AGENTS.md) map code areas to focused tests and describe
 the Git workflow. Work on a dedicated branch and keep changes in coherent commits.
 
+The toolbox loads the SHACL validation engine and notebook HTML display support
+when those features are first used. A normal package import avoids loading them;
+both remain included in the required dependencies. See the developer overview
+for the startup measurement protocol and local before/after results.
+
 From the repository root, install the test dependencies and run the local smoke checks:
 
 ```bash

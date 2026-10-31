@@ -69,8 +69,8 @@ Importing the facade does more than expose symbols:
 - `_cfg.py` constructs the shared Pint `UnitRegistry`; the facade assigns it to
   `pint_xarray.unit_registry`.
 - Convention, wrapper, utility, database, RDF, and SHACL modules are imported.
-  The SHACL module imports PySHACL eagerly, while representations import
-  IPython display support.
+  PySHACL is loaded when validation runs; IPython display support is loaded when
+  HTML output is displayed. Neither is loaded by a plain toolbox import.
 - The default `h5py` convention is registered and selected. The bundled `h5tbx`
   convention is already built lazily when first selected.
 - An exit handler cleans session data, and an xarray display option is set.
@@ -177,6 +177,21 @@ do not mix those numbers with the process benchmark.
 
 ### Completed refactorings
 
+PySHACL validation and IPython HTML display imports now occur at first use.
+The fresh-process regression in `tests/test_startup.py` checks that ordinary
+imports avoid these libraries, then exercises validation, HTML display, dataset
+reading, default convention selection, and shared unit-registry identity.
+
+Five sequential fresh-process samples on the same Windows/CPython 3.12.4
+environment before and after this import change gave median process wall times
+of **5.111 s** and **4.423 s**, respectively (about **13% lower**). Median time
+inside the child around package import fell from **4.453 s** to **3.896 s**.
+Both sets used isolated application directories and included five samples;
+wall times include interpreter startup and exit cleanup. These local results
+are indicative and do not establish a portable performance threshold. SHACL and
+HTML display now pay their import cost on first use; their correctness is tested
+separately. Required dependencies and public entry points are unchanged.
+
 RDF graph-to-text serialization now has one internal implementation in
 `ld/utils.py`. File methods, facade JSON-LD output, and metadata-file exporters
 share context optimization and RDFLib formatting. Graph construction and each
@@ -194,7 +209,7 @@ and existing RDF behavior remain compatibility constraints.
 
 | Order | Evidence and proposed change | Verification and completion criteria |
 | --- | --- | --- |
-| 1. Startup and import boundaries | The facade eagerly reaches scientific, display, validation, and database code. Start by replacing avoidable facade back-imports with imports from defining modules, then defer measured costly feature imports where initialization contracts allow it. Keep the CLI's existing command-local imports. | Repeat the startup protocol; check CLI help and first-use costs. Run configuration, wrapper, convention, extension, representation, CLI, and SHACL tests. Preserve registry identity, exported symbols, convention activation, and registrations. Report the actual improvement before setting a target. |
+| 1. Startup and import boundaries | Validation/display engines are now deferred. Scientific initialization, facade back-imports, and database package initialization remain candidates for profiling. Replace avoidable facade back-imports with imports from defining modules and defer further measured costs where initialization contracts allow it. | Repeat the startup protocol; check CLI help and first-use costs. Run startup, configuration, wrapper, convention, extension, representation, CLI, and SHACL tests. Preserve registry identity, exported symbols, convention activation, and registrations. Report measured improvements before setting a target. |
 | 2. Serialization follow-up | Shared graph-to-text behavior has been consolidated. Review remaining argument normalization and graph-building duplication only where semantics agree. | Run `tests/ld/`, wrapper serialization tests, and `tests/test_cli.py`. Compare graph semantics and separately assert documented formatting. Preserve URI validation, `skipND`, prefixes, format aliases, and current `rdf_mappings` handling. |
 | 3. Small correctness fixes | `_cfg.py` validates plotting-name order using list truthiness and rejects `None` compression values despite `None` defaults. Decoder cleanup contains adjacent `'DATA_SCALE' 'DATA_OFFSET'` literals. Address each with an explicit regression test in a separate behavior-fix commit. | Add valid/invalid configuration cases to `tests/test_config.py` and assert decoder output attributes in wrapper tests. Do not combine these behavior changes with serialization or import refactors. |
 | 4. Convention state isolation | `convention/cfg.py` has a context-local pointer, while `convention/core.py` mutates signatures and `wrapper/ds_decoder.py` keeps global decoder selection. Define the supported concurrency contract before changing storage. | Start with nested convention and decoder restoration tests. If task/thread isolation becomes a goal, add concurrent tests that exercise different conventions and signatures; do not infer isolation from `ContextVar` alone. |

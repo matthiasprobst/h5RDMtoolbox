@@ -125,6 +125,8 @@ entry point is `h5tbx`, mapped to `h5rdmtoolbox_cli:h5tbx`.
   startup changes in fresh processes with isolated application directories,
   record environment and repeated timings, and test the first use of deferred
   features. Use `-X importtime` for attribution, not as a wall-time benchmark.
+  Run `python -m pytest tests/test_startup.py -q` to check deferred engine imports
+  and first-use behavior in a fresh process.
 - Required dependencies and feature extras are defined in `pyproject.toml`.
   Reuse existing extras and pins; avoid silently changing installation contracts.
 

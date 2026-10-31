@@ -10,7 +10,6 @@ import h5py
 import importlib_resources
 import numpy as np
 import xarray as xr
-from IPython.display import HTML, display
 from numpy import ndarray
 from ontolutils import M4I
 
@@ -734,6 +733,8 @@ class H5Repr:
 
     def __html__(self, group, collapsed: bool = True, preamble: str = None,
                  chunks: bool = False, maxshape: bool = False) -> None:
+        from IPython.display import HTML, display
+
         display(
             HTML(
                 self.html_repr(
