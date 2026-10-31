@@ -12,6 +12,9 @@ def scale_and_offset_decoder(xarr: xr.DataArray, ds: h5py.Dataset) -> xr.DataArr
     """Assumes that scale and offset are available as attributes. The return value is a new xarray.DataArray,
     which data has been transformed according to ret = xarr * scale + offset
     depending on the units of xarr and offset.
+
+    Storage-only calibration references and role flags are removed from the
+    decoded attributes. The underlying HDF5 attributes remain unchanged.
     """
 
     def _quantify(obj):
@@ -22,6 +25,8 @@ def scale_and_offset_decoder(xarr: xr.DataArray, ds: h5py.Dataset) -> xr.DataArr
 
     scale = xarr.attrs.pop('DATA_SCALE', None)
     offset = xarr.attrs.pop('DATA_OFFSET', None)
+    for attribute in ('IS_DATA_SCALE', 'IS_DATA_OFFSET'):
+        xarr.attrs.pop(attribute, None)
 
     if scale and offset:
         if isinstance(scale, h5py.Dataset):
@@ -50,9 +55,6 @@ def scale_and_offset_decoder(xarr: xr.DataArray, ds: h5py.Dataset) -> xr.DataArr
             offset_xrda = ds.rootparent[offset][()]
         with xr.set_options(keep_attrs=True):
             return _dequantify(_quantify(xarr) + _quantify(offset_xrda))
-
-    for a in ('IS_DATA_SCALE', 'IS_DATA_SCALE', 'DATA_SCALE' 'DATA_OFFSET'):
-        xarr.attrs.pop(a, None)
 
     return xarr
 

@@ -387,6 +387,13 @@ Quantity-valued attribute strings keep their original HDF5 text.
 `attribute.to_pint()` accepts plain, parenthesized, and square-bracket unit
 annotations such as `1.2 m`, `1.2 (m)`, and `1.2 [m]`, including newer Pint parsers.
 
+## Decoded calibration data
+
+When a convention enables scale/offset decoding, returned xarray data omits the
+storage attributes `DATA_SCALE`, `DATA_OFFSET`, `IS_DATA_SCALE`, and
+`IS_DATA_OFFSET`. Calibration links, role flags, and raw values remain available
+on the HDF5 datasets.
+
 ## Convention contexts
 
 `with convention:` restores the preceding convention on exit, including when

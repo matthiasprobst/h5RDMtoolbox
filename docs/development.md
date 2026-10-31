@@ -114,7 +114,7 @@ single offline marker covering all external I/O. Check individual test modules
 and skip reasons before choosing a local verification set.
 
 The latest full coverage run on Windows/CPython 3.12.4 with required server
-validation produced **497 passed, 27 skipped, and no failures**. Live uploads and
+validation produced **506 passed, 27 skipped, and no failures**. Live uploads and
 Wikidata opt-ins were disabled; other public resource downloads still ran.
 An earlier run exposed an unguarded Sandbox upload returning HTTP 403 without
 a token. Live upload tests now carry the `zenodo_upload` marker and require both explicit
@@ -207,6 +207,13 @@ of the base package's Python 3.9 support.
 
 ### Completed refactorings
 
+Scale/offset decoding now removes both calibration role flags before every
+processing branch. The former cleanup duplicated `IS_DATA_SCALE`, concatenated
+the scale/offset reference names, and missed transformed results due to early
+returns. `tests/wrapper/test_decoders.py` covers all four transform combinations,
+path and dataset references, values, units, coordinates, and preservation of raw
+HDF5 calibration metadata. The decoder/file/context selection passed 41 tests.
+
 The first hosted server job passed, while the core matrix on macOS/Python 3.13
 exposed a Pint 0.26.2 parsing incompatibility in `AttributeString.to_pint()`.
 That failure was reproduced locally using an isolated copy of the same Pint
@@ -217,7 +224,10 @@ scientific notation, and unchanged stored text. The matrix now keeps independent
 jobs running after a failure, so one result does not hide the other combinations.
 Focused checks passed with both Pint 0.25.2 (76 tests) and Pint 0.26.2 (74 tests);
 the selections included the attribute regressions and existing wrapper tests.
-See hosted baseline run
+Hosted run
+[41235572426](https://github.com/matthiasprobst/h5RDMtoolbox/actions/runs/41235572426)
+for commit `c8cb559c` passed all 15 Python/OS combinations and the server job.
+The earlier failed baseline is run
 [41222928487](https://github.com/matthiasprobst/h5RDMtoolbox/actions/runs/41222928487).
 
 Optional server tests now have a single missing-dependency boundary instead of
@@ -227,7 +237,7 @@ required server runs and broken installed dependencies fail visibly. The
 Ubuntu/Python 3.12 CI job runs the server suite in required mode and validates
 actual passing cases with no skips in its JUnit report. Other Python/OS coverage
 remains in the main matrix. Local import-policy and report-policy tests cover
-the failure paths; hosted execution remains unverified until CI runs.
+the failure paths; the hosted server job passed in the run linked above.
 
 Checkout/setup-python/cache actions now use Node 24-compatible v6/v6/v5 releases
 on the existing GitHub-hosted runners. Their documented minimum runner version
@@ -235,8 +245,8 @@ is 2.327.1; self-hosted reuse must meet it. See the official
 [checkout](https://github.com/actions/checkout#checkout-v5),
 [setup-python](https://github.com/actions/setup-python#breaking-changes-in-v6),
 and [cache](https://github.com/actions/cache#whats-new) runtime notes. Action major
-updates preserve the configured inputs, permissions, and Python matrix; actual
-hosted execution remains a separate verification step.
+updates preserve the configured inputs, permissions, and Python matrix. Hosted
+execution passed for all supported Python versions on Linux, macOS, and Windows.
 
 Convention objects now keep a separate existing `use` manager for every entry,
 so repeated same-instance nesting restores each previous convention on exit.
@@ -265,7 +275,7 @@ Zenodo write credentials. Automatic account-wide cleanup was removed. The manual
 cleanup tool now validates an explicit list of positive deposition IDs, deletes
 only those IDs at the fixed Sandbox endpoint with a timeout, and stops on errors.
 Mock-based ownership and workflow tests pass without deleting remote records.
-Hosted GitHub execution has not been triggered or verified locally.
+Hosted GitHub execution passed in the run linked above; cleanup checks used mocks.
 
 Catalog tests now keep generated HDF5 data and local databases under per-test
 `tmp_path` directories. Checked-in metadata remains read-only, and individual
@@ -321,7 +331,6 @@ and existing RDF behavior remain compatibility constraints.
 | --- | --- | --- |
 | 1. Startup and import boundaries | Validation/display engines are now deferred. Scientific initialization, facade back-imports, and database package initialization remain candidates for profiling. Replace avoidable facade back-imports with imports from defining modules and defer further measured costs where initialization contracts allow it. | Repeat the startup protocol; check CLI help and first-use costs. Run startup, configuration, wrapper, convention, extension, representation, CLI, and SHACL tests. Preserve registry identity, exported symbols, convention activation, and registrations. Report measured improvements before setting a target. |
 | 2. Serialization follow-up | Shared graph-to-text behavior has been consolidated. Review remaining argument normalization and graph-building duplication only where semantics agree. | Run `tests/ld/`, wrapper serialization tests, and `tests/test_cli.py`. Compare graph semantics and separately assert documented formatting. Preserve URI validation, `skipND`, prefixes, format aliases, and current `rdf_mappings` handling. |
-| 3. Decoder correctness | Configuration validation and format restoration have been corrected. Decoder cleanup still contains adjacent `'DATA_SCALE' 'DATA_OFFSET'` literals. Address this with an explicit regression test in a separate behavior-fix commit. | Assert decoder output attributes in wrapper tests. Keep behavior changes separate from serialization and import refactors. |
 | 4. Convention state isolation | Sequential nesting is corrected and characterized. Activation still mutates shared signatures/decoders, and partial activation failures lack a rollback contract. | Characterize failed signature insertion and define its rollback behavior separately. Settle per-file versus active-context semantics before concurrent-isolation changes; test actual decoding/signatures, not just pointer names. |
 | 5. Compatibility shims and installation boundaries | Both `utils.py` and the `utils/` package exist; the package also re-exports split helpers. `utils.py` announces removal in 3.0. Audit actual callers and distribution contents before consolidating. | Run utility tests and import smoke checks from an installed wheel. Retain supported imports in 2.x. Check minimal installation and feature extras before proposing dependency changes. |
 | 6. Contributor checks and CI | PR/push/manual checks exclude Zenodo write credentials and automatic cleanup. Artifact tests run in the matrix, and a dedicated server job enforces execution. Local checks and public-resource reads remain mixed. | Restore meaningful supported-version coverage for older integration tests and isolate local convention setup from connectivity probes. Verify actual Python/OS execution in hosted CI; keep skips visible. |
