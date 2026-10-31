@@ -177,6 +177,13 @@ do not mix those numbers with the process benchmark.
 
 ### Completed refactorings
 
+Configuration validation now checks every plotting-name entry and accepts
+`None` for both compression defaults. All options are checked before updates;
+setting and restoring `ureg_format` use the same routine so nested contexts and
+exceptions restore the shared Pint formatter as well as the configuration dict.
+Regression tests in `tests/test_config.py` cover invalid batches, nested contexts,
+label priorities, and the compression of datasets created inside overrides.
+
 PySHACL validation and IPython HTML display imports now occur at first use.
 The fresh-process regression in `tests/test_startup.py` checks that ordinary
 imports avoid these libraries, then exercises validation, HTML display, dataset
@@ -211,7 +218,7 @@ and existing RDF behavior remain compatibility constraints.
 | --- | --- | --- |
 | 1. Startup and import boundaries | Validation/display engines are now deferred. Scientific initialization, facade back-imports, and database package initialization remain candidates for profiling. Replace avoidable facade back-imports with imports from defining modules and defer further measured costs where initialization contracts allow it. | Repeat the startup protocol; check CLI help and first-use costs. Run startup, configuration, wrapper, convention, extension, representation, CLI, and SHACL tests. Preserve registry identity, exported symbols, convention activation, and registrations. Report measured improvements before setting a target. |
 | 2. Serialization follow-up | Shared graph-to-text behavior has been consolidated. Review remaining argument normalization and graph-building duplication only where semantics agree. | Run `tests/ld/`, wrapper serialization tests, and `tests/test_cli.py`. Compare graph semantics and separately assert documented formatting. Preserve URI validation, `skipND`, prefixes, format aliases, and current `rdf_mappings` handling. |
-| 3. Small correctness fixes | `_cfg.py` validates plotting-name order using list truthiness and rejects `None` compression values despite `None` defaults. Decoder cleanup contains adjacent `'DATA_SCALE' 'DATA_OFFSET'` literals. Address each with an explicit regression test in a separate behavior-fix commit. | Add valid/invalid configuration cases to `tests/test_config.py` and assert decoder output attributes in wrapper tests. Do not combine these behavior changes with serialization or import refactors. |
+| 3. Decoder correctness | Configuration validation and format restoration have been corrected. Decoder cleanup still contains adjacent `'DATA_SCALE' 'DATA_OFFSET'` literals. Address this with an explicit regression test in a separate behavior-fix commit. | Assert decoder output attributes in wrapper tests. Keep behavior changes separate from serialization and import refactors. |
 | 4. Convention state isolation | `convention/cfg.py` has a context-local pointer, while `convention/core.py` mutates signatures and `wrapper/ds_decoder.py` keeps global decoder selection. Define the supported concurrency contract before changing storage. | Start with nested convention and decoder restoration tests. If task/thread isolation becomes a goal, add concurrent tests that exercise different conventions and signatures; do not infer isolation from `ContextVar` alone. |
 | 5. Compatibility shims and installation boundaries | Both `utils.py` and the `utils/` package exist; the package also re-exports split helpers. `utils.py` announces removal in 3.0. Audit actual callers and distribution contents before consolidating. | Run utility tests and import smoke checks from an installed wheel. Retain supported imports in 2.x. Check minimal installation and feature extras before proposing dependency changes. |
 | 6. Contributor checks and CI | `tests/README.md` still describes Python 3.8, and the test workflow currently triggers on pushes only. Local and external-service checks are mixed. | Update the old guide; add pull-request coverage with an explicit credential/service policy and a discoverable local test selection. Verify Python/OS coverage and make missing integrations visible rather than treating skipped tests as coverage. |

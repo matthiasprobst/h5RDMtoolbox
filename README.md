@@ -381,6 +381,22 @@ Here is the BibTeX entry:
 }
 ```
 
+## Configuration
+
+Use `h5tbx.set_config(...)` for persistent settings, or as a context manager for
+temporary overrides. Nested contexts restore both configuration and the shared
+Pint display format on exit, including when an exception is raised. Invalid
+keys or values are rejected before settings change.
+
+```python
+with h5tbx.set_config(hdf_compression=None, hdf_compression_opts=None):
+    # Create datasets without the configured default compression.
+    ...
+```
+
+`plotting_name_order` accepts a nonempty list or tuple of `plot_name`,
+`long_name`, and/or `standard_name` in the desired priority order.
+
 ## Contribution
 
 Start with the [developer overview](./docs/development.md) for module responsibilities,
