@@ -1,5 +1,6 @@
 import pathlib
-import tempfile
+import importlib.util
+import os
 import urllib.parse
 import json
 
@@ -7,24 +8,24 @@ import h5py
 import pytest
 import rdflib
 
-try:
-    from fastapi.testclient import TestClient
+missing_dependencies = [name for name in ('fastapi', 'httpx') if importlib.util.find_spec(name) is None]
+if missing_dependencies:
+    message = 'Server tests require: ' + ', '.join(missing_dependencies) + '; install .[test-server]'
+    if os.environ.get('H5RDMTOOLBOX_REQUIRE_SERVER_TESTS') == '1':
+        raise ImportError(message)
+    pytest.skip(message, allow_module_level=True)
 
-    FASTAPI_AVAILABLE = True
-except Exception:
-    FASTAPI_AVAILABLE = False
+from fastapi.testclient import TestClient
 
 
 @pytest.fixture()
-def hdf_filename():
-    tmpdir = pathlib.Path(tempfile.mkdtemp())
-    filename = tmpdir / "server_test.h5"
+def hdf_filename(tmp_path):
+    filename = tmp_path / "server_test.h5"
     with h5py.File(filename, "w") as h5:
         h5.create_group("grp")
     return filename
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_landing_page_lists_hdf5_files(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
@@ -60,7 +61,6 @@ def test_landing_page_lists_hdf5_files(hdf_filename):
     assert ">SHACL<" in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_file_ttl_endpoint_returns_form_and_dump(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
@@ -80,7 +80,6 @@ def test_file_ttl_endpoint_returns_form_and_dump(hdf_filename):
     assert "hdf:File" in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_file_ttl_endpoint_returns_raw_turtle(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
@@ -93,7 +92,6 @@ def test_file_ttl_endpoint_returns_raw_turtle(hdf_filename):
     assert "hdf:File" in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_file_subject_endpoint_returns_turtle_for_hdf5_object(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
@@ -107,7 +105,6 @@ def test_file_subject_endpoint_returns_turtle_for_hdf5_object(hdf_filename):
     assert "hdf:File" not in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_file_subject_endpoint_returns_html_by_default(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
@@ -123,7 +120,6 @@ def test_file_subject_endpoint_returns_html_by_default(hdf_filename):
     assert "/resolve?iri=http%3A%2F%2Fpurl.allotrope.org%2Fontologies%2Fhdf5%2F1.8%23Group" in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_resource_html_groups_multiple_objects_per_predicate(monkeypatch, hdf_filename):
     import h5rdmtoolbox.server as server
 
@@ -150,7 +146,6 @@ def test_resource_html_groups_multiple_objects_per_predicate(monkeypatch, hdf_fi
         assert str(obj).rsplit("/", 1)[-1] in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_file_subject_endpoint_uses_accept_header(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
@@ -163,7 +158,6 @@ def test_file_subject_endpoint_uses_accept_header(hdf_filename):
     assert "server_test.h5/grp" in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_file_subject_endpoint_format_overrides_accept_header(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
@@ -175,7 +169,6 @@ def test_file_subject_endpoint_format_overrides_accept_header(hdf_filename):
     assert "hdf:Group" in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_file_subject_endpoint_resolves_file_uri_subject(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
@@ -188,7 +181,6 @@ def test_file_subject_endpoint_resolves_file_uri_subject(hdf_filename):
     assert "hdf:Group" in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_file_subject_endpoint_resolves_encoded_file_uri_query(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
@@ -200,7 +192,6 @@ def test_file_subject_endpoint_resolves_encoded_file_uri_query(hdf_filename):
     assert "hdf:Group" in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_file_subject_endpoint_returns_404_for_unknown_subject(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
@@ -211,7 +202,6 @@ def test_file_subject_endpoint_returns_404_for_unknown_subject(hdf_filename):
     assert "Unknown RDF subject" in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_resolve_endpoint_returns_turtle_for_matching_external_iri(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
@@ -229,7 +219,6 @@ def test_resolve_endpoint_returns_turtle_for_matching_external_iri(hdf_filename)
     assert "hdf:Group" in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 @pytest.mark.parametrize("path", ["/", "/resolve"])
 def test_resolve_query_parameter_returns_turtle_for_matching_external_iri(hdf_filename, path):
     from h5rdmtoolbox.server import create_app
@@ -249,7 +238,6 @@ def test_resolve_query_parameter_returns_turtle_for_matching_external_iri(hdf_fi
     assert "hdf:Group" in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_resolve_query_parameter_does_not_require_local_iri_pattern(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
@@ -266,7 +254,6 @@ def test_resolve_query_parameter_does_not_require_local_iri_pattern(hdf_filename
     assert "hdf:Group" in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_resolve_query_parameter_supports_jsonld_format(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
@@ -283,7 +270,6 @@ def test_resolve_query_parameter_supports_jsonld_format(hdf_filename):
     assert "https://doi.org/10.5281/zenodo.17572275#server_test.h5/grp" in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_resolve_uses_first_local_subject_occurrence_only(monkeypatch, hdf_filename):
     import h5rdmtoolbox.server as server
 
@@ -324,7 +310,6 @@ def test_resolve_uses_first_local_subject_occurrence_only(monkeypatch, hdf_filen
     assert calls == []
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_resolve_endpoint_rejects_non_matching_external_iri(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
@@ -357,7 +342,6 @@ class _FakeHTTPResponse:
         return False
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_resolve_uses_zenodo_doi_fallback_for_fragment_iri(monkeypatch, hdf_filename):
     import h5rdmtoolbox.server as server
 
@@ -394,7 +378,6 @@ def test_resolve_uses_zenodo_doi_fallback_for_fragment_iri(monkeypatch, hdf_file
     assert not any(call.endswith("/ignored/content") for call in calls)
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_resolve_uses_zenodo_record_url_fallback(monkeypatch, hdf_filename):
     import h5rdmtoolbox.server as server
 
@@ -425,7 +408,6 @@ def test_resolve_uses_zenodo_record_url_fallback(monkeypatch, hdf_filename):
     assert "T1" in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_resolve_merges_local_and_zenodo_fragment_data(monkeypatch, hdf_filename):
     import h5rdmtoolbox.server as server
 
@@ -459,7 +441,6 @@ def test_resolve_merges_local_and_zenodo_fragment_data(monkeypatch, hdf_filename
     assert 'ex:source "zenodo"' in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_resolve_does_not_use_zenodo_fallback_without_fragment(monkeypatch, hdf_filename):
     import h5rdmtoolbox.server as server
 
@@ -477,7 +458,6 @@ def test_resolve_does_not_use_zenodo_fallback_without_fragment(monkeypatch, hdf_
     assert "Unknown RDF subject" in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_resolve_uses_known_ontology_registry_for_fragment_iri(monkeypatch, caplog, hdf_filename):
     import h5rdmtoolbox.server as server
 
@@ -516,7 +496,6 @@ def test_resolve_uses_known_ontology_registry_for_fragment_iri(monkeypatch, capl
     assert "Known ontology candidates for https://matthiasprobst.github.io/ssno#StandardName" in caplog.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_resolve_uses_known_ontology_template_for_qudt_unit(monkeypatch, caplog, hdf_filename):
     import h5rdmtoolbox.server as server
 
@@ -552,7 +531,6 @@ def test_resolve_uses_known_ontology_template_for_qudt_unit(monkeypatch, caplog,
     assert "Known ontology subject candidates for https://qudt.org/vocab/unit/K" in caplog.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_resolve_unknown_iri_returns_external_fallback_for_html(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
@@ -566,7 +544,6 @@ def test_resolve_unknown_iri_returns_external_fallback_for_html(hdf_filename):
     assert f'href="{iri}" target="_blank"' in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_resolve_external_fallback_escapes_inline_script(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
@@ -579,7 +556,6 @@ def test_resolve_external_fallback_escapes_inline_script(hdf_filename):
     assert r"\u003c/script\u003e\u003cscript\u003ealert(1)\u003c/script\u003e" in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_resolve_rejects_private_ontology_url(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
@@ -593,7 +569,6 @@ def test_resolve_rejects_private_ontology_url(hdf_filename):
     assert "non-public address" in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_sparql_accepts_small_urlencoded_form(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
@@ -607,7 +582,6 @@ def test_sparql_accepts_small_urlencoded_form(hdf_filename):
     assert "results" in response.json()
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_sparql_rejects_oversized_body(hdf_filename):
     from h5rdmtoolbox.server import MAX_SPARQL_REQUEST_BYTES, create_app
 
@@ -621,7 +595,6 @@ def test_sparql_rejects_oversized_body(hdf_filename):
     assert response.status_code == 413
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_resolve_uses_ontology_document_for_fragment_iri(monkeypatch, caplog, hdf_filename):
     import h5rdmtoolbox.server as server
 
@@ -666,7 +639,6 @@ def test_resolve_uses_ontology_document_for_fragment_iri(monkeypatch, caplog, hd
     assert "Loading linked RDF serialization https://example.org/ontology/ontology.ttl" in caplog.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_resolve_does_not_use_ontology_document_without_fragment(monkeypatch, hdf_filename):
     import h5rdmtoolbox.server as server
 
@@ -684,7 +656,6 @@ def test_resolve_does_not_use_ontology_document_without_fragment(monkeypatch, hd
     assert "Unknown RDF subject" in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_resolve_uses_wikidata_direct_claims(monkeypatch, hdf_filename):
     import h5rdmtoolbox.server as server
 
@@ -724,7 +695,6 @@ def test_resolve_uses_wikidata_direct_claims(monkeypatch, hdf_filename):
     assert "1952-03-11T00:00:00+00:00" in response.text or "1952-03-11T00:00:00Z" in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_ttl_endpoint_accepts_query_options(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
@@ -735,7 +705,6 @@ def test_ttl_endpoint_accepts_query_options(hdf_filename):
     assert "&lt;https://example.org/data/server_test.h5&gt;" in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_ttl_endpoint_binds_file_uri_prefix(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
@@ -747,7 +716,6 @@ def test_ttl_endpoint_binds_file_uri_prefix(hdf_filename):
     assert "ex:server_test.h5" in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_ttl_endpoint_rejects_invalid_prefix(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
@@ -758,7 +726,6 @@ def test_ttl_endpoint_rejects_invalid_prefix(hdf_filename):
     assert "prefix must start" in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_ttl_endpoint_rejects_empty_selection(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
@@ -769,7 +736,6 @@ def test_ttl_endpoint_rejects_empty_selection(hdf_filename):
     assert "At least one of structural or contextual must be True" in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 @pytest.mark.parametrize(
     ("path", "content_type", "expected"),
     [
@@ -789,7 +755,6 @@ def test_file_format_endpoints_return_raw_formats(hdf_filename, path, content_ty
     assert expected in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_file_graph_endpoint_returns_interactive_page(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
@@ -991,7 +956,6 @@ def test_file_graph_endpoint_returns_interactive_page(hdf_filename):
     assert ".fullscreen-exit-link" not in graph_css.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_file_graph_endpoint_preserves_controls_in_collapsible_settings(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
@@ -1018,7 +982,6 @@ def test_file_graph_endpoint_preserves_controls_in_collapsible_settings(hdf_file
     assert "Open full screen" not in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_combined_graph_endpoint_uses_collapsible_settings(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
@@ -1035,7 +998,6 @@ def test_combined_graph_endpoint_uses_collapsible_settings(hdf_filename):
     assert "Open full screen" not in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_file_graph_data_endpoint_returns_json_with_label_mode(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
@@ -1052,7 +1014,6 @@ def test_file_graph_data_endpoint_returns_json_with_label_mode(hdf_filename):
     assert "expandable" in payload["nodes"][0]
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_file_graph_endpoint_normalizes_visual_tuning_options(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
@@ -1082,7 +1043,6 @@ def test_file_graph_endpoint_normalizes_visual_tuning_options(hdf_filename):
     assert '"backgroundColor": "#ffffff"' in normalized.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_file_graph_data_endpoint_returns_namespace_color_metadata(monkeypatch, hdf_filename):
     import h5rdmtoolbox.server as server
 
@@ -1117,7 +1077,6 @@ def test_file_graph_data_endpoint_returns_namespace_color_metadata(monkeypatch, 
     assert beta["namespace_label"] == "https://other.example/data/"
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_file_graph_data_endpoint_supports_color_schemes(monkeypatch, hdf_filename):
     import h5rdmtoolbox.server as server
 
@@ -1161,7 +1120,6 @@ def test_file_graph_data_endpoint_supports_color_schemes(monkeypatch, hdf_filena
     }
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_file_graph_data_endpoint_includes_class_index(monkeypatch, hdf_filename):
     import h5rdmtoolbox.server as server
 
@@ -1194,7 +1152,6 @@ def test_file_graph_data_endpoint_includes_class_index(monkeypatch, hdf_filename
     assert alpha_node["group"] == "class:ex:Extra"
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_file_graph_data_endpoint_returns_empty_class_index_for_untyped_graph(monkeypatch, hdf_filename):
     import h5rdmtoolbox.server as server
 
@@ -1216,7 +1173,6 @@ def test_file_graph_data_endpoint_returns_empty_class_index_for_untyped_graph(mo
     assert all(node["rdf_classes"] == [] for node in payload["nodes"])
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_file_graph_data_endpoint_includes_outgoing_links_for_unrendered_targets(monkeypatch, hdf_filename):
     import h5rdmtoolbox.server as server
 
@@ -1246,7 +1202,6 @@ def test_file_graph_data_endpoint_includes_outgoing_links_for_unrendered_targets
     assert ("ex:relatedTo", str(gamma), "ex:gamma", False) in outgoing_links
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_graph_data_endpoint_rejects_invalid_color_by(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
@@ -1257,7 +1212,6 @@ def test_graph_data_endpoint_rejects_invalid_color_by(hdf_filename):
     assert "color_by must be one of" in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_graph_data_endpoint_rejects_invalid_color_scheme(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
@@ -1268,7 +1222,6 @@ def test_graph_data_endpoint_rejects_invalid_color_scheme(hdf_filename):
     assert "color_scheme must be one of" in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_graph_data_drops_nodes_without_visible_edges_by_default(monkeypatch, hdf_filename):
     import h5rdmtoolbox.server as server
 
@@ -1296,7 +1249,6 @@ def test_graph_data_drops_nodes_without_visible_edges_by_default(monkeypatch, hd
         assert edge["to"] in visible_ids
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_graph_data_can_include_nodes_without_visible_edges(monkeypatch, hdf_filename):
     import h5rdmtoolbox.server as server
 
@@ -1320,7 +1272,6 @@ def test_graph_data_can_include_nodes_without_visible_edges(monkeypatch, hdf_fil
     assert payload["summary"]["dropped_isolated_visible_nodes"] == 0
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_graph_detail_presets_select_limits(monkeypatch, hdf_filename):
     import h5rdmtoolbox.server as server
 
@@ -1358,7 +1309,6 @@ def test_graph_detail_presets_select_limits(monkeypatch, hdf_filename):
     assert detailed["summary"]["shown_nodes"] >= compact["summary"]["shown_nodes"]
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_graph_detail_full_ignores_limits_and_includes_isolated_nodes(monkeypatch, hdf_filename):
     import h5rdmtoolbox.server as server
 
@@ -1390,7 +1340,6 @@ def test_graph_detail_full_ignores_limits_and_includes_isolated_nodes(monkeypatc
     assert "https://example.org/literal-only" in {node["id"] for node in payload["nodes"]}
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_graph_detail_full_respects_search_and_ontology_filter(monkeypatch, hdf_filename):
     import h5rdmtoolbox.server as server
 
@@ -1416,7 +1365,6 @@ def test_graph_detail_full_respects_search_and_ontology_filter(monkeypatch, hdf_
     assert "http://www.w3.org/2000/01/rdf-schema#Class" not in without_ontology_ids
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_combined_graph_data_focus_returns_node_neighborhood(monkeypatch, hdf_filename):
     import h5rdmtoolbox.server as server
 
@@ -1441,7 +1389,6 @@ def test_combined_graph_data_focus_returns_node_neighborhood(monkeypatch, hdf_fi
     assert beta["hidden_neighbor_count"] == 0
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_graph_data_focus_respects_direction_depth_and_expansion_caps(monkeypatch, hdf_filename):
     import h5rdmtoolbox.server as server
 
@@ -1473,7 +1420,6 @@ def test_graph_data_focus_respects_direction_depth_and_expansion_caps(monkeypatc
     assert capped_payload["summary"]["truncated"] is True
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_file_graph_endpoint_accepts_mode_and_prefix_options(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
@@ -1492,7 +1438,6 @@ def test_file_graph_endpoint_accepts_mode_and_prefix_options(hdf_filename):
     assert '<option value="light" selected>Light</option>' in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_graph_data_endpoint_rejects_invalid_labels(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
@@ -1503,7 +1448,6 @@ def test_graph_data_endpoint_rejects_invalid_labels(hdf_filename):
     assert "labels must be one of" in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_graph_data_endpoint_rejects_invalid_direction(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
@@ -1514,7 +1458,6 @@ def test_graph_data_endpoint_rejects_invalid_direction(hdf_filename):
     assert "direction must be one of" in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_graph_data_endpoint_rejects_invalid_detail(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
@@ -1526,7 +1469,6 @@ def test_graph_data_endpoint_rejects_invalid_detail(hdf_filename):
 
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_file_graph_endpoint_links_matching_external_iris_to_local_resolver(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
@@ -1544,7 +1486,6 @@ def test_file_graph_endpoint_links_matching_external_iris_to_local_resolver(hdf_
     assert "Open local TTL" in client.get("/static/graph.js").text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_file_graph_endpoint_rejects_invalid_mode(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
@@ -1555,7 +1496,6 @@ def test_file_graph_endpoint_rejects_invalid_mode(hdf_filename):
     assert "mode must be one of" in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_file_graph_uses_standard_prefixes_for_compact_labels(monkeypatch, hdf_filename):
     import h5rdmtoolbox.server as server
 
@@ -1580,7 +1520,6 @@ def test_file_graph_uses_standard_prefixes_for_compact_labels(monkeypatch, hdf_f
     assert '"label": "rzen:12345"' in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_file_query_endpoint_returns_query_form(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
@@ -1603,7 +1542,6 @@ def test_file_query_endpoint_returns_query_form(hdf_filename):
     assert "Run the example query" in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_file_query_endpoint_runs_select_query(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
@@ -1620,7 +1558,6 @@ def test_file_query_endpoint_runs_select_query(hdf_filename):
     assert "hdf:Group" in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_file_query_endpoint_is_scoped_to_selected_file(monkeypatch, hdf_filename):
     import h5rdmtoolbox.server as server
 
@@ -1656,7 +1593,6 @@ def test_file_query_endpoint_is_scoped_to_selected_file(monkeypatch, hdf_filenam
     assert "second" not in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_combined_query_endpoint_uses_combined_server_graph(monkeypatch, hdf_filename):
     import h5rdmtoolbox.server as server
 
@@ -1693,7 +1629,6 @@ def test_combined_query_endpoint_uses_combined_server_graph(monkeypatch, hdf_fil
     assert "second" in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_combined_ttl_endpoint_serializes_combined_server_graph(monkeypatch, hdf_filename):
     import h5rdmtoolbox.server as server
 
@@ -1727,7 +1662,6 @@ def test_combined_ttl_endpoint_serializes_combined_server_graph(monkeypatch, hdf
     assert '"second"' in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_combined_metrics_endpoint_uses_combined_server_graph(monkeypatch, hdf_filename):
     import h5rdmtoolbox.server as server
 
@@ -1759,7 +1693,6 @@ def test_combined_metrics_endpoint_uses_combined_server_graph(monkeypatch, hdf_f
     assert ">2<" in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_combined_metrics_skips_exact_distance_for_large_graph(monkeypatch, hdf_filename):
     import h5rdmtoolbox.server as server
 
@@ -1780,7 +1713,6 @@ def test_combined_metrics_skips_exact_distance_for_large_graph(monkeypatch, hdf_
     assert "Skipped for graphs above 3 resource nodes" in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_combined_graph_endpoint_truncates_large_graph(monkeypatch, hdf_filename):
     import h5rdmtoolbox.server as server
 
@@ -1802,7 +1734,6 @@ def test_combined_graph_endpoint_truncates_large_graph(monkeypatch, hdf_filename
     assert 'id="graph-detail"' in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_file_graph_endpoint_uses_large_graph_defaults(monkeypatch, hdf_filename):
     import h5rdmtoolbox.server as server
 
@@ -1832,7 +1763,6 @@ def test_file_graph_endpoint_uses_large_graph_defaults(monkeypatch, hdf_filename
     assert payload["summary"]["truncated"] is True
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_combined_graph_endpoint_searches_node_neighborhood(monkeypatch, hdf_filename):
     import h5rdmtoolbox.server as server
 
@@ -1850,7 +1780,6 @@ def test_combined_graph_endpoint_searches_node_neighborhood(monkeypatch, hdf_fil
     assert "gamma" not in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_file_shacl_endpoint_returns_validation_form(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
@@ -1867,7 +1796,6 @@ def test_file_shacl_endpoint_returns_validation_form(hdf_filename):
     assert "Run the default shape" in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_file_shacl_endpoint_runs_validation(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
@@ -1891,7 +1819,6 @@ hdf:FileShape
     assert "sh:conforms true" in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_file_metrics_endpoint_returns_graph_metrics(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
@@ -1931,7 +1858,6 @@ def test_file_metrics_endpoint_returns_graph_metrics(hdf_filename):
     assert "hdf:rootGroup" in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_create_app_discovers_hdf5_files(monkeypatch, hdf_filename):
     from h5rdmtoolbox.server import create_app
 
@@ -1955,7 +1881,6 @@ def test_create_app_discovers_hdf5_files(monkeypatch, hdf_filename):
     assert "hdf:File" in ttl_response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_create_app_expands_folder_input(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
@@ -1975,7 +1900,6 @@ def test_create_app_expands_folder_input(hdf_filename):
     assert "ignored.txt" not in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_create_app_expands_folder_input_recursively(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
@@ -2002,7 +1926,6 @@ def test_create_app_expands_folder_input_recursively(hdf_filename):
     assert "nested.hdf5" in recursive_response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_create_app_filters_folder_input_by_extension(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
@@ -2020,7 +1943,6 @@ def test_create_app_filters_folder_input_by_extension(hdf_filename):
     assert "second.hdf5" in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_create_app_supports_mixed_file_and_folder_inputs(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
@@ -2038,7 +1960,6 @@ def test_create_app_supports_mixed_file_and_folder_inputs(hdf_filename):
     assert "single.hdf5" in response.text
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_create_app_includes_turtle_files_in_combined_graph(hdf_filename):
     from h5rdmtoolbox.server import create_app
 
@@ -2073,7 +1994,6 @@ def test_create_app_includes_turtle_files_in_combined_graph(hdf_filename):
     assert with_ttl_client.app.state.rdf_files == [str(folder / "metadata.ttl")]
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 def test_create_app_includes_turtle_files_recursively(hdf_filename):
     from h5rdmtoolbox.server import create_app
 

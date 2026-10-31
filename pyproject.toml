@@ -90,6 +90,10 @@ test-core = [
 test = [
     "h5rdmtoolbox[catalog,csv,database,snt,test-core]"
 ]
+test-server = [
+    "h5rdmtoolbox[server,test]",
+    "httpx"
+]
 docs = [
     "Sphinx==8.0.0",
     "sphinx_book_theme==1.1.3",

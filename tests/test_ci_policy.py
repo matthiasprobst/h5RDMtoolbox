@@ -70,3 +70,10 @@ def test_default_ci_has_pr_checks_and_no_zenodo_writes():
     assert workflow['jobs']['test']['strategy']['matrix']['python-version'] == [
         '3.9', '3.10', '3.11', '3.12', '3.13',
     ]
+    steps = workflow['jobs']['server']['steps']
+    assert any('.[test-server]' in step.get('run', '') for step in steps)
+    required_step = next(step for step in steps if 'tests/test_server.py' in step.get('run', ''))
+    assert required_step['env']['H5RDMTOOLBOX_REQUIRE_SERVER_TESTS'] == '1'
+    report_step = next(step for step in steps if 'tests.check_test_report' in step.get('run', ''))
+    assert steps.index(report_step) > steps.index(required_step)
+    assert 'if' not in report_step and 'continue-on-error' not in report_step

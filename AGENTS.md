@@ -130,8 +130,11 @@ entry point is `h5tbx`, mapped to `h5rdmtoolbox_cli:h5tbx`.
   cleanup. The manual cleanup tool requires explicit owned deposition IDs;
   validate changes using mocked requests in `tests/test_ci_policy.py`.
 - MongoDB tests probe a local server and can fall back to mongomock on Python
-  below 3.13. Optional server tests may skip when their dependencies are absent.
-  Install the relevant extra for changes in those areas and check skip reasons.
+  below 3.13. For server work, install `.[test-server]` (including HTTPX) and set
+  `H5RDMTOOLBOX_REQUIRE_SERVER_TESTS=1`. Missing optional server dependencies can
+  skip the module otherwise; broken installed imports must fail. The dedicated
+  server CI job checks its JUnit report using `tests.check_test_report` to reject
+  empty/skipped runs. See `tests/README.md` for the exact commands.
 - Add meaningful regression tests for changed behavior. For RDF changes, compare
   graph semantics rather than incidental triple order, unless output formatting
   is itself the contract. Documentation-only changes need documentation checks,

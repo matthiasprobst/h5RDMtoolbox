@@ -67,6 +67,29 @@ Existing Python-version restrictions still apply; inspect skip reasons. Keep
 credentials out of version control. The test application directories are
 isolated, so local user `zenodo.ini` files are not reused by the suite.
 
+## Optional server tests
+
+Install the dedicated test extra and require server tests explicitly:
+
+```bash
+python -m pip install -e ".[test-server]"
+```
+
+In PowerShell:
+
+```powershell
+$env:H5RDMTOOLBOX_REQUIRE_SERVER_TESTS = '1'
+python -m pytest tests/test_server.py -q --junitxml=server-test-results.xml
+python -m tests.check_test_report server-test-results.xml
+```
+
+In bash, prefix the pytest command with `H5RDMTOOLBOX_REQUIRE_SERVER_TESTS=1`.
+The extra combines existing server/test requirements with HTTPX. Missing FastAPI
+or HTTPX skips the module only in optional runs; required runs fail. Unexpected
+errors from installed dependencies are not treated as missing packages. The
+report check requires executed cases with no skips, failures, or errors.
+`tests/test_server_policy.py` verifies these boundaries without service calls.
+
 ## CI and manual cleanup
 
 The test workflow runs on pushes, pull requests, and manual dispatch. It preserves
@@ -74,6 +97,8 @@ the supported Python/OS matrix, uses read-only repository permissions, and does
 not receive Zenodo credentials. Upload and Wikidata opt-ins are explicitly off.
 Coverage upload is restricted to push events. Public resource reads still occur;
 these checks are not an offline test selection.
+The configured checkout/setup-python/cache versions use Node 24 and require
+Actions Runner 2.327.1 or newer if the workflow is reused on self-hosted runners.
 
 There is no automatic Sandbox cleanup job. Opted-in integration tests clean their
 own records in `finally` blocks. If manual cleanup is needed, first identify and

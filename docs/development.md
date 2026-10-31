@@ -113,8 +113,8 @@ probe a local server, with mongomock fallback on Python below 3.13. There is no
 single offline marker covering all external I/O. Check individual test modules
 and skip reasons before choosing a local verification set.
 
-The latest full coverage run on Windows/CPython 3.12.4 after the context-restoration
-fix produced **464 passed, 27 skipped, and no failures**. Live uploads and
+The latest full coverage run on Windows/CPython 3.12.4 with required server
+validation produced **476 passed, 27 skipped, and no failures**. Live uploads and
 Wikidata opt-ins were disabled; other public resource downloads still ran.
 An earlier run exposed an unguarded Sandbox upload returning HTTP 403 without
 a token. Live upload tests now carry the `zenodo_upload` marker and require both explicit
@@ -207,6 +207,24 @@ of the base package's Python 3.9 support.
 
 ### Completed refactorings
 
+Optional server tests now have a single missing-dependency boundary instead of
+82 repeated skip annotations. Missing FastAPI/HTTPX can skip optional runs;
+required server runs and broken installed dependencies fail visibly. The
+`test-server` extra combines existing feature/test extras with HTTPX. A dedicated
+Ubuntu/Python 3.12 CI job runs the server suite in required mode and validates
+actual passing cases with no skips in its JUnit report. Other Python/OS coverage
+remains in the main matrix. Local import-policy and report-policy tests cover
+the failure paths; hosted execution remains unverified until CI runs.
+
+Checkout/setup-python/cache actions now use Node 24-compatible v6/v6/v5 releases
+on the existing GitHub-hosted runners. Their documented minimum runner version
+is 2.327.1; self-hosted reuse must meet it. See the official
+[checkout](https://github.com/actions/checkout#checkout-v5),
+[setup-python](https://github.com/actions/setup-python#breaking-changes-in-v6),
+and [cache](https://github.com/actions/cache#whats-new) runtime notes. Action major
+updates preserve the configured inputs, permissions, and Python matrix; actual
+hosted execution remains a separate verification step.
+
 Convention objects now keep a separate existing `use` manager for every entry,
 so repeated same-instance nesting restores each previous convention on exit.
 Return identity and immediate activation by `use(...)` are preserved. New local
@@ -293,7 +311,7 @@ and existing RDF behavior remain compatibility constraints.
 | 3. Decoder correctness | Configuration validation and format restoration have been corrected. Decoder cleanup still contains adjacent `'DATA_SCALE' 'DATA_OFFSET'` literals. Address this with an explicit regression test in a separate behavior-fix commit. | Assert decoder output attributes in wrapper tests. Keep behavior changes separate from serialization and import refactors. |
 | 4. Convention state isolation | Sequential nesting is corrected and characterized. Activation still mutates shared signatures/decoders, and partial activation failures lack a rollback contract. | Characterize failed signature insertion and define its rollback behavior separately. Settle per-file versus active-context semantics before concurrent-isolation changes; test actual decoding/signatures, not just pointer names. |
 | 5. Compatibility shims and installation boundaries | Both `utils.py` and the `utils/` package exist; the package also re-exports split helpers. `utils.py` announces removal in 3.0. Audit actual callers and distribution contents before consolidating. | Run utility tests and import smoke checks from an installed wheel. Retain supported imports in 2.x. Check minimal installation and feature extras before proposing dependency changes. |
-| 6. Contributor checks and CI | PR/push/manual checks now exclude Zenodo write credentials and automatic cleanup. Local checks and public-resource reads remain mixed; explicit server and artifact coverage still need attention. | Add deliberate optional-feature and artifact checks plus a discoverable local test selection. Verify actual Python/OS execution in hosted CI and make missing integrations visible rather than treating skipped tests as coverage. |
+| 6. Contributor checks and CI | PR/push/manual checks exclude Zenodo write credentials and automatic cleanup. Artifact tests run in the matrix, and a dedicated server job enforces execution. Local checks and public-resource reads remain mixed. | Restore meaningful supported-version coverage for older integration tests and isolate local convention setup from connectivity probes. Verify actual Python/OS execution in hosted CI; keep skips visible. |
 
 Two serialization differences need particular care: `ld.get_ld` accepts base
 URIs ending in `#` or `/`, while the wrapper JSON-LD path has a stricter check;

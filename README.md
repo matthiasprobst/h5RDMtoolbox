@@ -350,7 +350,7 @@ Install optional dependencies by specifying them in square brackets after the pa
 - `python-gitlab`: Access to gitlab repositories
 - `pypandoc`: Conversion of markdown files to html
 
-Other supported extras are `layout_validation`, `catalog`, `gui`, `server`, `test`, `docs`, `complete`, and
+Other supported extras are `layout_validation`, `catalog`, `gui`, `server`, `test`, `test-server`, `docs`, `complete`, and
 `complete-with-docs`. See the [installation guide](https://h5rdmtoolbox.readthedocs.io/en/latest/gettingstarted/installation.html)
 for their purpose. The authoritative dependency lists and version constraints are in [`pyproject.toml`](./pyproject.toml).
 
@@ -471,6 +471,13 @@ CI runs on pushes, pull requests, and manual dispatch with read-only repository
 permissions and without Zenodo write credentials or automatic account cleanup.
 Manual Sandbox cleanup requires an explicit list of deposition IDs; it never
 enumerates or deletes all drafts in an account.
+
+Server validation has its own CI job using `.[test-server]`, which includes HTTPX
+for FastAPI's TestClient. Missing optional dependencies are reported as a module
+skip in ordinary test runs, but fail when `H5RDMTOOLBOX_REQUIRE_SERVER_TESTS=1`.
+Broken installed dependencies always fail visibly. CI checks the JUnit report
+for actual passing test cases and rejects skips or an empty run. Workflow actions
+use Node 24-compatible versions; self-hosted runners need version 2.327.1 or newer.
 
 Catalog tests generate their HDF5 files and local indexes in per-test temporary
 directories, keeping checked-in sample data read-only and avoiding shared state

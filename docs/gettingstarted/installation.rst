@@ -43,3 +43,15 @@ You may want to install optional dependencies:
 
    # install the web server and viewer
    pip install h5RDMtoolbox[server]
+
+   # install server and test dependencies, including HTTPX for TestClient
+   python -m pip install "h5RDMtoolbox[test-server]"
+
+The documentation extra currently requires Python 3.10 or newer because it uses
+Sphinx 8. The base package continues to support Python 3.9.
+
+For server development, the ``test-server`` extra provides both the optional
+server and its test dependencies. Set ``H5RDMTOOLBOX_REQUIRE_SERVER_TESTS=1``
+when checking that feature; missing dependencies then fail instead of skipping
+the server test module. See the repository testing guide for the JUnit execution
+check used by CI.
