@@ -114,7 +114,7 @@ single offline marker covering all external I/O. Check individual test modules
 and skip reasons before choosing a local verification set.
 
 The latest full coverage run on Windows/CPython 3.12.4 with required server
-validation produced **506 passed, 27 skipped, and no failures**. Live uploads and
+validation produced **558 passed, 27 skipped, and no failures**. Live uploads and
 Wikidata opt-ins were disabled; other public resource downloads still ran.
 An earlier run exposed an unguarded Sandbox upload returning HTTP 403 without
 a token. Live upload tests now carry the `zenodo_upload` marker and require both explicit
@@ -202,6 +202,35 @@ text, scalar UTF-8 string types, list shapes, attribute names, append/duplicate
 behavior, empty mappings, and reopened files. It covers root groups, nested
 groups, datasets, file-level metadata, blank nodes, literals, JSON-LD, and
 `ontolutils.Thing` values. Existing graph/query tests complement these checks.
+
+The refactored implementation separates three responsibilities:
+
+| Layer | Responsibility |
+| --- | --- |
+| `ld/rdf.py` | Public managers, URL/type validation, and preparation of individual RDF objects. Small helpers handle literal encoding and single-entry JSON-LD graphs without HDF5 access. |
+| `ld/_rdf_storage.py` | Shared mapping replacement, object append, entry removal, and type merging. It preserves scalar/list transitions, duplicate behavior, and empty mappings. Each mapping adapter lives for one operation, avoiding stale manager caches. |
+| `wrapper/h5attr.py` and existing attribute utilities | Actual attribute assignment and HDF5 encoding, including JSON formatting, string types, and existing convention hooks. These writers are unchanged. |
+
+The public module continues to export the same managers, helpers, and constants.
+The internal storage module imports only `json`, and does not depend on wrapper,
+RDFLib, Pydantic, or package-facade initialization. Sequence orchestration remains
+at the public entry points so the adapter does not change validation or write order.
+
+The contract selection now includes 52 cases. A local differential audit loaded
+the pre-refactor module from commit `25e00360` alongside the new implementation
+and replayed 81 operations. After each operation, raw attributes, datatypes,
+shapes, dataset values, exceptions, and warnings were identical; reopening the
+files also gave identical stored attributes. The disposable comparison artifacts
+remain under ignored `.playground/`; the permanent contract tests are in `tests/ld/`.
+
+Verification on Windows/CPython 3.12.4 passed the focused RDF/wrapper/startup
+selection (252 tests), the full coverage suite (558 passed, 27 skipped), and
+Sphinx with `-W` and notebook execution disabled. The targeted Pylint score
+remains 9.20/10, and the full-package score remains 8.75/10 against a separate
+copy of the original tracked package. Pylint still exits nonzero for existing
+findings. Non-cycle diagnostics introduce no new messages and remove two old
+ones; both package reports contain 55 import-cycle diagnostics, whose reported
+paths vary with traversal order. The new storage module adds only a `json` import.
 
 Preserve validation and mutation order as well as final values. Sequence writes
 can retain earlier elements when a later element is rejected. `IRIDict.object`

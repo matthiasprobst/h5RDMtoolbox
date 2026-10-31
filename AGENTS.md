@@ -143,6 +143,8 @@ entry point is `h5tbx`, mapped to `h5rdmtoolbox_cli:h5tbx`.
 - For RDF storage refactoring, also run `tests/ld/test_rdf_storage.py`. Preserve
   exact raw attribute representations and mutation order, including partial
   writes on invalid sequences. See the storage contract in `docs/development.md`.
+  Keep RDF validation/preparation in `ld/rdf.py` and shared storage mutations in
+  `ld/_rdf_storage.py`; keep the latter independent of wrapper/facade imports.
 
 ## Refactoring and compatibility
 

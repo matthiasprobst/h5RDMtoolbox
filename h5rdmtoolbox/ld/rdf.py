@@ -12,6 +12,7 @@ from pydantic import HttpUrl
 
 from h5rdmtoolbox.database import lazy
 from h5rdmtoolbox.protocols import H5TbxAttributeManager
+from ._rdf_storage import _AttributeMapping, _merge_type_values
 
 RDF_OBJECT_ATTR_NAME = 'RDF_OBJECT'
 RDF_FILE_OBJECT_ATTR_NAME = 'RDF_FILE_OBJECT'
@@ -100,7 +101,7 @@ def set_predicate(attr: h5py.AttributeManager,
                   attr_name: str,
                   value: str,
                   rdf_predicate_attr_name=RDF_PREDICATE_ATTR_NAME) -> None:
-    """Set the class of an attribute
+    """Associate an attribute name with a predicate IRI.
 
     Parameters
     ----------
@@ -119,24 +120,18 @@ def set_predicate(attr: h5py.AttributeManager,
     """
     if isinstance(value, rdflib.BNode):
         value = value.n3()
-    else:
-        if isinstance(value, str) and value.startswith("_:"):
-            pass
-        else:
-            try:
-                HttpUrl(value)
-            except pydantic.ValidationError as e:
-                raise RDFError(f'Invalid IRI: "{value}" for attr name "{attr_name}". '
-                               f'Expecting a valid URL. This was validated with pydantic. Pydantic error: {e}')
+    elif not (isinstance(value, str) and value.startswith("_:")):
+        try:
+            HttpUrl(value)
+        except pydantic.ValidationError as e:
+            raise RDFError(f'Invalid IRI: "{value}" for attr name "{attr_name}". '
+                           f'Expecting a valid URL. This was validated with pydantic. Pydantic error: {e}')
 
-    iri_name_data = attr.get(rdf_predicate_attr_name, None)
-    if iri_name_data is None:
-        iri_name_data = {}
-    iri_name_data.update({attr_name: value})
-    attr[rdf_predicate_attr_name] = iri_name_data
+    _AttributeMapping(attr, rdf_predicate_attr_name).set(attr_name, value)
 
 
 def is_sdict(data):
+    """Return whether a string starts with the serialized-dictionary marker."""
     if isinstance(data, str):
         if data[0] == "{":
             return True
@@ -147,87 +142,76 @@ def set_object(attr: h5py.AttributeManager,
                attr_name: str,
                data: str,
                rdf_object_attr_name=RDF_OBJECT_ATTR_NAME) -> None:
-    """Set the class of an attribute"""
+    """Add RDF objects, persisting each sequence element separately.
+
+    A later invalid element leaves earlier writes intact. Keep this sequencing
+    here rather than batching storage updates or normalizing the entire input.
+    """
     if isinstance(data, (list, tuple)):
         for d in data:
             set_object(attr, attr_name, d, rdf_object_attr_name)
         return
 
-    iri_data_data = attr.get(rdf_object_attr_name, None)
+    mapping = _AttributeMapping(attr, rdf_object_attr_name, decode_json=True)
+    mapping.add(attr_name, _normalize_object(data, attr_name))
 
-    if iri_data_data is None:
-        iri_data_data = {}
-    elif is_sdict(iri_data_data):
-        iri_data_data = json.loads(iri_data_data)
 
+def _normalize_object(data, attr_name):
+    """Prepare one RDF object without reading or writing HDF5 attributes.
+
+    Keep entry-point-specific sequence handling in the callers: normalizing a
+    whole sequence here would change validation order and partial writes.
+    """
     if isinstance(data, Thing):
-        data = data.get_jsonld_dict()
-    elif isinstance(data, rdflib.BNode):
-        data = data.n3()
-    elif isinstance(data, rdflib.Literal):
-        if data.language is not None and data.datatype is None:
-            data = {"lexical_or_value": str(data), "lang": data.language, "$type": "rdflib.term.Literal"}
-    elif isinstance(data, dict):
-        # assuming it is a JSON-LD dict
-        if "@graph" in data:
-            # if one entry, reduce it to a simpler form:
-            if len(data["@graph"]) == 1:
-                _ctx = data.get("@context", None)
-                _data = data["@graph"][0]
-                data = {"@context": _ctx, **_data} if _ctx is not None else _data
-            else:
-                raise RDFError(f"Cannot set multiple graph entries as object for attribute {attr_name}. ")
-        if not "@type" in data:
-            raise RDFError(f"The input data is interpreted as JSON-LD, but no '@type' is found: {data}")
-    else:
-        if isinstance(data, str) and data.startswith("_:"):
-            pass
-        else:
-            try:
-                data = str(HttpUrl(data))
-            except pydantic.ValidationError as e:
-                raise RDFError(f'Invalid IRI: "{data}" for attr name "{attr_name}". '
-                               f'Expecting a valid URL. This was validated with pydantic. Pydantic error: {e}')
-    curr_data = iri_data_data.get(attr_name, None)
-    if curr_data is None:
-        iri_data_data.update({attr_name: data})
-    else:
-        if isinstance(curr_data, list):
-            if isinstance(data, list):
-                curr_data.extend(data)
-            else:
-                curr_data.append(data)
-                iri_data_data.update({attr_name: curr_data})
-        else:
-            if isinstance(data, list):
-                iri_data_data.update({attr_name: [curr_data, *data]})
-            else:
-                iri_data_data.update({attr_name: [curr_data, data]})
-    attr[rdf_object_attr_name] = iri_data_data
+        return data.get_jsonld_dict()
+    if isinstance(data, rdflib.BNode):
+        return data.n3()
+    if isinstance(data, rdflib.Literal):
+        return _encode_literal(data)
+    if isinstance(data, dict):
+        return _normalize_jsonld_object(data, attr_name)
+    if isinstance(data, str) and data.startswith("_:"):
+        return data
+    try:
+        return str(HttpUrl(data))
+    except pydantic.ValidationError as e:
+        raise RDFError(f'Invalid IRI: "{data}" for attr name "{attr_name}". '
+                       f'Expecting a valid URL. This was validated with pydantic. Pydantic error: {e}')
+
+
+def _encode_literal(literal):
+    """Retain the stored type marker needed to reconstruct language literals."""
+    if literal.language is not None and literal.datatype is None:
+        return {"lexical_or_value": str(literal), "lang": literal.language, "$type": "rdflib.term.Literal"}
+    return literal
+
+
+def _normalize_jsonld_object(data, attr_name):
+    """Flatten a single graph entry and require the existing JSON-LD type field."""
+    if "@graph" in data:
+        if len(data["@graph"]) != 1:
+            raise RDFError(f"Cannot set multiple graph entries as object for attribute {attr_name}. ")
+        context = data.get("@context", None)
+        graph_entry = data["@graph"][0]
+        data = {"@context": context, **graph_entry} if context is not None else graph_entry
+    if "@type" not in data:
+        raise RDFError(f"The input data is interpreted as JSON-LD, but no '@type' is found: {data}")
+    return data
+
+
+def _validate_types(rdf_type):
+    """Validate types while retaining the caller's scalar or list representation."""
+    if isinstance(rdf_type, list):
+        return [validate_url(value) for value in rdf_type]
+    return validate_url(rdf_type)
 
 
 def append(attr: h5py.AttributeManager,
            attr_name: str,
            data: Union[str, List[str]],
            attr_identifier: str) -> None:
-    """Append the class, predicate or subject of an attribute"""
-    iri_data_data = attr.get(attr_identifier, None)
-    if iri_data_data is None:
-        iri_data_data = {}
-
-    curr_data = iri_data_data[attr_name]
-    if isinstance(curr_data, list):
-        if isinstance(data, list):
-            curr_data.extend(data)
-        else:
-            curr_data.append(data)
-            iri_data_data.update({attr_name: curr_data})
-    else:
-        if isinstance(data, list):
-            iri_data_data.update({attr_name: [curr_data, *data]})
-        else:
-            iri_data_data.update({attr_name: [curr_data, data]})
-    attr[attr_identifier] = iri_data_data
+    """Append to an existing annotation without revalidating its values."""
+    _AttributeMapping(attr, attr_identifier).append(attr_name, data)
 
 
 def parse_typed_data(data: Dict) -> Any:
@@ -300,9 +284,7 @@ class IRIDict(Dict):
     @definition.setter
     def definition(self, definition: str):
         """Define the attribute. JSON-LD export will interpret this as SKOS.definition."""
-        attr_def = self._attr.get(DEFINITION_ATTR_NAME, {})
-        attr_def.update({self._attr_name: definition})
-        self._attr[DEFINITION_ATTR_NAME] = attr_def
+        _AttributeMapping(self._attr, DEFINITION_ATTR_NAME).set(self._attr_name, definition)
 
 
 class _RDFPO(abc.ABC):
@@ -342,11 +324,7 @@ class _RDFPO(abc.ABC):
         self.__setiri__(key, value)
 
     def __delitem__(self, key):
-        iri_data_data = self._attr.get(self.IRI_ATTR_NAME, None)
-        if iri_data_data is None:
-            iri_data_data = {}
-        iri_data_data.pop(key, None)
-        self._attr[self.IRI_ATTR_NAME] = iri_data_data
+        _AttributeMapping(self._attr, self.IRI_ATTR_NAME).remove(key)
 
     def keys(self):
         """Return all attribute names assigned to the IRIs"""
@@ -539,36 +517,16 @@ class RDFManager:
     def type(self, rdf_type: Union[str, List[str]]):
         """Add a rdf type (@type in JSON-LD syntax) to the group or dataset.
         If the subject already exists, it will not be added again."""
-        if isinstance(rdf_type, list):
-            data = [validate_url(i) for i in rdf_type]
-        else:
-            data = validate_url(rdf_type)
+        data = _validate_types(rdf_type)
 
         # get the attribute
         if '@TYPE' in self._attr:
             warnings.warn('The attribute @TYPE is deprecated. Use RDF_TYPE instead.', DeprecationWarning)
-            iri_sbj_data = self._attr.get('@TYPE', None)
+            current_types = self._attr.get('@TYPE', None)
         else:
-            iri_sbj_data = self._attr.get(RDF_TYPE_ATTR_NAME, None)
+            current_types = self._attr.get(RDF_TYPE_ATTR_NAME, None)
 
-        if iri_sbj_data is None:
-            self._attr[RDF_TYPE_ATTR_NAME] = data
-            return
-
-        if isinstance(iri_sbj_data, list):
-            if isinstance(data, list):
-                iri_sbj_data.extend(data)
-            else:
-                iri_sbj_data.append(data)
-        else:
-            iri_sbj_data = [iri_sbj_data, ]
-            if isinstance(data, list):
-                iri_sbj_data.extend(data)
-            else:
-                iri_sbj_data.append(data)
-
-        # ensure, that the list contains unique values:
-        self._attr[RDF_TYPE_ATTR_NAME] = list(set(iri_sbj_data))
+        self._attr[RDF_TYPE_ATTR_NAME] = _merge_type_values(current_types, data)
 
     @type.deleter
     def type(self):
@@ -608,11 +566,7 @@ class RDFManager:
             raise TypeError(f'Expecting a string or URL. Got {type(data_predicate)}. Note, that a predicate of '
                             'a group or dataset can only be one value. If you meant to set one or multiple RDF types, '
                             'use .type instead.')
-        iri_predicate_data = self._attr.get(RDF_PREDICATE_ATTR_NAME, None)
-        if iri_predicate_data is None:
-            iri_predicate_data = {}
-        iri_predicate_data.update({'DATA_PREDICATE': data_predicate})
-        self._attr[RDF_PREDICATE_ATTR_NAME] = iri_predicate_data
+        _AttributeMapping(self._attr, RDF_PREDICATE_ATTR_NAME).set('DATA_PREDICATE', data_predicate)
 
     @property
     def predicate(self) -> RDF_Predicate:
@@ -626,11 +580,7 @@ class RDFManager:
             raise TypeError(f'Expecting a string or URL. Got {type(predicate)}. Note, that a predicate of '
                             'a group or dataset can only be one value. If you meant to set one or multiple RDF types, '
                             'use .type instead.')
-        iri_predicate_data = self._attr.get(RDF_PREDICATE_ATTR_NAME, None)
-        if iri_predicate_data is None:
-            iri_predicate_data = {}
-        iri_predicate_data.update({'SELF': predicate})
-        self._attr[RDF_PREDICATE_ATTR_NAME] = iri_predicate_data
+        _AttributeMapping(self._attr, RDF_PREDICATE_ATTR_NAME).set('SELF', predicate)
 
     @predicate.deleter
     def predicate(self):
@@ -757,11 +707,7 @@ class FileIRIDict(Dict):
 
     @object.deleter
     def object(self):
-        iri_data_data = self._attr.get(RDF_FILE_OBJECT_ATTR_NAME, None)
-        if iri_data_data is None:
-            iri_data_data = {}
-        iri_data_data.pop(self._attr_name, None)
-        self._attr[RDF_FILE_OBJECT_ATTR_NAME] = iri_data_data
+        _AttributeMapping(self._attr, RDF_FILE_OBJECT_ATTR_NAME).remove(self._attr_name)
 
     @object.setter
     def object(self, value):
@@ -881,29 +827,9 @@ class FileRDFManager:
     @type.setter
     def type(self, rdf_type: Union[str, List[str]]):
         """Add a rdf type (@type in JSON-LD syntax) to the hdf5 file (not the root group!)"""
-        if isinstance(rdf_type, list):
-            data = [validate_url(i) for i in rdf_type]
-        else:
-            data = validate_url(rdf_type)
+        data = _validate_types(rdf_type)
 
         # get the attribute
-        iri_sbj_data = self._attr.get(RDF_FILE_TYPE_ATTR_NAME, None)
+        current_types = self._attr.get(RDF_FILE_TYPE_ATTR_NAME, None)
 
-        if iri_sbj_data is None:
-            self._attr[RDF_FILE_TYPE_ATTR_NAME] = data
-            return
-
-        if isinstance(iri_sbj_data, list):
-            if isinstance(data, list):
-                iri_sbj_data.extend(data)
-            else:
-                iri_sbj_data.append(data)
-        else:
-            iri_sbj_data = [iri_sbj_data, ]
-            if isinstance(data, list):
-                iri_sbj_data.extend(data)
-            else:
-                iri_sbj_data.append(data)
-
-        # ensure, that the list contains unique values:
-        self._attr[RDF_FILE_TYPE_ATTR_NAME] = list(set(iri_sbj_data))
+        self._attr[RDF_FILE_TYPE_ATTR_NAME] = _merge_type_values(current_types, data)

@@ -65,6 +65,19 @@ def test_mapping_write_sequence(target):
     assert_raw_text(target, 'label', 'café')
 
 
+def test_self_and_data_predicates_preserve_neighboring_annotations(target):
+    target.attrs['label', BASE + 'label'] = 'value'
+    target.rdf.predicate = BASE + 'parent'
+    target.rdf.data_predicate = BASE + 'data'
+    assert_raw_mapping(target, 'RDF_PREDICATE', {
+        'label': BASE + 'label', 'SELF': BASE + 'parent', 'DATA_PREDICATE': BASE + 'data',
+    })
+    del target.rdf.predicate
+    assert_raw_mapping(target, 'RDF_PREDICATE', {
+        'label': BASE + 'label', 'DATA_PREDICATE': BASE + 'data',
+    })
+
+
 @pytest.mark.parametrize('factory,expected', [
     (lambda: rdflib.BNode('object'), '_:object'),
     (lambda: rdflib.Literal('bonjour', lang='fr'), {
@@ -169,6 +182,18 @@ def test_type_and_subject_representation(tmp_h5_file, scope, prefix):
     with pytest.raises(RDFError):
         manager.type = [BASE + 'OtherType', 'invalid']
     np.testing.assert_array_equal(raw[prefix + 'TYPE'], [BASE + 'Type'])
+
+
+@pytest.mark.parametrize('scope,prefix', [('rdf', 'RDF_'), ('frdf', 'RDF_FILE_')])
+def test_initial_type_lists_keep_order_and_duplicates(tmp_h5_file, scope, prefix):
+    manager = getattr(tmp_h5_file, scope)
+    manager.type = [BASE + 'B', BASE + 'A', BASE + 'B']
+    raw = h5py.AttributeManager(tmp_h5_file)
+    np.testing.assert_array_equal(raw[prefix + 'TYPE'], [BASE + 'B', BASE + 'A', BASE + 'B'])
+    manager.type = [BASE + 'C', BASE + 'B']
+    # Updates historically use set ordering; preserve that exact rule.
+    expected = list(set([BASE + 'B', BASE + 'A', BASE + 'B', BASE + 'C', BASE + 'B']))
+    np.testing.assert_array_equal(raw[prefix + 'TYPE'], expected)
 
 
 def test_legacy_type_and_raw_json_object_mapping(tmp_h5_file):
