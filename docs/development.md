@@ -189,6 +189,27 @@ Use `python -X importtime -c "import h5rdmtoolbox"` with isolated application
 directories to attribute import costs. Its instrumentation changes timing;
 do not mix those numbers with the process benchmark.
 
+## RDF metadata storage contract
+
+The RDF storage refactoring is developed on `feature/refactor-rdf-storage`.
+Its scope is Python implementation and architecture: written HDF5 metadata must
+remain unchanged. Public `rdf`/`frdf` managers, `Attribute`, tuple assignment,
+and `attrs.create(...)` remain the supported entry points.
+
+`tests/ld/test_rdf_storage.py` characterizes the original implementation before
+refactoring (47 passing cases). It bypasses wrapper getters to check exact JSON
+text, scalar UTF-8 string types, list shapes, attribute names, append/duplicate
+behavior, empty mappings, and reopened files. It covers root groups, nested
+groups, datasets, file-level metadata, blank nodes, literals, JSON-LD, and
+`ontolutils.Thing` values. Existing graph/query tests complement these checks.
+
+Preserve validation and mutation order as well as final values. Sequence writes
+can retain earlier elements when a later element is rejected. `IRIDict.object`
+and the mapping-style object setter have different sequence handling; predicates
+and objects also differ in URL normalization. File-predicate entry points have
+historical routing differences. Changing these behaviors belongs in a separate
+behavior change, with a deliberate storage compatibility decision.
+
 ## Prioritized maintenance backlog
 
 The two-agent review and parent verification are recorded in
