@@ -403,6 +403,8 @@ Start with the [developer overview](./docs/development.md) for module responsibi
 initialization behavior, startup measurements, and maintenance priorities. The
 [repository guidelines](./AGENTS.md) map code areas to focused tests and describe
 the Git workflow. Work on a dedicated branch and keep changes in coherent commits.
+For the current modernization, Git operations are authorized without repeated
+confirmation, with `git merge` excluded and commits confined to the working branch.
 
 Subagent investigations require explicit approval before agents are started.
 Approved architecture, quality, feature, or difficult-problem discussions are

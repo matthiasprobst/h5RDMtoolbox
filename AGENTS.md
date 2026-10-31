@@ -24,8 +24,10 @@ and the prioritized maintenance backlog.
 - Commit regularly after each coherent, verified step, using a short, specific
   imperative subject. Keep unrelated changes in separate commits. Make routine
   commits on the agreed non-main branch without asking for confirmation.
-- Report completed checks and any failures or skips. Pushes, merges, and releases
-  require a task that calls for them.
+- Git commands relevant to the task are authorized without extra confirmation.
+  **Never run `git merge` or merge branches/PRs.** Keep the non-main branch checks
+  above. Report completed checks and any failures or skips; publish releases only
+  when the task calls for them.
 - Keep documentation, including `README.md`, current with every change. Review
   the README alongside affected API docstrings, user guides, developer overview,
   and agent instructions; update them in the same commit
