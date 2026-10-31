@@ -113,8 +113,8 @@ probe a local server, with mongomock fallback on Python below 3.13. There is no
 single offline marker covering all external I/O. Check individual test modules
 and skip reasons before choosing a local verification set.
 
-The latest full coverage run on Windows/CPython 3.12.4 after the CI and artifact
-fixes produced **457 passed, 27 skipped, and no failures**. Live uploads and
+The latest full coverage run on Windows/CPython 3.12.4 after the context-restoration
+fix produced **464 passed, 27 skipped, and no failures**. Live uploads and
 Wikidata opt-ins were disabled; other public resource downloads still ran.
 An earlier run exposed an unguarded Sandbox upload returning HTTP 403 without
 a token. Live upload tests now carry the `zenodo_upload` marker and require both explicit
@@ -197,8 +197,8 @@ reports. They identified additional correctness gaps that the editable-install
 test suite does not expose: automatic account-wide Sandbox cleanup in CI,
 missing installed metadata/resources, and same-instance Convention restoration.
 The default CI write/cleanup and installed metadata issues have since been
-addressed below. Correct sequential convention restoration before undertaking a
-larger concurrency redesign. The reports
+addressed below, along with sequential convention restoration. Full concurrency
+isolation remains a separate design question. The reports
 preserve baseline evidence, alternatives, and acceptance checks; see completed
 changes here for subsequent fixes.
 
@@ -206,6 +206,16 @@ The pinned Sphinx 8 documentation environment requires Python 3.10+, independent
 of the base package's Python 3.9 support.
 
 ### Completed refactorings
+
+Convention objects now keep a separate existing `use` manager for every entry,
+so repeated same-instance nesting restores each previous convention on exit.
+Return identity and immediate activation by `use(...)` are preserved. New local
+regressions block network requests and cover two/three levels, mixed instances,
+exceptions, re-entry, and an entry failure before activation, checking signatures
+and dataset decoding as well as the context pointer. This does not provide
+transactional rollback of partially failed signature insertion or concurrent
+thread/task isolation. Getter/class docstrings now distinguish context-local
+lookup from the process-global activation effects.
 
 `get_package_meta()` now reads package data in a built distribution, with an
 editable-checkout fallback to the canonical root metadata. A small setuptools
@@ -281,7 +291,7 @@ and existing RDF behavior remain compatibility constraints.
 | 1. Startup and import boundaries | Validation/display engines are now deferred. Scientific initialization, facade back-imports, and database package initialization remain candidates for profiling. Replace avoidable facade back-imports with imports from defining modules and defer further measured costs where initialization contracts allow it. | Repeat the startup protocol; check CLI help and first-use costs. Run startup, configuration, wrapper, convention, extension, representation, CLI, and SHACL tests. Preserve registry identity, exported symbols, convention activation, and registrations. Report measured improvements before setting a target. |
 | 2. Serialization follow-up | Shared graph-to-text behavior has been consolidated. Review remaining argument normalization and graph-building duplication only where semantics agree. | Run `tests/ld/`, wrapper serialization tests, and `tests/test_cli.py`. Compare graph semantics and separately assert documented formatting. Preserve URI validation, `skipND`, prefixes, format aliases, and current `rdf_mappings` handling. |
 | 3. Decoder correctness | Configuration validation and format restoration have been corrected. Decoder cleanup still contains adjacent `'DATA_SCALE' 'DATA_OFFSET'` literals. Address this with an explicit regression test in a separate behavior-fix commit. | Assert decoder output attributes in wrapper tests. Keep behavior changes separate from serialization and import refactors. |
-| 4. Convention state isolation | `convention/cfg.py` has a context-local pointer, while `convention/core.py` mutates signatures and `wrapper/ds_decoder.py` keeps global decoder selection. Define the supported concurrency contract before changing storage. | Start with nested convention and decoder restoration tests. If task/thread isolation becomes a goal, add concurrent tests that exercise different conventions and signatures; do not infer isolation from `ContextVar` alone. |
+| 4. Convention state isolation | Sequential nesting is corrected and characterized. Activation still mutates shared signatures/decoders, and partial activation failures lack a rollback contract. | Characterize failed signature insertion and define its rollback behavior separately. Settle per-file versus active-context semantics before concurrent-isolation changes; test actual decoding/signatures, not just pointer names. |
 | 5. Compatibility shims and installation boundaries | Both `utils.py` and the `utils/` package exist; the package also re-exports split helpers. `utils.py` announces removal in 3.0. Audit actual callers and distribution contents before consolidating. | Run utility tests and import smoke checks from an installed wheel. Retain supported imports in 2.x. Check minimal installation and feature extras before proposing dependency changes. |
 | 6. Contributor checks and CI | PR/push/manual checks now exclude Zenodo write credentials and automatic cleanup. Local checks and public-resource reads remain mixed; explicit server and artifact coverage still need attention. | Add deliberate optional-feature and artifact checks plus a discoverable local test selection. Verify actual Python/OS execution in hosted CI and make missing integrations visible rather than treating skipped tests as coverage. |
 

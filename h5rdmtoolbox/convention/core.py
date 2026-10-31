@@ -101,6 +101,12 @@ class Convention(AbstractConvention):
     Recommended initialization is via `Convention.from_yaml(<yaml_filename>)` or
     `Convention.from_json(<json_filename>)`.
 
+    Convention objects support sequential nested context use, including repeated
+    entry of the same object. Each exit restores the preceding convention.
+    Activation changes process-global wrapper signatures and decoder selection;
+    concurrent convention-dependent operations are not isolated across threads
+    or asynchronous tasks.
+
     Parameters
     ----------
     name : str
@@ -142,6 +148,7 @@ class Convention(AbstractConvention):
 
         self.contact = contact
         self.institution = institution
+        self._context_managers = []
 
         self._registered_standard_attributes = {}
         self.name = name
@@ -257,12 +264,12 @@ class Convention(AbstractConvention):
         return out
 
     def __enter__(self):
-        self._curr_cv = get_current_convention()
-        use(self)
+        manager = use(self)
+        self._context_managers.append(manager)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        use(self._curr_cv.name)
+        return self._context_managers.pop().__exit__(exc_type, exc_val, exc_tb)
 
     @property
     def registered_standard_attributes(self):
@@ -677,7 +684,12 @@ def _ensure_builtin_convention(name: str) -> bool:
 
 class use:
     """Enable a convention.
-    To disable the convention, active an empty convention like so: cv.use(None)
+
+    Call ``use(None)`` to activate the default empty ``h5py`` convention.
+
+    Activation occurs when this manager is constructed. Use a fresh manager for
+    each context. Wrapper signatures and decoder selection are process-global;
+    this manager does not isolate concurrent convention-dependent operations.
 
     Parameters
     ----------
@@ -772,7 +784,12 @@ def add_convention(convention: Convention, name=None):
 
 
 def get_current_convention() -> Union[None, Convention]:
-    """Return the current convention (thread-safe)."""
+    """Return the context-local convention pointer.
+
+    Activation also changes process-global wrapper signatures and decoders.
+    Context-local lookup does not imply isolated file operations across threads
+    or asynchronous tasks.
+    """
     return cfg._current_convention.get()
 
 

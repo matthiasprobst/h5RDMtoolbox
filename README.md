@@ -381,6 +381,19 @@ Here is the BibTeX entry:
 }
 ```
 
+## Convention contexts
+
+`with convention:` restores the preceding convention on exit, including when
+the same Convention object is nested repeatedly or the body raises an exception.
+`h5tbx.use(...)` activates immediately when constructed; create a fresh `use`
+manager for each context.
+
+Convention-name lookup is context-local, but activation changes shared wrapper
+method signatures and decoder selection. Convention-dependent operations should
+run sequentially: different conventions are not isolated across concurrent
+threads or asynchronous tasks, and an open file is not an isolated decoding
+environment merely because it remembers its opening convention.
+
 ## Configuration
 
 Use `h5tbx.set_config(...)` for persistent settings, or as a context manager for

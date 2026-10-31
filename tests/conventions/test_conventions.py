@@ -99,8 +99,8 @@ class TestConventions(unittest.TestCase):
             self.assertEqual(h5.attrs["publication_type"], "book")
         h5tbx.use(None)
 
-    def test_convention_thread_safety(self):
-        """Test that convention state is isolated per thread using ContextVar."""
+    def test_convention_name_lookup_is_context_local(self):
+        """Check per-thread name lookup, not signature or decoder isolation."""
         import threading
         import time
 

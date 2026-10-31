@@ -146,6 +146,11 @@ entry point is `h5tbx`, mapped to `h5rdmtoolbox_cli:h5tbx`.
   explicit imports, and NumPy-style public docstrings.
 - Extract common behavior only where semantics agree. Inspect existing helpers
   before introducing another abstraction; separate behavior fixes from refactors.
+- Convention changes require `tests/conventions/test_context_state.py`, whose
+  local tests block network requests and check names, signatures, decoding, and
+  restoration. Preserve immediate `use(...)` activation and context return
+  identity. Convention pointers are context-local; signatures and decoders remain
+  process-global. Do not describe this as full thread/task isolation.
 - Prefer imports from defining internal modules over new back-imports through
   the package facade where this avoids cycles. Check initialization order before
   changing existing imports. Preserve shared unit-registry identity, convention
