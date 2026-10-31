@@ -17,8 +17,8 @@ from h5py._objects import ObjectID, phil
 from pydantic import HttpUrl
 
 from .. import errors
-from .. import get_config, convention, utils
-from .. import get_ureg
+from .. import convention, utils
+from .._cfg import get_config, get_ureg
 from .. import protected_attributes
 from ..convention import consts
 

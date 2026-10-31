@@ -26,8 +26,8 @@ from . import xr2hdf
 from .ds_decoder import dataset_value_decoder
 from .h5attr import H5_DIM_ATTRS, pop_hdf_attributes, WrapperAttributeManager
 from .h5utils import _is_not_valid_natural_name, get_rootparent
-from .. import _repr, get_config, convention, utils, consts, protected_attributes
-from .. import get_ureg
+from .. import _repr, convention, utils, consts, protected_attributes
+from .._cfg import get_config, get_ureg
 from .. import protocols
 from .._repr import H5Repr, H5PY_SPECIAL_ATTRIBUTES
 from ..convention.consts import DefaultValue

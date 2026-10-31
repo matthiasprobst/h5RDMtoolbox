@@ -414,6 +414,10 @@ when those features are first used. A normal package import avoids loading them;
 both remain included in the required dependencies. See the developer overview
 for the startup measurement protocol and local before/after results.
 
+Internally, wrappers and shared utilities access configuration through its
+defining module; public configuration helpers remain available on `h5tbx`.
+Utility logging continues to use the shared `h5rdmtoolbox` logger and handlers.
+
 From the repository root, install the test dependencies and run the local smoke checks:
 
 ```bash

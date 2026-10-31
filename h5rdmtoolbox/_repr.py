@@ -16,7 +16,8 @@ from ontolutils import M4I
 from h5rdmtoolbox.ld.rdf import (RDF_PREDICATE_ATTR_NAME,
                                  RDF_OBJECT_ATTR_NAME,
                                  RDF_TYPE_ATTR_NAME)
-from . import get_config, identifiers, protected_attributes
+from . import identifiers, protected_attributes
+from ._cfg import get_config
 
 H5PY_SPECIAL_ATTRIBUTES = ('DIMENSION_LIST', 'REFERENCE_LIST', 'NAME', 'CLASS', protected_attributes.COORDINATES)
 try:

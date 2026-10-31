@@ -30,7 +30,7 @@ solely because they all perform validation.
 | `database/` | Queries HDF5 objects and exposes lazy results; contains the optional MongoDB integration. The public `lazy` helper is imported by the package facade. |
 | `catalog/` | Coordinates metadata and data stores, local indexing, and remote SPARQL queries. Uses wrappers, RDF, pandas, and repository resources. |
 | `repository/` | Defines the repository interface and Zenodo record, download, metadata, and upload behavior. Convention loading also uses this integration. |
-| `utils/`, `_cfg.py`, `user.py`, `_repr.py` | Shared file/network/HDF5 helpers, mutable configuration and unit registry, application directories, and text/notebook representations. Some still import back through the facade. |
+| `utils/`, `_cfg.py`, `user.py`, `_repr.py` | Shared file/network/HDF5 helpers, mutable configuration and unit registry, application directories, and text/notebook representations. Configuration access uses `_cfg.py` directly, and utilities use the named package logger. |
 | `extensions/`, `plotting.py` | Dataset accessors and scientific operations, plus plotting support for xarray data and unit-aware labels. |
 | `h5rdmtoolbox_cli.py` | Implements the `h5tbx` console entry point. `h5rdmtoolbox/cli.py` delegates to it. Heavy package imports are delayed until command execution. |
 | `server.py`, `server/`, `gui/` | `server.py` implements HTTP inspection; `server/` holds templates and static assets. `gui/` contains the optional Qt application. |
@@ -48,8 +48,8 @@ Python caller or CLI command
 ```
 
 This is a functional overview, not a strict dependency hierarchy. For example,
-the wrapper imports RDF support, convention code imports wrapper decoders, and
-utility code reads facade exports. Refactors must account for the actual import
+the wrapper imports RDF support and convention code imports wrapper decoders.
+Refactors must account for the actual import
 order before enforcing new boundaries.
 
 `pyproject.toml` is the installation contract. NumPy, h5py, xarray, pint,
@@ -112,6 +112,15 @@ Wikidata tests are opt-in through `H5RDMTOOLBOX_RUN_WIKIDATA_TESTS=1`. MongoDB t
 probe a local server, with mongomock fallback on Python below 3.13. There is no
 single offline marker covering all external I/O. Check individual test modules
 and skip reasons before choosing a local verification set.
+
+A full coverage run after the configuration/import refactors, with Zenodo token
+environment variables cleared, produced **440 passed, 26 skipped, and 1 failed**.
+The failure was `TestConventions.test_upload_convention`: it attempts to create
+a Sandbox deposition without a token and receives HTTP 403. This live write test
+still needs an explicit integration opt-in/credential gate; the result is not a
+fully passing suite. The directly affected local test selection passed all
+113 tests. Targeted Pylint reports retained the 9.07/10 baseline, with no new
+diagnostics after accounting for the renamed configuration import.
 
 For prose and navigation, build without notebook execution:
 
@@ -176,6 +185,14 @@ do not mix those numbers with the process benchmark.
 ## Prioritized maintenance backlog
 
 ### Completed refactorings
+
+Wrapper objects, dataset decoders, representations, and HDF5 utilities obtain
+configuration and unit-registry access from `_cfg.py` rather than facade
+re-exports. Utility loggers use `logging.getLogger("h5rdmtoolbox")`, preserving
+the same logger and handlers without dynamically importing the package facade.
+Download utilities obtain the user-data directory from its defining module.
+These changes remove initialization-order dependencies on facade attributes;
+public exports and shared registry/logger identities remain unchanged.
 
 Configuration validation now checks every plotting-name entry and accepts
 `None` for both compression defaults. All options are checked before updates;

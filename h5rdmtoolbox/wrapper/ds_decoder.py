@@ -4,7 +4,8 @@ import h5py
 import numpy as np
 import xarray as xr
 
-from .. import consts, get_ureg, get_config, protected_attributes
+from .. import consts, protected_attributes
+from .._cfg import get_config, get_ureg
 
 
 def scale_and_offset_decoder(xarr: xr.DataArray, ds: h5py.Dataset) -> xr.DataArray:
