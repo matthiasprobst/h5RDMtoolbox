@@ -160,4 +160,5 @@ For scientists working with HDF5 data, h5rdmtoolbox addresses critical challenge
    :hidden:
    :caption: Repository
 
+   Developer Overview <development>
    GitHub Repository <https://github.com/matthiasprobst/h5RDMtoolbox>
