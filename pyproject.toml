@@ -142,4 +142,5 @@ python_files = "test_*.py"
 testpaths = ["tests"]
 markers = [
     "wikidata: tests that call the public Wikidata Query Service",
+    "zenodo_upload: live Zenodo Sandbox uploads requiring explicit opt-in and credentials",
 ]

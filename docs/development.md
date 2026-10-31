@@ -115,12 +115,19 @@ and skip reasons before choosing a local verification set.
 
 A full coverage run after the configuration/import refactors, with Zenodo token
 environment variables cleared, produced **440 passed, 26 skipped, and 1 failed**.
-The failure was `TestConventions.test_upload_convention`: it attempts to create
-a Sandbox deposition without a token and receives HTTP 403. This live write test
-still needs an explicit integration opt-in/credential gate; the result is not a
-fully passing suite. The directly affected local test selection passed all
+The failure was `TestConventions.test_upload_convention`: it attempted to create
+a Sandbox deposition without a token and received HTTP 403. Live upload tests
+now carry the `zenodo_upload` marker and require both explicit
+`H5RDMTOOLBOX_RUN_ZENODO_UPLOAD_TESTS=1` and `ZENODO_SANDBOX_API_TOKEN`.
+The historical run was not a fully passing suite. The directly affected local test selection passed all
 113 tests. Targeted Pylint reports retained the 9.07/10 baseline, with no new
 diagnostics after accounting for the renamed configuration import.
+
+Collection-policy regression tests exercise opt-in/credential combinations in
+isolated pytest processes using a dummy upload, so they perform no remote writes.
+Wikidata opt-in is independent of the upload gate. See `tests/README.md` for the
+current integration commands; Python-version restrictions on existing tests
+remain in effect.
 
 For prose and navigation, build without notebook execution:
 

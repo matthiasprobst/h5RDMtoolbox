@@ -5,6 +5,7 @@ import shutil
 import tempfile
 
 import pytest
+from tests._integration import pytest_collection_modifyitems
 
 # Tests exercise destructive user-directory reset operations. Configure all
 # application directories before importing the package so those operations are
@@ -16,19 +17,6 @@ os.environ["H5RDMTOOLBOX_LOG_DIR"] = str(_TEST_RUNTIME_ROOT / "log")
 atexit.register(shutil.rmtree, _TEST_RUNTIME_ROOT, ignore_errors=True)
 
 import h5rdmtoolbox as h5tbx
-
-
-def pytest_collection_modifyitems(config, items):
-    """Skip public Wikidata Query Service tests unless explicitly enabled."""
-    if os.environ.get("H5RDMTOOLBOX_RUN_WIKIDATA_TESTS") == "1":
-        return
-
-    skip_wikidata = pytest.mark.skip(
-        reason="set H5RDMTOOLBOX_RUN_WIKIDATA_TESTS=1 to run Wikidata tests"
-    )
-    for item in items:
-        if "wikidata" in item.keywords:
-            item.add_marker(skip_wikidata)
 
 
 @pytest.fixture(autouse=True)

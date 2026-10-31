@@ -430,6 +430,11 @@ modules. The full suite includes downloads and external integrations; the develo
 overview explains test isolation and service requirements. Use existing code style
 and **NumPy-style docstrings** for public APIs.
 
+Live Zenodo uploads are opt-in: tests marked `zenodo_upload` require both
+`H5RDMTOOLBOX_RUN_ZENODO_UPLOAD_TESTS=1` and `ZENODO_SANDBOX_API_TOKEN`.
+Ordinary test runs skip these remote writes, even if a token is available.
+See the [testing guide](./tests/README.md) for commands and skip reasons.
+
 Keep this README, API documentation, affected guides, and developer instructions
 up to date in the same commit as the change. Add or update notebooks when they help
 explain user-facing behavior. See the [documentation guide](./docs/README.md) for

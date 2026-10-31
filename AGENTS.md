@@ -117,6 +117,11 @@ entry point is `h5tbx`, mapped to `h5rdmtoolbox_cli:h5tbx`.
 - Some tests download remote resources or use Zenodo credentials. Wikidata tests
   are skipped unless `H5RDMTOOLBOX_RUN_WIKIDATA_TESTS=1`. There is no universal
   offline test marker; do not describe the full suite as offline.
+- Tests marked `zenodo_upload` require both
+  `H5RDMTOOLBOX_RUN_ZENODO_UPLOAD_TESTS=1` and `ZENODO_SANDBOX_API_TOKEN`.
+  Supplying credentials alone does not enable remote writes. Check skip reasons
+  with `python -m pytest -m zenodo_upload -rs`; existing Python-version skips
+  still apply. See `tests/README.md` for the integration-test workflow.
 - MongoDB tests probe a local server and can fall back to mongomock on Python
   below 3.13. Optional server tests may skip when their dependencies are absent.
   Install the relevant extra for changes in those areas and check skip reasons.
