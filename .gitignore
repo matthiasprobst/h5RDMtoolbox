@@ -50,6 +50,7 @@ docs/jupyter_execute
 
 # pytest
 .coverage
+.coverage.*
 htmlcov
 coverage.svg
 docs/colab/my_file.hdf

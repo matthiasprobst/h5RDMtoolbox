@@ -435,6 +435,10 @@ Live Zenodo uploads are opt-in: tests marked `zenodo_upload` require both
 Ordinary test runs skip these remote writes, even if a token is available.
 See the [testing guide](./tests/README.md) for commands and skip reasons.
 
+Catalog tests generate their HDF5 files and local indexes in per-test temporary
+directories, keeping checked-in sample data read-only and avoiding shared state
+between test cases.
+
 Keep this README, API documentation, affected guides, and developer instructions
 up to date in the same commit as the change. Add or update notebooks when they help
 explain user-facing behavior. See the [documentation guide](./docs/README.md) for

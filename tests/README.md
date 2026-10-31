@@ -9,7 +9,8 @@ python -m pytest tests/test_version.py tests/test_config.py tests/test_cli.py -q
 python -m pytest --cov=h5rdmtoolbox --cov-report=html
 ```
 
-HTML coverage is written to `htmlcov/index.html`. Choose focused tests using the
+HTML coverage is written to `htmlcov/index.html`; `.coverage` and subprocess
+coverage files named `.coverage.*` are ignored local artifacts. Choose focused tests using the
 [source/test map](../AGENTS.md). Static analysis uses the existing configuration:
 
 ```bash
@@ -25,6 +26,11 @@ global configuration explicitly. Checked-in sample files are inputs, not output
 locations. For scripts run outside pytest, set all three application directory
 environment variables before importing the package; see the
 [developer overview](../docs/development.md).
+
+Catalog/store tests place generated HDF5 files and local databases under
+`tmp_path`, separately for each test. Their checked-in RDF/JSON-LD inputs remain
+read-only. Tests can be run individually without relying on a previous test's
+generated files or deleting a shared source-tree database directory.
 
 The full suite still includes public resource downloads and service integrations.
 It is not an offline suite. Use `-rs` to see skip reasons; a skipped integration

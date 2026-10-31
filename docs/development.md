@@ -113,14 +113,14 @@ probe a local server, with mongomock fallback on Python below 3.13. There is no
 single offline marker covering all external I/O. Check individual test modules
 and skip reasons before choosing a local verification set.
 
-A full coverage run after the configuration/import refactors, with Zenodo token
-environment variables cleared, produced **440 passed, 26 skipped, and 1 failed**.
-The failure was `TestConventions.test_upload_convention`: it attempted to create
-a Sandbox deposition without a token and received HTTP 403. Live upload tests
-now carry the `zenodo_upload` marker and require both explicit
+The latest full coverage run on Windows/CPython 3.12.4 after the test-isolation
+changes produced **444 passed, 27 skipped, and no failures**. Live uploads and
+Wikidata opt-ins were disabled; other public resource downloads still ran.
+An earlier run exposed an unguarded Sandbox upload returning HTTP 403 without
+a token. Live upload tests now carry the `zenodo_upload` marker and require both explicit
 `H5RDMTOOLBOX_RUN_ZENODO_UPLOAD_TESTS=1` and `ZENODO_SANDBOX_API_TOKEN`.
-The historical run was not a fully passing suite. The directly affected local test selection passed all
-113 tests. Targeted Pylint reports retained the 9.07/10 baseline, with no new
+The directly affected import-refactor test selection passed all 113 tests.
+Targeted Pylint reports retained the 9.07/10 baseline, with no new
 diagnostics after accounting for the renamed configuration import.
 
 Collection-policy regression tests exercise opt-in/credential combinations in
@@ -138,9 +138,9 @@ python -m sphinx -b html -D nb_execution_mode=off docs docs/_build/html
 
 The pre-change documentation baseline built successfully without Sphinx warnings
 with notebook execution disabled. Notebook edits require a separate build using
-the configured execution policy. The historical `tests/README.md` contains old
-setup instructions; use `pyproject.toml` and the root agent guidelines for the
-supported Python versions and current commands.
+the configured execution policy. `tests/README.md` documents current setup,
+isolation, and integration-test opt-ins. `pyproject.toml` remains the source of
+truth for supported Python versions and dependencies.
 
 ### Startup measurement protocol
 
@@ -192,6 +192,11 @@ do not mix those numbers with the process benchmark.
 ## Prioritized maintenance backlog
 
 ### Completed refactorings
+
+Catalog tests now keep generated HDF5 data and local databases under per-test
+`tmp_path` directories. Checked-in metadata remains read-only, and individual
+tests no longer share or delete a source-tree working database. Identical
+catalog initialization branches were consolidated into one path.
 
 Wrapper objects, dataset decoders, representations, and HDF5 utilities obtain
 configuration and unit-registry access from `_cfg.py` rather than facade
@@ -245,7 +250,7 @@ and existing RDF behavior remain compatibility constraints.
 | 3. Decoder correctness | Configuration validation and format restoration have been corrected. Decoder cleanup still contains adjacent `'DATA_SCALE' 'DATA_OFFSET'` literals. Address this with an explicit regression test in a separate behavior-fix commit. | Assert decoder output attributes in wrapper tests. Keep behavior changes separate from serialization and import refactors. |
 | 4. Convention state isolation | `convention/cfg.py` has a context-local pointer, while `convention/core.py` mutates signatures and `wrapper/ds_decoder.py` keeps global decoder selection. Define the supported concurrency contract before changing storage. | Start with nested convention and decoder restoration tests. If task/thread isolation becomes a goal, add concurrent tests that exercise different conventions and signatures; do not infer isolation from `ContextVar` alone. |
 | 5. Compatibility shims and installation boundaries | Both `utils.py` and the `utils/` package exist; the package also re-exports split helpers. `utils.py` announces removal in 3.0. Audit actual callers and distribution contents before consolidating. | Run utility tests and import smoke checks from an installed wheel. Retain supported imports in 2.x. Check minimal installation and feature extras before proposing dependency changes. |
-| 6. Contributor checks and CI | `tests/README.md` still describes Python 3.8, and the test workflow currently triggers on pushes only. Local and external-service checks are mixed. | Update the old guide; add pull-request coverage with an explicit credential/service policy and a discoverable local test selection. Verify Python/OS coverage and make missing integrations visible rather than treating skipped tests as coverage. |
+| 6. Contributor checks and CI | The testing guide is current and live uploads are opt-in. The test workflow still triggers on pushes only; local checks and external-service reads remain mixed. | Add pull-request coverage with an explicit credential/service policy and a discoverable local test selection. Verify Python/OS coverage and make missing integrations visible rather than treating skipped tests as coverage. |
 
 Two serialization differences need particular care: `ld.get_ld` accepts base
 URIs ending in `#` or `/`, while the wrapper JSON-LD path has a stricter check;
