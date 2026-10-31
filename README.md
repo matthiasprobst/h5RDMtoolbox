@@ -404,6 +404,11 @@ initialization behavior, startup measurements, and maintenance priorities. The
 [repository guidelines](./AGENTS.md) map code areas to focused tests and describe
 the Git workflow. Work on a dedicated branch and keep changes in coherent commits.
 
+Subagent investigations require explicit approval before agents are started.
+Approved architecture, quality, feature, or difficult-problem discussions are
+documented under `.work/<topic>/`, with evidence, alternatives, and a final
+recommendation. See the repository guidelines for the delegation workflow.
+
 The toolbox loads the SHACL validation engine and notebook HTML display support
 when those features are first used. A normal package import avoids loading them;
 both remain included in the required dependencies. See the developer overview

@@ -228,6 +228,17 @@ URIs ending in `#` or `/`, while the wrapper JSON-LD path has a stricter check;
 contextual-only graph building currently ignores `rdf_mappings`. These are
 existing behaviors, not instructions to silently normalize them during cleanup.
 
+## Collaborative investigations
+
+Before starting subagents, obtain the user's explicit approval for the topic,
+purpose, agent count, and editing scope. Each approved investigation documents
+its work in `.work/<topic>/`. Use separate reports for agents, with source
+references, evidence, options, tradeoffs, checks, and open questions. Record the
+discussion and final recommendation in a synthesis, preserving meaningful
+disagreements and decision rationale. Assign separate report/code ownership to
+avoid file conflicts, and review findings before implementing them. Keep accepted
+decisions reflected in production documentation as well as the investigation.
+
 ## Local experiments
 
 Existing unversioned ideas were moved to ignored `.playground/`, retaining their

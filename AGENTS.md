@@ -31,6 +31,24 @@ and the prioritized maintenance backlog.
   and agent instructions; update them in the same commit
   whenever behavior, architecture, or development workflows change.
 
+## Subagents and collaborative investigations
+
+- Before starting any subagent, ask the user for explicit approval of the
+  proposed delegation. State the topic, purpose, number of agents, and whether
+  they will investigate, discuss alternatives, or edit code. Wait for approval.
+- Use subagents when architecture, quality, features, decisions, or difficult
+  problems benefit from independent investigation or discussion. Approval is
+  scoped to the agreed delegation; ask again before starting additional agents.
+- Each approved investigation uses `.work/<topic>/` with a descriptive topic
+  name. Agents document their evidence, findings, options and tradeoffs, open
+  questions, recommendations, and relevant checks there. Give agents separate
+  report files and explicit edit ownership to avoid concurrent file conflicts.
+- Record the discussion and final synthesis in that topic folder, including
+  disagreements and the rationale for the chosen approach. Link relevant source
+  paths and checks; never put credentials or sensitive runtime data in reports.
+- Review agent findings before applying changes, and carry accepted decisions
+  into the affected production code, README, and developer/user documentation.
+
 ## Source map and focused tests
 
 Paths below are relative to the repository root. `tests/` mirrors package areas,
