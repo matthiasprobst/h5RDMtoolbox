@@ -1,6 +1,7 @@
 """Build an sdist and verify its wheel outside the editable checkout."""
 
 from email.parser import Parser
+import json
 import os
 from pathlib import Path
 import shutil
@@ -14,6 +15,7 @@ from build import ProjectBuilder
 
 def test_sdist_wheel_contains_resources_and_runs_independently(tmp_path):
     repository = Path(__file__).parents[1]
+    canonical_metadata = (repository / 'codemeta.json').read_bytes()
     source = tmp_path / 'source'
     source.mkdir()
     for name in ('pyproject.toml', 'README.md', 'LICENSE', 'codemeta.json', '_build.py', 'MANIFEST.in', 'h5rdmtoolbox_cli.py'):
@@ -45,6 +47,7 @@ def test_sdist_wheel_contains_resources_and_runs_independently(tmp_path):
         assert any(name.endswith('/LICENSE') for name in names)
         metadata_path, = [name for name in names if name.endswith('.dist-info/METADATA')]
         version = Parser().parsestr(archive.read(metadata_path).decode('utf-8'))['Version']
+        assert archive.read('h5rdmtoolbox/data/codemeta.json') == canonical_metadata
         archive.extractall(installed)
     env = os.environ.copy()
     for key, folder in (('H5RDMTOOLBOX_USER_DATA_DIR', 'data'),
@@ -57,9 +60,11 @@ sys.path.insert(0, sys.argv[1])
 import h5rdmtoolbox as h
 assert Path(h.__file__).resolve().is_relative_to(Path(sys.argv[1]).resolve())
 assert h.get_package_meta()['version'] == h.__version__ == sys.argv[2]
+assert h.get_package_meta()['@id'] == sys.argv[3]
 with h.File('measurement.hdf', 'w') as handle:
     assert handle.create_dataset('data', data=[1, 2])[()].values.tolist() == [1, 2]
 '''
-    result = subprocess.run([sys.executable, '-I', '-c', script, str(installed), version],
+    result = subprocess.run([sys.executable, '-I', '-c', script, str(installed), version,
+                             json.loads(canonical_metadata)['@id']],
                             cwd=tmp_path, env=env, capture_output=True, text=True, timeout=60)
     assert result.returncode == 0, result.stdout + result.stderr
