@@ -350,14 +350,16 @@ Install optional dependencies by specifying them in square brackets after the pa
 - `python-gitlab`: Access to gitlab repositories
 - `pypandoc`: Conversion of markdown files to html
 
-Other supported extras are `layout_validation`, `catalog`, `gui`, `server`, `test`, `docs`, `complete`, and
+Other supported extras are `layout_validation`, `catalog`, `gui`, `server`, `test`, `test-server`, `docs`, `complete`, and
 `complete-with-docs`. See the [installation guide](https://h5rdmtoolbox.readthedocs.io/en/latest/gettingstarted/installation.html)
 for their purpose. The authoritative dependency lists and version constraints are in [`pyproject.toml`](./pyproject.toml).
 
 ## Citing the package
 
-If you intend to use the package in your work, you may cite the software itself as published on paper in the
-[Zenodo (latest version)](https://zenodo.org/records/13309253) repository. A related paper is published in the
+If you use the package in your work, cite the software using its version-specific
+[Zenodo DOI for version 2.8.3](https://doi.org/10.5281/zenodo.23854129).
+This DOI is reserved for the release and will resolve once the Zenodo record is published.
+A related paper is published in the
 journal [inggrid](https://www.inggrid.org/article/id/4028/). Thank you!
 
 Alternatively or additionally, you can consult the `CITATION.cff` file.
@@ -381,18 +383,144 @@ Here is the BibTeX entry:
 }
 ```
 
+## Attribute quantities
+
+Quantity-valued attribute strings keep their original HDF5 text.
+`attribute.to_pint()` accepts plain, parenthesized, and square-bracket unit
+annotations such as `1.2 m`, `1.2 (m)`, and `1.2 [m]`, including newer Pint parsers.
+
+## Decoded calibration data
+
+When a convention enables scale/offset decoding, returned xarray data omits the
+storage attributes `DATA_SCALE`, `DATA_OFFSET`, `IS_DATA_SCALE`, and
+`IS_DATA_OFFSET`. Calibration links, role flags, and raw values remain available
+on the HDF5 datasets.
+
+## Convention contexts
+
+`with convention:` restores the preceding convention on exit, including when
+the same Convention object is nested repeatedly or the body raises an exception.
+`h5tbx.use(...)` activates immediately when constructed; create a fresh `use`
+manager for each context.
+
+Convention-name lookup is context-local, but activation changes shared wrapper
+method signatures and decoder selection. Convention-dependent operations should
+run sequentially: different conventions are not isolated across concurrent
+threads or asynchronous tasks, and an open file is not an isolated decoding
+environment merely because it remembers its opening convention.
+
+## Configuration
+
+Use `h5tbx.set_config(...)` for persistent settings, or as a context manager for
+temporary overrides. Nested contexts restore both configuration and the shared
+Pint display format on exit, including when an exception is raised. Invalid
+keys or values are rejected before settings change.
+
+```python
+with h5tbx.set_config(hdf_compression=None, hdf_compression_opts=None):
+    # Create datasets without the configured default compression.
+    ...
+```
+
+`plotting_name_order` accepts a nonempty list or tuple of `plot_name`,
+`long_name`, and/or `standard_name` in the desired priority order.
+
 ## Contribution
 
-Feel free to contribute. Make sure to write `docstrings` to your methods and classes and please write tests and use PEP
-8 (https://peps.python.org/pep-0008/)
+Releases follow a **DOI-first** workflow: supply the reserved, version-specific
+Zenodo DOI before bumping the version, then update package and citation metadata
+together. See the [release checklist](./docs/development.md#doi-first-release-checklist)
+and [agent instructions](./AGENTS.md#fair-versioning-and-release-metadata).
+Release preparation and publication are separate steps.
 
-Please write tests for your code and put them into the `tests/` folder. Visit the [README file](./tests/README.md) in the
-tests folder for more information.
+RDF storage refactoring preserves the existing HDF5 attribute representation.
+RDF validation and object preparation stay separate from shared mapping updates;
+the existing wrapper continues to encode attributes for HDF5.
+The compatibility checks in `tests/ld/test_rdf_storage.py` inspect raw h5py
+values, string types, shapes, and reopened files. See the
+[storage contract](./docs/development.md#rdf-metadata-storage-contract).
 
-Please also add a Jupyter notebook in the `docs/` folder in order to document your code. Please visit
-the [README file](./docs/README.md) in the docs-folder for more information on how to compile the documentation.
+Start with the [developer overview](./docs/development.md) for module responsibilities,
+initialization behavior, startup measurements, and maintenance priorities. The
+[repository guidelines](./AGENTS.md) map code areas to focused tests and describe
+the Git workflow. Work on a dedicated branch and keep changes in coherent commits.
+For the current modernization, Git operations are authorized without repeated
+confirmation, with `git merge` excluded and commits confined to the working branch.
 
-Please use the **numpy style for the docstrings**:
-https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_numpy.html#example-numpy
+Subagent investigations require explicit approval before agents are started.
+Approved architecture, quality, feature, or difficult-problem discussions are
+documented under `.work/<topic>/`, with evidence, alternatives, and a final
+recommendation. See the repository guidelines for the delegation workflow.
+
+The [architecture and quality review](./.work/architecture-quality/README.md)
+records independently reviewed CI, installed-wheel, test-coverage, and convention
+state findings, with reproductions and prioritized follow-up checks.
+
+The toolbox loads the SHACL validation engine and notebook HTML display support
+when those features are first used. A normal package import avoids loading them;
+both remain included in the required dependencies. See the developer overview
+for the startup measurement protocol and local before/after results.
+
+Internally, wrappers and shared utilities access configuration through its
+defining module; public configuration helpers remain available on `h5tbx`.
+Utility logging continues to use the shared `h5rdmtoolbox` logger and handlers.
+
+Distribution builds copy the canonical root `codemeta.json` into package data,
+so `h5tbx.get_package_meta()` also works outside an editable checkout. The test
+extra includes the build frontend and backend needed to verify an sdist-built
+wheel without downloading build dependencies during the test:
+
+```bash
+python -m pytest tests/test_distribution.py -q
+```
+
+This check builds from a fresh source copy, verifies metadata and runtime assets,
+and imports the resulting package outside the checkout. Use clean source trees
+for release builds so stale local build files cannot enter a distribution.
+
+From the repository root, install the test dependencies and run the local smoke checks:
+
+```bash
+python -m pip install -e ".[test]"
+python -m pytest tests/test_version.py tests/test_config.py tests/test_cli.py -q
+```
+
+Add regression tests in `tests/` for changed behavior and run the relevant test
+modules. The full suite includes downloads and external integrations; the developer
+overview explains test isolation and service requirements. Use existing code style
+and **NumPy-style docstrings** for public APIs.
+
+Live Zenodo uploads are opt-in: tests marked `zenodo_upload` require both
+`H5RDMTOOLBOX_RUN_ZENODO_UPLOAD_TESTS=1` and `ZENODO_SANDBOX_API_TOKEN`.
+Ordinary test runs skip these remote writes, even if a token is available.
+See the [testing guide](./tests/README.md) for commands and skip reasons.
+
+CI runs on pushes, pull requests, and manual dispatch with read-only repository
+permissions and without Zenodo write credentials or automatic account cleanup.
+Manual Sandbox cleanup requires an explicit list of deposition IDs; it never
+enumerates or deletes all drafts in an account.
+
+Server validation has its own CI job using `.[test-server]`, which includes HTTPX
+for FastAPI's TestClient. Missing optional dependencies are reported as a module
+skip in ordinary test runs, but fail when `H5RDMTOOLBOX_REQUIRE_SERVER_TESTS=1`.
+Broken installed dependencies always fail visibly. CI checks the JUnit report
+for actual passing test cases and rejects skips or an empty run. Workflow actions
+use Node 24-compatible versions; self-hosted runners need version 2.327.1 or newer.
+
+Catalog tests generate their HDF5 files and local indexes in per-test temporary
+directories, keeping checked-in sample data read-only and avoiding shared state
+between test cases.
+
+Keep this README, API documentation, affected guides, and developer instructions
+up to date in the same commit as the change. Add or update notebooks when they help
+explain user-facing behavior. See the [documentation guide](./docs/README.md) for
+build requirements. For prose-only changes, a build without notebook execution is:
+
+```bash
+python -m sphinx -W -b html -D nb_execution_mode=off docs docs/_build/html
+```
+
+For notebook behavior changes, omit `-D nb_execution_mode=off` to use the configured
+execution policy.
 
 

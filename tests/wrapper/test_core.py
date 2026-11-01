@@ -50,7 +50,7 @@ class TestCore(unittest.TestCase):
             ttl = h5.serialize("ttl")
             self.assertEqual(
                 ttl,
-                """@prefix hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#> .
+                f"""@prefix hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#> .
 @prefix schema: <https://schema.org/> .
 
 [] a hdf:File ;
@@ -58,14 +58,14 @@ class TestCore(unittest.TestCase):
             hdf:member [ a hdf:Group,
                         schema:SoftwareSourceCode ;
                     hdf:attribute [ a hdf:StringAttribute ;
-                            hdf:data "2.8.2" ;
+                            hdf:data "{__version__}" ;
                             hdf:name "__h5rdmtoolbox_version__" ],
                         [ a hdf:StringAttribute ;
                             hdf:data "https://github.com/matthiasprobst/h5RDMtoolbox" ;
                             hdf:name "code_repository" ] ;
                     hdf:name "/h5rdmtoolbox" ;
                     schema:codeRepository <https://github.com/matthiasprobst/h5RDMtoolbox> ;
-                    schema:softwareVersion "2.8.2" ] ;
+                    schema:softwareVersion "{__version__}" ] ;
             hdf:name "/" ] .
 
 """,
@@ -714,10 +714,11 @@ class TestCore(unittest.TestCase):
                     self.assertEqual(
                         f"{obj.attrs['mean_with_unit'].to_pint()}", "1.2 m"
                     )
-                    self.assertEqual(attrs_with_unit, h5tbx.get_ureg()(test_val))
+                    expected_quantity = h5tbx.get_ureg().Quantity(1.2, 'm')
+                    self.assertEqual(attrs_with_unit, expected_quantity)
                     obj.attrs["mean_with_unit"] = attrs_with_unit
                     self.assertEqual(
-                        obj.attrs["mean_with_unit"], str(h5tbx.get_ureg()(test_val))
+                        obj.attrs["mean_with_unit"], str(expected_quantity)
                     )
 
                 self.assertEqual(obj.attrs.get("non_existing_attribute"), None)

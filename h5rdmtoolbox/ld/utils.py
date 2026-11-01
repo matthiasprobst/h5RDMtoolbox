@@ -89,6 +89,16 @@ def optimize_context(graph, context=None):
     return selected_namespaces
 
 
+def _serialize_graph(graph: rdflib.Graph, fmt: str, indent: int, context: Optional[dict]) -> str:
+    """Serialize a graph using the toolbox's shared context and formatting policy."""
+    return graph.serialize(
+        format=fmt,
+        indent=indent,
+        auto_compact=True,
+        context=optimize_context(graph, context or {}),
+    )
+
+
 def _get_obj_id(file_id: float, obj: Union[h5py.Dataset, h5py.Group], name: Optional[str] = None):
     if name:
         name = f"/{name}"

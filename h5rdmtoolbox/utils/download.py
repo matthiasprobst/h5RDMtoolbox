@@ -2,6 +2,7 @@
 
 import atexit
 import json
+import logging
 import pathlib
 import time
 import uuid
@@ -16,10 +17,11 @@ from .file_io import (
     _download_file,
     get_checksum,
 )
-from .. import user, USER_DATA_DIR
+from .. import user
+from ..user import USER_DATA_DIR
 from .._version import __version__
 
-logger = __import__("h5rdmtoolbox", fromlist=["logger"]).logger
+logger = logging.getLogger("h5rdmtoolbox")
 USER_AGENT_HEADER = {
     "User-Agent": f"h5rdmtoolbox/{__version__} (https://github.com/matthiasprobst/h5rdmtoolbox)",
 }
@@ -180,7 +182,7 @@ def download_context(
         _fname = _url.rsplit("/", 1)[-1]
         context_file = user.UserDir["cache"] / _fname
         if not context_file.exists() or force_download:
-            logger.debug(f"Downloading context file from {_url} to {context_file}")
+            logger.debug("Downloading context file from %s to %s", _url, context_file)
             try:
                 r = _request_with_backoff(
                     "GET", _url, timeout=timeout, max_retries=max_retries
@@ -319,7 +321,7 @@ class DownloadFileManager:
             raise FileNotFoundError(f"File {filepath} does not exist!")
         if checksum is None:
             checksum = get_checksum(filepath)
-            logger.debug(f"Checksum for {filepath} computed: {checksum}")
+            logger.debug("Checksum for %s computed: %s", filepath, checksum)
         self.registry[checksum] = {
             "url": str(url),
             "filepath": str(filepath.resolve()),
@@ -363,9 +365,9 @@ class DownloadFileManager:
         if entry and entry.get("filename") == filename:
             self.registry.pop(checksum)
             self.save_registry()
-            logger.info(f"File removed: {filename} with checksum: {checksum}")
+            logger.info("File removed: %s with checksum: %s", filename, checksum)
         else:
-            logger.warning(f"No entry found for: {filename} with checksum: {checksum}")
+            logger.warning("No entry found for: %s with checksum: %s", filename, checksum)
 
     def remove_corrupted_file(self, filename: pathlib.Path):
         """Removes a corrupted file from the registry.
@@ -375,7 +377,7 @@ class DownloadFileManager:
         filename : pathlib.Path
             Path to the corrupted file.
         """
-        logger.info(f"Removing corrupted file from registry: {filename}")
+        logger.info("Removing corrupted file from registry: %s", filename)
         remove_keys = []
         for k, v in self.registry.items():
             if pathlib.Path(self.registry[k].get("filepath", None)) == pathlib.Path(
@@ -396,11 +398,11 @@ class DownloadFileManager:
                     json.dump(self.registry, f, indent=2)
                 return
             except PermissionError:
-                logger.debug(f"Could not save registry. Trying again in 0.1s")
+                logger.debug("Could not save registry. Trying again in 0.1s")
                 n_tries += 1
                 time.sleep(0.1)
         logger.debug(
-            f"Could not save registry after {max_tries} tries. File seems to be locked."
+            "Could not save registry after %s tries. File seems to be locked.", max_tries
         )
 
     def load_registry(self) -> Dict[str, str]:
@@ -418,7 +420,7 @@ class DownloadFileManager:
                     return json.load(f)
             except json.JSONDecodeError as e:
                 logger.error(
-                    f"Could not load registry file {registry_filename}: {e}. Deleting the file."
+                    "Could not load registry file %s: %s. Deleting the file.", registry_filename, e
                 )
                 self.registry_filename.unlink()
         return {}

@@ -44,11 +44,11 @@ _VALIDATORS = {
     'return_xarray': lambda x: isinstance(x, bool),
     'advanced_shape_repr': lambda x: isinstance(x, bool),
     'natural_naming': lambda x: isinstance(x, bool),
-    'hdf_compression': lambda x: isinstance(x, str),
-    'hdf_compression_opts': lambda x: isinstance(x, int),
+    'hdf_compression': lambda x: x is None or isinstance(x, str),
+    'hdf_compression_opts': lambda x: x is None or isinstance(x, int),
     'xarray_unit_repr_in_plots': lambda x: x in ('/', '()', '(', '[]', '[', '//', 'in'),
-    'plotting_name_order': lambda x: isinstance(x, (tuple, list)) and [xx in ('plot_name', 'long_name', 'standard_name')
-                                                                       for xx in x],
+    'plotting_name_order': lambda x: isinstance(x, (tuple, list)) and bool(x) and all(
+        xx in ('plot_name', 'long_name', 'standard_name') for xx in x),
     'require_unit': lambda x: isinstance(x, bool),
     'ureg_format': lambda x: isinstance(x, str),
     'init_logger_level': lambda x: is_valid_logger_level(x),
@@ -62,7 +62,14 @@ _VALIDATORS = {
 
 
 class set_config:
-    """Set the configuration parameters."""
+    """Set configuration immediately, optionally restoring it as a context manager.
+
+    All keys and values are validated before configuration is changed. Context
+    exit restores previous values, including the shared Pint registry format.
+    Compression settings accept ``None`` to restore their uncompressed defaults.
+    ``plotting_name_order`` requires a nonempty list or tuple containing only
+    ``plot_name``, ``long_name``, or ``standard_name``.
+    """
 
     def __init__(self, **kwargs):
         self.old = {}
@@ -72,8 +79,6 @@ class set_config:
             if k not in CONFIG:
                 raise KeyError(f'Not a configuration key: "{k}"')
             self.old[k] = CONFIG[k]
-            if k == 'ureg_format':
-                get_ureg().formatter.default_format = str(v)
         self._update(kwargs)
 
     def __enter__(self):
@@ -83,6 +88,8 @@ class set_config:
         self._update(self.old)
 
     def _update(self, options_dict: Dict):
+        if 'ureg_format' in options_dict:
+            get_ureg().formatter.default_format = options_dict['ureg_format']
         CONFIG.update(options_dict)
 
 

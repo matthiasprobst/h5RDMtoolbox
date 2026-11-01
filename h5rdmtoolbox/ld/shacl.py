@@ -4,7 +4,6 @@ from typing import Union, List
 
 import h5py
 import rdflib
-from pyshacl import validate as pyshacl_validate
 
 from .hdf.file import get_ld as get_hdf_ld
 from .user.file import get_ld as get_contextual_ld
@@ -225,6 +224,8 @@ def _validate_graphs(
       - results_graph: An RDF graph with validation results.
       - results_text: A textual summary of the validation results.
     """
+    from pyshacl import validate as pyshacl_validate
+
     conforms, results_graph, results_text = pyshacl_validate(
         data_graph,
         shacl_graph=shacl_graph,

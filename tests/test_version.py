@@ -1,4 +1,6 @@
+import datetime
 import pathlib
+import re
 import unittest
 
 import toml
@@ -35,7 +37,8 @@ class TestVersion(unittest.TestCase):
         self.assertIn("@id", codemeta)
         with open(__this_dir__ / "../CITATION.cff", "r") as f:
             ccf = yaml.safe_load(f)
-        self.assertIn(ccf["doi"], codemeta["@id"])
+        doi = ccf["doi"].removeprefix("https://doi.org/")
+        self.assertEqual(codemeta["@id"], f"https://doi.org/{doi}")
 
     def test_colab_version(self):
         """open colab jupyter notebook and check first cell for version"""
@@ -57,9 +60,9 @@ class TestVersion(unittest.TestCase):
         citation_cff = __this_dir__ / "../CITATION.cff"
         with open(citation_cff, "r") as f:
             cff = yaml.safe_load(f)
-        self.assertTrue(
-            "todo" not in cff["doi"].lower(), "Please replace 'todo' in CITATION.cff"
-        )
+        doi = cff["doi"].removeprefix("https://doi.org/")
+        self.assertIsNotNone(re.fullmatch(r"10\.5281/zenodo\.[1-9][0-9]*", doi))
+        datetime.date.fromisoformat(str(cff["date-released"]))
 
     def test_citation_cff_version(self):
         """checking if the version in CITATION.cff is the same as the one of the h5rdmtoolbox"""

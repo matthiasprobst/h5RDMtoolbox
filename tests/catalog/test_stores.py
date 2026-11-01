@@ -67,6 +67,10 @@ def create_test_hdf5_file(filename):
 
 class TestDataStore(unittest.TestCase):
 
+    @pytest.fixture(autouse=True)
+    def isolated_paths(self, tmp_path):
+        self.working_dir = tmp_path
+
     def test_DataStoreManager(self):
         manager = StoreManager()
         self.assertEqual(len(manager), 0)
@@ -277,8 +281,8 @@ ex:PersonShape
         )
 
     def test_hdf_store(self):
-        hdf5_filename = create_test_hdf5_file("tmp.hdf")
-        working_dir = __this_dir__ / "local-db/hdf"
+        hdf5_filename = create_test_hdf5_file(self.working_dir / "tmp.hdf")
+        working_dir = self.working_dir / "hdf"
         hdf5_store = HDF5FileStore(working_dir)
 
         local_file_dist = dcat.Distribution(

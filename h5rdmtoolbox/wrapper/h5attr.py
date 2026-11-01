@@ -17,8 +17,8 @@ from h5py._objects import ObjectID, phil
 from pydantic import HttpUrl
 
 from .. import errors
-from .. import get_config, convention, utils
-from .. import get_ureg
+from .. import convention, utils
+from .._cfg import get_config, get_ureg
 from .. import protected_attributes
 from ..convention import consts
 
@@ -132,10 +132,15 @@ def _check_iri(url):
 class AttributeString(str):
     """String with special methods such as `to_pint()`"""
 
-    def to_pint(self) -> "pint.util.Quantity":
-        """Returns a pint.Quantity object"""
+    def to_pint(self) -> "pint.Quantity":
+        """Parse a quantity, accepting square-bracket unit annotations.
+
+        Brackets are normalized only for parsing; the stored attribute text is
+        unchanged. This keeps forms such as ``1.2 [m]`` compatible with Pint
+        parsers that accept parentheses but reject square brackets.
+        """
         assert get_ureg().formatter.default_format == get_config("ureg_format")
-        return get_ureg()(self)
+        return get_ureg()(self.replace('[', '(').replace(']', ')'))
 
 
 class WrapperAttributeManager(AttributeManager):

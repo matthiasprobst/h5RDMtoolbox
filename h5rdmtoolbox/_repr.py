@@ -10,14 +10,14 @@ import h5py
 import importlib_resources
 import numpy as np
 import xarray as xr
-from IPython.display import HTML, display
 from numpy import ndarray
 from ontolutils import M4I
 
 from h5rdmtoolbox.ld.rdf import (RDF_PREDICATE_ATTR_NAME,
                                  RDF_OBJECT_ATTR_NAME,
                                  RDF_TYPE_ATTR_NAME)
-from . import get_config, identifiers, protected_attributes
+from . import identifiers, protected_attributes
+from ._cfg import get_config
 
 H5PY_SPECIAL_ATTRIBUTES = ('DIMENSION_LIST', 'REFERENCE_LIST', 'NAME', 'CLASS', protected_attributes.COORDINATES)
 try:
@@ -734,6 +734,8 @@ class H5Repr:
 
     def __html__(self, group, collapsed: bool = True, preamble: str = None,
                  chunks: bool = False, maxshape: bool = False) -> None:
+        from IPython.display import HTML, display
+
         display(
             HTML(
                 self.html_repr(

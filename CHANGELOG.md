@@ -2,6 +2,23 @@
 
 Log of changes in the versions
 
+## v2.8.3
+
+- improve RDF metadata writing and serialization internals while preserving
+  stored HDF5 annotations and exported RDF behavior
+- defer SHACL and notebook display imports until first use; reduce shared
+  configuration and logging dependencies on the package facade
+- validate configuration batches before changing state and restore the shared
+  unit display format correctly across nested contexts
+- restore conventions correctly when nesting the same Convention object
+- support square-bracket quantity annotations with newer Pint parsers and
+  remove storage-only calibration flags from decoded xarray attributes
+- ship canonical CodeMeta metadata in built distributions and verify sdist-built
+  wheels outside the source checkout
+- improve test isolation and CI coverage, require explicit opt-in for live
+  Zenodo uploads, and remove automatic account-wide Sandbox cleanup
+- document architecture, contributor workflows, and DOI-first release preparation
+
 ## v2.8.2
 
 - security and reliability hardening

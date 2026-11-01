@@ -50,6 +50,7 @@ docs/jupyter_execute
 
 # pytest
 .coverage
+.coverage.*
 htmlcov
 coverage.svg
 docs/colab/my_file.hdf
@@ -62,5 +63,5 @@ test.*
 docs/practical_examples/lib/vis-9.1.2/vis-network.min.js
 docs/practical_examples/graph.html
 
-
-AGENTS.md
+# Local experiments and archived code ideas
+/.playground/

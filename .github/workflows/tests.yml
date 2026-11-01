@@ -4,8 +4,15 @@ name: Tests
 
 env:
   H5RDMTOOLBOX_CACHE_DIR: .cache/zenodo
+  H5RDMTOOLBOX_RUN_ZENODO_UPLOAD_TESTS: '0'
+  H5RDMTOOLBOX_RUN_WIKIDATA_TESTS: '0'
+
+permissions:
+  contents: read
 
 on:
+  pull_request:
+  workflow_dispatch:
   push:
     branches:
       - main
@@ -17,9 +24,27 @@ on:
       - release/*
       - hotfix/*
 jobs:
+  server:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install server test dependencies
+        run: python -m pip install -e ".[test-server]"
+      - name: Run required server tests
+        env:
+          H5RDMTOOLBOX_REQUIRE_SERVER_TESTS: '1'
+        run: python -m pytest tests/test_server.py -q --junitxml=server-test-results.xml
+      - name: Verify server tests executed without skips
+        run: python -m tests.check_test_report server-test-results.xml
   test:
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ ubuntu-latest, macos-latest, windows-latest ]
         python-version: [ '3.9', '3.10', '3.11', '3.12', '3.13' ]
@@ -27,10 +52,12 @@ jobs:
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - name: Set Up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -50,8 +77,8 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install setuptools>=78.1.1
-          pip install -e ".[test]"
+          python -m pip install "setuptools>=78.1.1"
+          python -m pip install -e ".[test]"
 
 #      - name: Install MongoDB (Windows)  # see: https://github.com/ankane/setup-mongodb
 #        if: startsWith(matrix.os, 'windows-')
@@ -65,7 +92,7 @@ jobs:
           mongodb-version: ${{ matrix.mongodb-version }}
 
       - name: Cache Zenodo downloads
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: .cache/zenodo
           key: zenodo-${{ runner.os }}-${{ hashFiles('**/pyproject.toml') }}
@@ -73,47 +100,18 @@ jobs:
             zenodo-${{ runner.os }}-
 
       - name: Run pytest coverage
-        env:
-          ZENODO_SANDBOX_API_TOKEN: ${{ secrets.ZENODO_SANDBOX_API_TOKEN }}
-          ZENODO_API_TOKEN: ${{ secrets.ZENODO_API_TOKEN }}
-        run: pytest --cov --cov-report=xml
+        run: python -m pytest --cov=h5rdmtoolbox --cov-report=xml
 
       - name: Upload coverage to Codecov
+        if: github.event_name == 'push'
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           file: ./coverage.xml
 
-      - uses: actions/cache@v3
+      - uses: actions/cache@v5
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
           restore-keys: |
             ${{ runner.os }}-pip-
-            
-  zenodo_cleanup:
-    runs-on: ubuntu-latest
-    needs: test
-
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        # This is version of action for setting up Python, not Python version.
-        uses: actions/setup-python@v4
-        with:
-          # Semantic version range syntax or exact version of a Python version
-          python-version: '3.9'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install setuptools>=78.1.1
-          pip install -e ".[test]"
-
-      - name: Cleanup Zenodo Sandbox
-        env:
-          ZENODO_SANDBOX_API_TOKEN: ${{ secrets.ZENODO_SANDBOX_API_TOKEN }}
-          ZENODO_API_TOKEN: ${{ secrets.ZENODO_API_TOKEN }}
-        run: python tests/clean_zenodo_sandbox.py

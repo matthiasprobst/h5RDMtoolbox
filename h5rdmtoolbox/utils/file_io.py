@@ -1,6 +1,7 @@
 """File I/O utilities for h5rdmtoolbox."""
 
 import hashlib
+import logging
 import os
 import pathlib
 import random
@@ -13,7 +14,7 @@ import requests
 from .. import user
 from .._version import __version__
 
-logger = __import__("h5rdmtoolbox", fromlist=["logger"]).logger
+logger = logging.getLogger("h5rdmtoolbox")
 RETRY_STATUS = {429, 500, 502, 503, 504}
 
 
@@ -30,7 +31,7 @@ def get_filesize(filename: pathlib.Path) -> int:
     int
         Size of the file in bytes.
     """
-    from .. import get_ureg
+    from .._cfg import get_ureg
 
     return os.path.getsize(filename) * get_ureg().byte
 

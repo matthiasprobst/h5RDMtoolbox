@@ -2,6 +2,7 @@
 
 import datetime
 import json
+import logging
 import pathlib
 import warnings
 from typing import Dict, List, Tuple, Union, Optional
@@ -11,11 +12,11 @@ import numpy as np
 import pint
 from h5py import File
 
-from .. import get_config
+from .._cfg import get_config
 from .._version import __version__
 from ..ld import rdf
 
-logger = __import__("h5rdmtoolbox", fromlist=["logger"]).logger
+logger = logging.getLogger("h5rdmtoolbox")
 
 
 def _has_object_type(target: Union[h5py.Group, pathlib.Path], obj_type: type) -> bool:

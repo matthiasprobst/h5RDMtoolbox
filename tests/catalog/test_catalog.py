@@ -1,11 +1,11 @@
 import logging
 import pathlib
-import shutil
 import sys
 import unittest
 from typing import List
 
 import numpy as np
+import pytest
 import rdflib
 from ontolutils import M4I, SCHEMA
 from ontolutils import QUDT_UNIT
@@ -74,17 +74,17 @@ def get_temperature_data_by_date(db, date: str) -> List[FederatedQueryResult]:
 
 class TestGenericLinkedDatabase(unittest.TestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        # clean up previous test data
-        working_dir = __this_dir__ / "local-db"
-        shutil.rmtree(working_dir, ignore_errors=True)
+    @pytest.fixture(autouse=True)
+    def isolated_paths(self, tmp_path):
+        self.working_dir = tmp_path / "local-db"
+        self.data_dir = tmp_path / "data"
+        self.data_dir.mkdir()
 
     def test_dcat_catalog_read_and_write(self):
         catalog_ttl = __this_dir__ / "data/catalog.ttl"
         self.assertTrue(catalog_ttl.exists())
 
-        working_dir = __this_dir__ / "local-db"
+        working_dir = self.working_dir
         working_dir.mkdir(parents=True, exist_ok=True)
 
         cm = CatalogManager(
@@ -161,7 +161,7 @@ class TestGenericLinkedDatabase(unittest.TestCase):
 
     def test_rdf_and_data_stores(self):
         # write test data
-        with h5tbx.File(__this_dir__ / "data/random_velocity_data.h5", mode="w") as h5:
+        with h5tbx.File(self.data_dir / "random_velocity_data.h5", mode="w") as h5:
             g = h5.create_group("creator")
             g.rdf.subject = "https://orcid.org/0000-0001-8729-0482"
             g.rdf.type = PROV.Person
@@ -180,7 +180,7 @@ class TestGenericLinkedDatabase(unittest.TestCase):
             # with open(__this_dir__ / "data/random_velocity_data.ttl", "w") as f:
             #     f.write(h5.serialize("ttl", file_uri="https://doi.org/10.5281/zenodo.18187577#"))
 
-        with h5tbx.File(__this_dir__ / "data/random_temperature_data.hdf", mode="w") as h5:
+        with h5tbx.File(self.data_dir / "random_temperature_data.hdf", mode="w") as h5:
             ds1 = h5.create_dataset("x", data=np.linspace(0, 100.0, 20), make_scale=True)
             ds2 = h5.create_dataset("y", data=np.linspace(-30, 30, 30) * 1000.0, make_scale=True)
             ds3 = h5.create_dataset("temperature", data=273.15 + np.random.rand(20, 30) * 20,
@@ -201,31 +201,18 @@ class TestGenericLinkedDatabase(unittest.TestCase):
             # with open(__this_dir__ / "data/random_temperature_data.ttl", "w") as f:
             #     f.write(h5.serialize("ttl", file_uri="https://doi.org/10.5281/zenodo.18187577#"))
 
-        data_store = HDF5FileStore(data_directory=__this_dir__ / "local-db" / "hdf")
+        data_store = HDF5FileStore(data_directory=self.working_dir / "hdf")
 
-        working_dir = __this_dir__ / "local-db"
+        working_dir = self.working_dir
         working_dir.mkdir(parents=True, exist_ok=True)
 
         catalog_ttl = __this_dir__ / "data/catalog.ttl"
 
-        if working_dir.exists():
-            cm = CatalogManager(
-                catalog=catalog_ttl,
-                working_directory=working_dir
-            )
-            in_memory_store = InMemoryRDFStore(cm.rdf_directory, formats="ttl")
-            cm.add_main_rdf_store(in_memory_store)
-            cm.download_metadata()
-            cm.main_rdf_store.populate()
-        else:
-            cm = CatalogManager(
-                catalog=catalog_ttl,
-                working_directory=working_dir
-            )
-            in_memory_store = InMemoryRDFStore(cm.rdf_directory, formats="ttl")
-            cm.add_main_rdf_store(in_memory_store)
-            cm.download_metadata()
-            cm.main_rdf_store.populate()
+        cm = CatalogManager(catalog=catalog_ttl, working_directory=working_dir)
+        in_memory_store = InMemoryRDFStore(cm.rdf_directory, formats="ttl")
+        cm.add_main_rdf_store(in_memory_store)
+        cm.download_metadata()
+        cm.main_rdf_store.populate()
 
         cm.add_hdf_store(data_store)
 
@@ -278,27 +265,27 @@ class TestGenericLinkedDatabase(unittest.TestCase):
         self.assertEqual(4794, len(res.data))
 
         main_rdf_store.upload_file(__this_dir__ / "data/metadata.jsonld")
-        self.assertTrue((__this_dir__ / "data/random_velocity_data.h5").exists())
-        self.assertTrue((__this_dir__ / "data/random_temperature_data.hdf").exists())
+        self.assertTrue((self.data_dir / "random_velocity_data.h5").exists())
+        self.assertTrue((self.data_dir / "random_temperature_data.hdf").exists())
 
-        uploaded_dist = hdf_store.upload_file(__this_dir__ / "data/random_velocity_data.h5")
+        uploaded_dist = hdf_store.upload_file(self.data_dir / "random_velocity_data.h5")
         self.assertIsInstance(
             uploaded_dist,
             dcat.Distribution
         )
         self.assertEqual(
             str(uploaded_dist.download_URL),
-            (__this_dir__ / "data/random_velocity_data.h5").resolve().absolute().as_uri()
+            (self.data_dir / "random_velocity_data.h5").resolve().absolute().as_uri()
         )
-        re_uploaded_dist = hdf_store.upload_file(__this_dir__ / "data/random_velocity_data.h5")
+        re_uploaded_dist = hdf_store.upload_file(self.data_dir / "random_velocity_data.h5")
         self.assertEqual(
             uploaded_dist,
             re_uploaded_dist
         )
-        uploaded_dist_temperature = hdf_store.upload_file(__this_dir__ / "data/random_temperature_data.hdf")
+        uploaded_dist_temperature = hdf_store.upload_file(self.data_dir / "random_temperature_data.hdf")
         self.assertEqual(
             str(uploaded_dist_temperature.download_URL),
-            (__this_dir__ / "data/random_temperature_data.hdf").resolve().absolute().as_uri()
+            (self.data_dir / "random_temperature_data.hdf").resolve().absolute().as_uri()
         )
         self.assertEqual(2, len(hdf_store._file_registry))
 
@@ -330,7 +317,7 @@ class TestGenericLinkedDatabase(unittest.TestCase):
         self.assertEqual(
             0, len(res.data)
         )
-        cm2.upload_hdf_file(__this_dir__ / "data/random_velocity_data.h5")
+        cm2.upload_hdf_file(self.data_dir / "random_velocity_data.h5")
         res = get_properties(subject_uri=uploaded_dist.id).execute(
             cm2.main_rdf_store
         )

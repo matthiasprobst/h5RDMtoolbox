@@ -9,6 +9,7 @@ from datetime import datetime
 
 import h5py
 import pint
+import pytest
 import requests
 import yaml
 from ssnolib import StandardName, StandardNameTable
@@ -98,8 +99,8 @@ class TestConventions(unittest.TestCase):
             self.assertEqual(h5.attrs["publication_type"], "book")
         h5tbx.use(None)
 
-    def test_convention_thread_safety(self):
-        """Test that convention state is isolated per thread using ContextVar."""
+    def test_convention_name_lookup_is_context_local(self):
+        """Check per-thread name lookup, not signature or decoder isolation."""
         import threading
         import time
 
@@ -203,6 +204,7 @@ class TestConventions(unittest.TestCase):
         get_python_version()[1] in TESTING_VERSIONS,
         reason=f"Nur auf Python {TESTING_VERSIONS} testen",
     )
+    @pytest.mark.zenodo_upload
     def test_upload_convention(self):
         cv_yaml_filename = tutorial.get_convention_yaml_filename()
         self.assertTrue(cv_yaml_filename.exists())
@@ -226,21 +228,15 @@ class TestConventions(unittest.TestCase):
             publication_date=datetime.now(),
         )
         zsr = ZenodoRecord(source=None, sandbox=True)
-        zsr.metadata = meta
-        zsr.upload_file(cv_yaml_filename, overwrite=True, metamapper=None)
-
-        # zsr.publish()
-
-        # download file from zenodo deposit:
-        self.assertEqual(1, len(zsr.files.keys()))
-
-        filename = zsr.files.get("tutorial_convention.yaml").download()
-        self.assertTrue(filename.exists())
-
-        # this should not raise an error:
-        cv = h5tbx.convention.Convention.from_yaml(filename)
-
-        zsr.delete()
+        try:
+            zsr.metadata = meta
+            zsr.upload_file(cv_yaml_filename, overwrite=True, metamapper=None)
+            self.assertEqual(1, len(zsr.files.keys()))
+            filename = zsr.files.get("tutorial_convention.yaml").download()
+            self.assertTrue(filename.exists())
+            h5tbx.convention.Convention.from_yaml(filename)
+        finally:
+            zsr.delete()
 
     @unittest.skipUnless(
         get_python_version()[1] in TESTING_VERSIONS,

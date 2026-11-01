@@ -65,10 +65,22 @@ __author_orcid__ = 'https://orcid.org/0000-0001-8729-0482'
 
 
 def get_package_meta() -> Dict:
-    """Reads codemeta.json and returns it as dict"""
-    with open(__this_dir__ / '../codemeta.json', 'r') as f:
-        codemeta = json.loads(f.read())
-    return codemeta
+    """Return CodeMeta metadata from the installed package or editable checkout.
+
+    Builds copy the canonical repository ``codemeta.json`` into package data;
+    editable checkouts read that canonical source directly when needed.
+    """
+    from importlib_resources import files
+
+    resource = files(__package__).joinpath('data/codemeta.json')
+    try:
+        text = resource.read_text(encoding='utf-8')
+    except FileNotFoundError:
+        source_root = __this_dir__.parent
+        if not (source_root / 'pyproject.toml').is_file():
+            raise
+        text = (source_root / 'codemeta.json').read_text(encoding='utf-8')
+    return json.loads(text)
 
 
 cv_h5py = convention.Convention(name='h5py',
@@ -168,11 +180,6 @@ def compute_metrics(
     )
 
 
-def _optimize_ld_context(graph: rdflib.Graph, context: Optional[Dict]) -> Dict:
-    from .ld import optimize_context
-    return optimize_context(graph, context or {})
-
-
 def _resolve_serialize_format(fmt: str, kwargs: Dict) -> str:
     return kwargs.pop("format", fmt)
 
@@ -192,12 +199,8 @@ def dump_jsonld(
                    contextual=contextual,
                    file_uri=file_uri,
                    skipND=skipND)
-    return graph.serialize(
-        format="json-ld",
-        indent=indent,
-        auto_compact=True,
-        context=_optimize_ld_context(graph, context)
-    )
+    from .ld.utils import _serialize_graph
+    return _serialize_graph(graph, fmt="json-ld", indent=indent, context=context)
 
 
 # def shacl_validate(

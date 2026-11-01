@@ -26,13 +26,14 @@ from . import xr2hdf
 from .ds_decoder import dataset_value_decoder
 from .h5attr import H5_DIM_ATTRS, pop_hdf_attributes, WrapperAttributeManager
 from .h5utils import _is_not_valid_natural_name, get_rootparent
-from .. import _repr, get_config, convention, utils, consts, protected_attributes
-from .. import get_ureg
+from .. import _repr, convention, utils, consts, protected_attributes
+from .._cfg import get_config, get_ureg
 from .. import protocols
 from .._repr import H5Repr, H5PY_SPECIAL_ATTRIBUTES
 from ..convention.consts import DefaultValue
 from ..ld import rdf
 from ..ld._types import RDFMappingEntry
+from ..ld.utils import _serialize_graph as _serialize_ld_graph
 
 logger = logging.getLogger("h5rdmtoolbox")
 
@@ -303,23 +304,6 @@ def _normalize_file_uri_and_prefix(
 
     prefix, normalized_file_uri = next(iter(file_uri.items()))
     return normalized_file_uri, prefix
-
-
-def _serialize_ld_graph(
-    graph: rdflib.Graph,
-    fmt: str,
-    indent: int,
-    context: Optional[Dict],
-) -> str:
-    from h5rdmtoolbox.ld.utils import optimize_context
-
-    optimized_context = optimize_context(graph, context or {})
-    return graph.serialize(
-        format=fmt,
-        indent=indent,
-        auto_compact=True,
-        context=optimized_context,
-    )
 
 
 class Group(h5py.Group):

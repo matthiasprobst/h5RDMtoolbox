@@ -8,7 +8,7 @@ from ._types import RDFMappingEntry
 from .hdf.file import get_ld as get_hdf_ld
 from .sparql import sparql
 from .user.file import get_ld as get_contextual_ld
-from .utils import optimize_context
+from .utils import _serialize_graph, optimize_context
 
 BINARY_AS_STRING = True
 
@@ -72,21 +72,6 @@ def _resolve_metadata_filename(
         # Recommended suffix for JSON-LD is .jsonld.
         return pathlib.Path(filename).with_suffix(suffix)
     return pathlib.Path(metadata_filename)
-
-
-def _serialize_graph(
-        graph: rdflib.Graph,
-        fmt: str,
-        indent: int,
-        context: Optional[dict],
-) -> str:
-    optimized_context = optimize_context(graph, context or {})
-    return graph.serialize(
-        format=fmt,
-        indent=indent,
-        auto_compact=True,
-        context=optimized_context,
-    )
 
 
 def get_ld(
