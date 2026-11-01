@@ -12,7 +12,8 @@ and the prioritized maintenance backlog.
 
 - Check `git status --short --branch` before editing. Preserve existing work.
 - Create or use the task's agreed working branch before changing files. For this
-  modernization, use `feature/modernize-repository`.
+  RDF storage refactoring, use `feature/refactor-rdf-storage`. The preceding
+  modernization work is on `feature/modernize-repository`.
 - **Never commit on `main`.** Before every staging operation and commit, run
   `git branch --show-current` and verify the agreed branch. Stop if the branch
   differs or HEAD is detached.
@@ -139,6 +140,11 @@ entry point is `h5tbx`, mapped to `h5rdmtoolbox_cli:h5tbx`.
   graph semantics rather than incidental triple order, unless output formatting
   is itself the contract. Documentation-only changes need documentation checks,
   not new behavioral tests.
+- For RDF storage refactoring, also run `tests/ld/test_rdf_storage.py`. Preserve
+  exact raw attribute representations and mutation order, including partial
+  writes on invalid sequences. See the storage contract in `docs/development.md`.
+  Keep RDF validation/preparation in `ld/rdf.py` and shared storage mutations in
+  `ld/_rdf_storage.py`; keep the latter independent of wrapper/facade imports.
 
 ## Refactoring and compatibility
 

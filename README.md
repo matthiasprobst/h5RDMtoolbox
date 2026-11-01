@@ -425,6 +425,13 @@ with h5tbx.set_config(hdf_compression=None, hdf_compression_opts=None):
 
 ## Contribution
 
+RDF storage refactoring preserves the existing HDF5 attribute representation.
+RDF validation and object preparation stay separate from shared mapping updates;
+the existing wrapper continues to encode attributes for HDF5.
+The compatibility checks in `tests/ld/test_rdf_storage.py` inspect raw h5py
+values, string types, shapes, and reopened files. See the
+[storage contract](./docs/development.md#rdf-metadata-storage-contract).
+
 Start with the [developer overview](./docs/development.md) for module responsibilities,
 initialization behavior, startup measurements, and maintenance priorities. The
 [repository guidelines](./AGENTS.md) map code areas to focused tests and describe
