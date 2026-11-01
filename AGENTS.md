@@ -11,9 +11,9 @@ and the prioritized maintenance backlog.
 ## Workspace and Git workflow
 
 - Check `git status --short --branch` before editing. Preserve existing work.
-- Create or use the task's agreed working branch before changing files. For this
-  RDF storage refactoring, use `feature/refactor-rdf-storage`. The preceding
-  modernization work is on `feature/modernize-repository`.
+- Create or use the task's agreed working branch before changing files. For the
+  next release preparation, use `release/2.8.3`, based on
+  `feature/modernize-repository`.
 - **Never commit on `main`.** Before every staging operation and commit, run
   `git branch --show-current` and verify the agreed branch. Stop if the branch
   differs or HEAD is detached.
@@ -33,6 +33,31 @@ and the prioritized maintenance backlog.
   the README alongside affected API docstrings, user guides, developer overview,
   and agent instructions; update them in the same commit
   whenever behavior, architecture, or development workflows change.
+
+## FAIR versioning and release metadata
+
+- **DOI first: do not bump the version until the user supplies the reserved,
+  version-specific Zenodo DOI.** Never reuse the previous version's DOI, invent
+  an identifier, or commit a placeholder. A concept DOI identifies the version
+  family; the release citation must identify the specific version.
+- The agreed next release is `2.8.3`, using a manually prepared new-version draft
+  in the existing Zenodo version family. The user reserves and supplies its DOI.
+- Update `pyproject.toml`, `CITATION.cff` (version, DOI, release date), root
+  `codemeta.json` (version and DOI URL in `@id`), and the Colab quickstart pin
+  together. Update the changelog and README release citation in the same commit.
+  Use the preparation date in Europe/Berlin unless the user specifies another.
+- Runtime `__version__` comes from installed distribution metadata. Refresh the
+  editable install after a bump; do not hard-code a version in `_version.py`.
+  `_build.py` generates the packaged CodeMeta resource from the root source.
+- Preserve historical release notes, audit evidence, dataset/example DOIs, the
+  CodeMeta context DOI, and the separate paper citation. Do not globally replace
+  version strings or identifiers.
+- Validate local metadata consistency and built artifacts before committing.
+  A reserved DOI need not resolve until publication; do not reject it because
+  an HTTP lookup fails. See [the release checklist](docs/development.md#doi-first-release-checklist).
+- Repository preparation does not authorize tags, GitHub releases, Zenodo
+  publication, or PyPI uploads. Those are separate explicitly requested actions.
+  Do not run `.build.bat` during preparation: it uploads to PyPI immediately.
 
 ## Subagents and collaborative investigations
 

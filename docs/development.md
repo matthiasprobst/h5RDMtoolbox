@@ -189,6 +189,92 @@ Use `python -X importtime -c "import h5rdmtoolbox"` with isolated application
 directories to attribute import costs. Its instrumentation changes timing;
 do not mix those numbers with the process benchmark.
 
+## DOI-first release checklist
+
+Release **2.8.3** is prepared on `release/2.8.3` from
+`feature/modernize-repository`, with the user-supplied reserved DOI
+`10.5281/zenodo.23854129` and release date **2026-11-01**. Publication is a separate
+step; a reserved DOI may not yet resolve. This checklist also applies to future
+versions, using their agreed version and release branch.
+
+### Reserve the identity before updating files
+
+The user creates a **new-version draft in the existing Zenodo version family**
+and supplies its reserved, version-specific DOI. Do not create an unrelated
+deposit, reuse the previous release DOI, substitute a concept DOI, or use a
+placeholder. Zenodo allows a DOI to be reserved before uploading the archive;
+it is registered on publication, so failure to resolve a reserved DOI is not
+an error. See [DOI reservation](https://help.zenodo.org/docs/deposit/create-new-upload/)
+and [record versioning](https://help.zenodo.org/docs/deposit/manage-versions/).
+
+### Update the release consistently
+
+After receiving the DOI, update these values in one coherent commit:
+
+| Source | Required release update |
+| --- | --- |
+| `pyproject.toml` | `[project].version` |
+| `CITATION.cff` | `version`, release DOI, and `date-released` |
+| Root `codemeta.json` | `version` and the DOI URL in `@id` |
+| `docs/colab/quickstart.ipynb` | Pinned installation version in the first cell |
+| `CHANGELOG.md` and README | New release notes and an explicitly version-labelled software citation |
+
+Use the preparation date in Europe/Berlin unless the user supplies a different
+release date. Keep author identities unchanged unless separately verified.
+Preserve historical changelog entries and audit reports, example/dataset DOIs,
+the CodeMeta context DOI, and the paper citation. Link the README software
+citation to the supplied release DOI and label it with the version; do not
+assume a fixed record URL always points to the latest release.
+
+`h5rdmtoolbox/_version.py` reads installed distribution metadata via
+`importlib.metadata`. Refresh the editable installation from the current
+checkout after editing the version. Do not add a second version constant or
+hand-edit `h5rdmtoolbox/data/codemeta.json`: `_build.py` copies the canonical root
+metadata during builds, and editable imports fall back to the root source.
+
+After moving/copying a checkout, ignored local `h5rdmtoolbox.egg-info` metadata
+can shadow the freshly installed version. Check `importlib.metadata.version`
+and `h5rdmtoolbox.__version__` before validation. If that local metadata is stale,
+regenerate it from the current project with
+`python -c "from setuptools import setup; setup()" egg_info`, then verify the
+version again. Do not change `_version.py` to conceal an installation mismatch.
+
+### Verify and prepare the handoff
+
+```bash
+python -m pip install -e ".[test]"
+python -m pytest tests/test_version.py tests/test_distribution.py tests/wrapper/test_core.py -q
+python -m pytest --cov=h5rdmtoolbox --cov-report=html
+python -m sphinx -b html -W -D nb_execution_mode=off docs docs/_build/html
+```
+
+Use the same interpreter throughout. Set
+`H5RDMTOOLBOX_RUN_ZENODO_UPLOAD_TESTS=0` and
+`H5RDMTOOLBOX_RUN_WIKIDATA_TESTS=0` for release validation. Install `.[test-server]`
+and set `H5RDMTOOLBOX_REQUIRE_SERVER_TESTS=1` when requiring server coverage;
+otherwise report optional skips. The full suite can still read public resources.
+The docs environment requires Python 3.10+ and `.[docs]`.
+Before building docs, point `H5RDMTOOLBOX_USER_DATA_DIR`,
+`H5RDMTOOLBOX_CACHE_DIR`, and `H5RDMTOOLBOX_LOG_DIR` at disposable directories
+under `.playground/`, since autodoc imports the package. After moving a checkout,
+use Sphinx's `-E` option and a fresh output directory to avoid stale build state.
+
+Version tests check package, citation, CodeMeta, and notebook agreement, plus
+exact DOI agreement and a valid release date without querying Zenodo. The RDF
+wrapper test derives its expected software version from `__version__`. The
+distribution test builds an sdist and wheel from fresh sources, checks the
+packaged CodeMeta bytes against the canonical source, and verifies its version
+and DOI through an import outside the checkout.
+
+Commit the verified preparation on the release branch. At a separately requested
+publication step, use the reviewed release commit for the archive and builds,
+match Zenodo's version/date/creators/license to the reviewed metadata, and upload
+to the same reserved draft. The planned archive is a source ZIP; generated build
+files, local experiments, caches, and credentials must not enter it. Git tags,
+GitHub releases, Zenodo publication, and PyPI uploads are separate actions.
+Never use `.build.bat` as a validation command: it builds and immediately uploads
+`dist/*` to PyPI. No release automation or `.zenodo.json` is introduced here.
+
 ## RDF metadata storage contract
 
 The RDF storage refactoring is developed on `feature/refactor-rdf-storage`.

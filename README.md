@@ -356,8 +356,10 @@ for their purpose. The authoritative dependency lists and version constraints ar
 
 ## Citing the package
 
-If you intend to use the package in your work, you may cite the software itself as published on paper in the
-[Zenodo (latest version)](https://zenodo.org/records/13309253) repository. A related paper is published in the
+If you use the package in your work, cite the software using its version-specific
+[Zenodo DOI for version 2.8.3](https://doi.org/10.5281/zenodo.23854129).
+This DOI is reserved for the release and will resolve once the Zenodo record is published.
+A related paper is published in the
 journal [inggrid](https://www.inggrid.org/article/id/4028/). Thank you!
 
 Alternatively or additionally, you can consult the `CITATION.cff` file.
@@ -424,6 +426,12 @@ with h5tbx.set_config(hdf_compression=None, hdf_compression_opts=None):
 `long_name`, and/or `standard_name` in the desired priority order.
 
 ## Contribution
+
+Releases follow a **DOI-first** workflow: supply the reserved, version-specific
+Zenodo DOI before bumping the version, then update package and citation metadata
+together. See the [release checklist](./docs/development.md#doi-first-release-checklist)
+and [agent instructions](./AGENTS.md#fair-versioning-and-release-metadata).
+Release preparation and publication are separate steps.
 
 RDF storage refactoring preserves the existing HDF5 attribute representation.
 RDF validation and object preparation stay separate from shared mapping updates;
