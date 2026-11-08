@@ -2,6 +2,28 @@
 
 Log of changes in the versions
 
+## Unreleased
+
+- resolve fresh request contexts and worker threads to the default `h5py`
+  convention so metadata writes work after another context imported the toolbox;
+  default lookup does not activate global signatures or decoders
+- preserve strings during contextual RDF export instead of guessing dates from
+  values such as `3`, `00123`, or `2025-01-10`
+- retain the datatype and lexical value of explicitly annotated RDF literals,
+  and decode them consistently through raw h5py files and toolbox wrappers
+- add regression coverage for fresh contexts, worker threads, literal storage,
+  date annotations, and SHACL validation; document the explicit datatype contract
+
+### Compatibility
+
+- date-like strings now remain strings; use explicit `rdflib.Literal` date or
+  dateTime annotations when those RDF datatypes are required
+- newly stored non-language literals use typed JSON descriptors in `RDF_OBJECT`
+  and `RDF_FILE_OBJECT`; historical bare-string entries remain readable as strings,
+  and existing language-literal descriptors retain their representation
+- convention signatures and decoders remain process-global; this fix does not
+  isolate concurrently active custom conventions
+
 ## v2.8.3
 
 - improve RDF metadata writing and serialization internals while preserving
