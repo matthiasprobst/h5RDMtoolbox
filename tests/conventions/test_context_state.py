@@ -1,6 +1,8 @@
 """Local convention-context contracts without connectivity probes."""
 
 from contextlib import ExitStack
+from contextvars import Context
+from concurrent.futures import ThreadPoolExecutor
 import inspect
 
 from pydantic import BaseModel
@@ -108,6 +110,38 @@ def test_use_constructor_still_activates_immediately(conventions):
     with manager as entered:
         assert entered is cv
     assert_state(original, 1)
+
+
+def test_fresh_contexts_and_workers_can_write_metadata(tmp_path):
+    def export(index):
+        expected = h5tbx.convention.get_registered_conventions()['h5py']
+        assert h5tbx.convention.get_current_convention() is expected
+        with h5tbx.File(tmp_path / f'context-{index}.h5', 'w') as handle:
+            handle.attrs['title'] = 'Fresh request'
+            group = handle.create_group('measurements')
+            group.attrs['description'] = 'Measurements'
+            dataset = group.create_dataset('pressure', data=[1., 2.])
+            dataset.attrs['unit'] = 'Pa'
+            dataset.rdf.subject = 'https://example.org/pressure'
+            assert dataset.attrs['unit'] == 'Pa'
+            assert dataset._convention is expected
+
+    for index in range(3):
+        Context().run(export, index)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        list(pool.map(export, range(3, 5)))
+
+
+def test_fallback_lookup_does_not_activate_global_state(conventions):
+    _, custom, _ = conventions
+    with custom:
+        parameters = inspect.signature(h5tbx.Group.create_dataset)
+        decoders = ds_decoder.decoder_names
+        default = Context().run(h5tbx.convention.get_current_convention)
+        assert default.name == 'h5py'
+        assert h5tbx.convention.get_current_convention() is custom
+        assert inspect.signature(h5tbx.Group.create_dataset) == parameters
+        assert ds_decoder.decoder_names == decoders
 
 
 def test_failed_entry_does_not_overwrite_outer_restoration(conventions, monkeypatch):

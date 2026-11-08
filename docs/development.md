@@ -80,6 +80,11 @@ and decoder names are still changed globally. This is not sufficient evidence
 of thread/task isolation. Configuration, the registry, accessor registration,
 and logging also have process-wide effects.
 
+Fresh contexts resolve an unset convention pointer to the registered empty
+`h5py` convention. This lookup does not activate global signatures or decoders;
+explicit activation still inspects the raw context pointer. Before the default
+convention is registered during package initialization, lookup may return None.
+
 For standalone benchmarks, documentation builds, and scripts that reset user
 directories, set these environment variables to disposable locations before
 the first package import:

@@ -735,7 +735,9 @@ def _use(convention_or_name: Union[str, Convention, None]) -> Convention:
         convention_name = convention_or_name.name
     else:
         convention_name = convention_or_name
-    current_convention = get_current_convention()
+    # Activation must inspect the stored pointer: a fresh context's fallback
+    # does not mean the caller explicitly activated that convention.
+    current_convention = cfg._current_convention.get()
 
     if convention_name is None:
         # reset to default convention
@@ -786,11 +788,16 @@ def add_convention(convention: Convention, name=None):
 def get_current_convention() -> Union[None, Convention]:
     """Return the context-local convention pointer.
 
+    Fresh contexts resolve to the registered empty ``h5py`` convention without
+    activating it or changing process-global signatures and decoders. During
+    package initialization, before registration, this can still return None.
+
     Activation also changes process-global wrapper signatures and decoders.
     Context-local lookup does not imply isolated file operations across threads
     or asynchronous tasks.
     """
-    return cfg._current_convention.get()
+    current = cfg._current_convention.get()
+    return current if current is not None else cfg._registered_conventions.get("h5py")
 
 
 def _process_relpath(rel_filename, relative_to):

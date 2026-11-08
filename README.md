@@ -403,6 +403,10 @@ the same Convention object is nested repeatedly or the body raises an exception.
 `h5tbx.use(...)` activates immediately when constructed; create a fresh `use`
 manager for each context.
 
+Fresh request contexts and worker threads without an explicitly selected
+convention resolve to the registered empty `h5py` convention. Looking up this
+default does not activate a convention or change global signatures and decoders.
+
 Convention-name lookup is context-local, but activation changes shared wrapper
 method signatures and decoder selection. Convention-dependent operations should
 run sequentially: different conventions are not isolated across concurrent
