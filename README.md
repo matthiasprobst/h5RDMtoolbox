@@ -413,6 +413,27 @@ run sequentially: different conventions are not isolated across concurrent
 threads or asynchronous tasks, and an open file is not an isolated decoding
 environment merely because it remembers its opening convention.
 
+## RDF literal types
+
+Contextual RDF export preserves string attributes as strings, including `"3"`,
+`"00123"`, and `"2025-01-10"`. It no longer guesses dates from their spelling.
+To export a date or timestamp, declare its RDF datatype explicitly:
+
+```python
+from rdflib import Literal, XSD
+
+with h5tbx.File("experiment.h5", "w") as h5:
+    h5.attrs["created"] = "2025-01-10"
+    h5.frdf["created"].predicate = "http://purl.org/dc/terms/created"
+    h5.frdf["created"].object = Literal("2025-01-10", datatype=XSD.date)
+```
+
+Use `obj.rdf` for group and dataset metadata. Existing explicit RDF literal
+annotations keep their datatype and language. Newly stored literals use a typed
+JSON descriptor in `RDF_OBJECT` or `RDF_FILE_OBJECT`; historical bare-string
+entries remain readable as strings. Previously inferred dates need
+explicit annotations when their date datatype is part of the intended contract.
+
 ## Configuration
 
 Use `h5tbx.set_config(...)` for persistent settings, or as a context manager for

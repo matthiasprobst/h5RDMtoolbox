@@ -193,6 +193,7 @@ class TestUserGraph(unittest.TestCase):
         with h5tbx.File() as h5:
             h5.attrs["created"] = "2025-01-10"
             h5.frdf["created"].predicate = "http://purl.org/dc/terms/created"
+            h5.frdf["created"].object = rdflib.Literal(str(h5.attrs["created"]), datatype=rdflib.XSD.date)
 
             self.assertEqual("2025-01-10", h5.attrs["created"])
             ttl = h5.serialize(fmt="ttl", contextual=True, structural=False)
@@ -205,6 +206,7 @@ class TestUserGraph(unittest.TestCase):
         with h5tbx.File() as h5:
             h5.attrs["created"] = datetime.datetime(year=2025, month=1, day=10)
             h5.frdf["created"].predicate = "http://purl.org/dc/terms/created"
+            h5.frdf["created"].object = rdflib.Literal("2025-01-10T00:00:00", datatype=rdflib.XSD.dateTime)
 
             self.assertEqual("2025-01-10T00:00:00000000", h5.attrs["created"])
             ttl = h5.serialize(fmt="ttl", contextual=True, structural=False)

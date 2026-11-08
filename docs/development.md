@@ -85,6 +85,18 @@ Fresh contexts resolve an unset convention pointer to the registered empty
 explicit activation still inspects the raw context pointer. Before the default
 convention is registered during package initialization, lookup may return None.
 
+Contextual RDF export does not infer dates from string attributes. Use explicit
+RDF Literal annotations for date and dateTime values; lexical strings such as
+dimension counts and sample identifiers must survive serialization unchanged.
+The focused regressions are `tests/conventions/test_context_state.py` and
+`tests/ld/test_literal_preservation.py`. This is a deliberate change from
+heuristic date typing; existing explicit annotations remain supported.
+Explicit non-language literals now use a `$type: rdflib.term.Literal` JSON
+descriptor with lexical value, datatype, and `normalize: false` in RDF object
+mapping attributes. This deliberately replaces their previous bare-string
+storage, which lost the datatype. Language-literal descriptors retain their
+existing representation. Legacy bare strings remain readable as strings.
+
 For standalone benchmarks, documentation builds, and scripts that reset user
 directories, set these environment variables to disposable locations before
 the first package import:

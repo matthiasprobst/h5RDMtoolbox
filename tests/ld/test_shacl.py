@@ -69,6 +69,7 @@ ex:LengthUnit rdfs:subClassOf ex:Unit .
         with h5tbx.File() as h5:
             h5.attrs["created"] = "2025-01-10"
             h5.frdf["created"].predicate = "http://purl.org/dc/terms/created"
+            h5.frdf["created"].object = rdflib.Literal("2025-01-10", datatype=rdflib.XSD.date)
 
             self.assertEqual("2025-01-10", h5.attrs["created"])
             ttl = h5.serialize(fmt="ttl", contextual=True, structural=False)
@@ -152,6 +153,7 @@ ex:CreatedDateShape
             g = h5.create_group("grp")
             g.attrs["created"] = "2025-01-10"
             g.rdf["created"].predicate = "http://purl.org/dc/terms/created"
+            g.rdf["created"].object = rdflib.Literal("2025-01-10", datatype=rdflib.XSD.date)
 
             self.assertEqual("2025-01-10", g.attrs["created"])
             ttl = h5.serialize(fmt="ttl", contextual=True, structural=True)
@@ -187,6 +189,7 @@ ex:HDFFileCreatedShape
         with h5tbx.File() as h5:
             h5.attrs["created"] = "2025-01-10"
             h5.frdf["created"].predicate = "http://purl.org/dc/terms/created"
+            h5.frdf["created"].object = rdflib.Literal("2025-01-10", datatype=rdflib.XSD.date)
 
             self.assertEqual("2025-01-10", h5.attrs["created"])
             ttl = h5.serialize(fmt="ttl", contextual=True, structural=True)
@@ -228,6 +231,7 @@ ex:HDFFileCreatedShape
         with h5tbx.File() as h5:
             h5.attrs["created"] = "2025-01-10"
             h5.frdf["created"].predicate = "http://purl.org/dc/terms/created"
+            h5.frdf["created"].object = rdflib.Literal("2025-01-10", datatype=rdflib.XSD.date)
 
             self.assertEqual("2025-01-10", h5.attrs["created"])
 
