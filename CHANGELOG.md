@@ -2,7 +2,9 @@
 
 Log of changes in the versions
 
-## Unreleased
+## v2.8.4
+
+Prepared 2026-11-08. Reserved release DOI: [10.5281/zenodo.24057487](https://doi.org/10.5281/zenodo.24057487).
 
 - resolve fresh request contexts and worker threads to the default `h5py`
   convention so metadata writes work after another context imported the toolbox;

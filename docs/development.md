@@ -208,6 +208,12 @@ do not mix those numbers with the process benchmark.
 
 ## DOI-first release checklist
 
+Release **2.8.4** is prepared on `fix/context-defaults-and-rdf-literals` from
+`main`, with the user-supplied reserved DOI `10.5281/zenodo.24057487` and
+preparation date **2026-11-08** (Europe/Berlin). Its release notes include the
+context-default and explicit RDF literal fixes. Publication remains a separate
+action. The previous release preparation is retained below for reference.
+
 Release **2.8.3** is prepared on `release/2.8.3` from
 `feature/modernize-repository`, with the user-supplied reserved DOI
 `10.5281/zenodo.23854129` and release date **2026-11-01**. Publication is a separate
