@@ -1,13 +1,11 @@
 import json
-import re
 import warnings
 from typing import Union
 
 import numpy as np
-from dateutil import parser
 from ontolutils import SCHEMA
 from ontolutils.classes.thing import is_url
-from rdflib import RDF, DCTERMS, XSD, URIRef, Literal, Graph, BNode
+from rdflib import RDF, DCTERMS, URIRef, Literal, Graph, BNode
 
 from h5rdmtoolbox.ld.utils import get_obj_bnode, to_literal
 from .utils import to_uriref
@@ -25,30 +23,6 @@ def _json_default(value):
     if isinstance(value, np.ndarray):
         return value.tolist()
     raise TypeError(f"Object of type {type(value).__name__} is not JSON serializable")
-
-
-def _is_date_str(value: str):
-    """Returns a tuple of (date_string, xsd_type) if the value is a date string, else None."""
-    if not isinstance(value, str):
-        return None
-    # quick check, that first character is a digit
-    if not re.match(r"^\d", value):
-        return None
-    # reject version-like strings composed only of digits and dots, e.g. "2.5.3"
-    if re.match(r"^\d+(?:\.\d+)+$", value):
-        return None
-    try:
-        dt = parser.parse(value)
-        # reject implausible years (versions can parse as year 2, etc.)
-        if dt.year < 1000:
-            return None
-        # Prüfe, ob nur ein Datum (YYYY-MM-DD) vorliegt
-        if re.match(r"^\d{4}-\d{2}-\d{2}$", value):
-            return dt.date().isoformat(), XSD.date
-        else:
-            return dt.isoformat(), XSD.dateTime
-    except (ValueError, OverflowError):
-        return None
 
 
 def process_file_attribute(parent_obj, name, data, graph, file_uri: Union[URIRef, BNode], blank_node_iri_base):
@@ -138,15 +112,7 @@ def process_file_attribute(parent_obj, name, data, graph, file_uri: Union[URIRef
                     warnings.warn(
                         f"Error parsing JSON-LD object for attribute. name={name}, data={data}. Orig. Error: {e}")
         else:
-            date_info = _is_date_str(data)
-            if date_info:
-                date_value, xsd_type = date_info
-                graph.add(
-                    (file_uri,
-                     to_uriref(rdf_user_predicate, blank_node_iri_base),
-                     Literal(date_value, datatype=xsd_type))
-                )
-            elif is_url(data):
+            if is_url(data):
                 graph.add(
                     (file_uri,
                      to_uriref(rdf_user_predicate, blank_node_iri_base),
@@ -228,15 +194,7 @@ def process_attribute(parent_obj, name, data, graph, blank_node_iri_base):
                         warnings.warn(
                             f"Error parsing JSON-LD object for attribute. name={name}, data={data}. Orig. Error: {e}")
         else:
-            date_info = _is_date_str(data)
-            if date_info:
-                date_value, xsd_type = date_info
-                graph.add(
-                    (parent_uri,
-                     to_uriref(rdf_user_predicate, blank_node_iri_base),
-                     Literal(date_value, datatype=xsd_type))
-                )
-            elif is_url(data):
+            if is_url(data):
                 graph.add(
                     (parent_uri,
                      to_uriref(rdf_user_predicate, blank_node_iri_base),

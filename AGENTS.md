@@ -12,8 +12,8 @@ and the prioritized maintenance backlog.
 
 - Check `git status --short --branch` before editing. Preserve existing work.
 - Create or use the task's agreed working branch before changing files. For the
-  next release preparation, use `release/2.8.3`, based on
-  `feature/modernize-repository`.
+  current 2.8.4 fixes and release preparation, use
+  `fix/context-defaults-and-rdf-literals`, based on `main`.
 - **Never commit on `main`.** Before every staging operation and commit, run
   `git branch --show-current` and verify the agreed branch. Stop if the branch
   differs or HEAD is detached.
@@ -40,8 +40,9 @@ and the prioritized maintenance backlog.
   version-specific Zenodo DOI.** Never reuse the previous version's DOI, invent
   an identifier, or commit a placeholder. A concept DOI identifies the version
   family; the release citation must identify the specific version.
-- The agreed next release is `2.8.3`, using a manually prepared new-version draft
-  in the existing Zenodo version family. The user reserves and supplies its DOI.
+- The agreed next release is `2.8.4`, with user-supplied reserved DOI
+  `10.5281/zenodo.24057487` in the existing Zenodo version family. The release
+  metadata preparation date is `2026-11-08` (Europe/Berlin).
 - Update `pyproject.toml`, `CITATION.cff` (version, DOI, release date), root
   `codemeta.json` (version and DOI URL in `@id`), and the Colab quickstart pin
   together. Update the changelog and README release citation in the same commit.

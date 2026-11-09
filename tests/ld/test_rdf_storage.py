@@ -83,7 +83,10 @@ def test_self_and_data_predicates_preserve_neighboring_annotations(target):
     (lambda: rdflib.Literal('bonjour', lang='fr'), {
         'lexical_or_value': 'bonjour', 'lang': 'fr', '$type': 'rdflib.term.Literal',
     }),
-    (lambda: rdflib.Literal(7), '7'),
+    (lambda: rdflib.Literal(7), {
+        'lexical_or_value': '7', 'datatype': str(rdflib.XSD.integer),
+        'normalize': False, '$type': 'rdflib.term.Literal',
+    }),
     (lambda: {'@context': {'ex': BASE}, '@graph': [
         {'@id': BASE + 'object', '@type': 'ex:Thing'},
     ]}, {'@context': {'ex': BASE}, '@id': BASE + 'object', '@type': 'ex:Thing'}),

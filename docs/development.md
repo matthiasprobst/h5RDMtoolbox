@@ -80,6 +80,23 @@ and decoder names are still changed globally. This is not sufficient evidence
 of thread/task isolation. Configuration, the registry, accessor registration,
 and logging also have process-wide effects.
 
+Fresh contexts resolve an unset convention pointer to the registered empty
+`h5py` convention. This lookup does not activate global signatures or decoders;
+explicit activation still inspects the raw context pointer. Before the default
+convention is registered during package initialization, lookup may return None.
+
+Contextual RDF export does not infer dates from string attributes. Use explicit
+RDF Literal annotations for date and dateTime values; lexical strings such as
+dimension counts and sample identifiers must survive serialization unchanged.
+The focused regressions are `tests/conventions/test_context_state.py` and
+`tests/ld/test_literal_preservation.py`. This is a deliberate change from
+heuristic date typing; existing explicit annotations remain supported.
+Explicit non-language literals now use a `$type: rdflib.term.Literal` JSON
+descriptor with lexical value, datatype, and `normalize: false` in RDF object
+mapping attributes. This deliberately replaces their previous bare-string
+storage, which lost the datatype. Language-literal descriptors retain their
+existing representation. Legacy bare strings remain readable as strings.
+
 For standalone benchmarks, documentation builds, and scripts that reset user
 directories, set these environment variables to disposable locations before
 the first package import:
@@ -190,6 +207,12 @@ directories to attribute import costs. Its instrumentation changes timing;
 do not mix those numbers with the process benchmark.
 
 ## DOI-first release checklist
+
+Release **2.8.4** is prepared on `fix/context-defaults-and-rdf-literals` from
+`main`, with the user-supplied reserved DOI `10.5281/zenodo.24057487` and
+preparation date **2026-11-08** (Europe/Berlin). Its release notes include the
+context-default and explicit RDF literal fixes. Publication remains a separate
+action. The previous release preparation is retained below for reference.
 
 Release **2.8.3** is prepared on `release/2.8.3` from
 `feature/modernize-repository`, with the user-supplied reserved DOI

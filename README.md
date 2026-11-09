@@ -357,7 +357,7 @@ for their purpose. The authoritative dependency lists and version constraints ar
 ## Citing the package
 
 If you use the package in your work, cite the software using its version-specific
-[Zenodo DOI for version 2.8.3](https://doi.org/10.5281/zenodo.23854129).
+[Zenodo DOI for version 2.8.4](https://doi.org/10.5281/zenodo.24057487).
 This DOI is reserved for the release and will resolve once the Zenodo record is published.
 A related paper is published in the
 journal [inggrid](https://www.inggrid.org/article/id/4028/). Thank you!
@@ -403,11 +403,36 @@ the same Convention object is nested repeatedly or the body raises an exception.
 `h5tbx.use(...)` activates immediately when constructed; create a fresh `use`
 manager for each context.
 
+Fresh request contexts and worker threads without an explicitly selected
+convention resolve to the registered empty `h5py` convention. Looking up this
+default does not activate a convention or change global signatures and decoders.
+
 Convention-name lookup is context-local, but activation changes shared wrapper
 method signatures and decoder selection. Convention-dependent operations should
 run sequentially: different conventions are not isolated across concurrent
 threads or asynchronous tasks, and an open file is not an isolated decoding
 environment merely because it remembers its opening convention.
+
+## RDF literal types
+
+Contextual RDF export preserves string attributes as strings, including `"3"`,
+`"00123"`, and `"2025-01-10"`. It no longer guesses dates from their spelling.
+To export a date or timestamp, declare its RDF datatype explicitly:
+
+```python
+from rdflib import Literal, XSD
+
+with h5tbx.File("experiment.h5", "w") as h5:
+    h5.attrs["created"] = "2025-01-10"
+    h5.frdf["created"].predicate = "http://purl.org/dc/terms/created"
+    h5.frdf["created"].object = Literal("2025-01-10", datatype=XSD.date)
+```
+
+Use `obj.rdf` for group and dataset metadata. Existing explicit RDF literal
+annotations keep their datatype and language. Newly stored literals use a typed
+JSON descriptor in `RDF_OBJECT` or `RDF_FILE_OBJECT`; historical bare-string
+entries remain readable as strings. Previously inferred dates need
+explicit annotations when their date datatype is part of the intended contract.
 
 ## Configuration
 

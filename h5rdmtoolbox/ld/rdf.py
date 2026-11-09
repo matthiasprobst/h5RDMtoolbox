@@ -180,10 +180,15 @@ def _normalize_object(data, attr_name):
 
 
 def _encode_literal(literal):
-    """Retain the stored type marker needed to reconstruct language literals."""
+    """Retain lexical values and explicit types instead of storing bare strings."""
     if literal.language is not None and literal.datatype is None:
         return {"lexical_or_value": str(literal), "lang": literal.language, "$type": "rdflib.term.Literal"}
-    return literal
+    return {
+        "lexical_or_value": str(literal),
+        "datatype": str(literal.datatype) if literal.datatype is not None else None,
+        "normalize": False,
+        "$type": "rdflib.term.Literal",
+    }
 
 
 def _normalize_jsonld_object(data, attr_name):
@@ -305,10 +310,10 @@ class _RDFPO(abc.ABC):
         if item is None:
             return attrs.get('SELF', default)
         if isinstance(attrs, dict):
-            return attrs.get(item, default)
-        assert isinstance(attrs, str)
-        parsed_str = json.loads(attrs)
-        value = parsed_str.get(item, default)
+            value = attrs.get(item, default)
+        else:
+            assert isinstance(attrs, str)
+            value = json.loads(attrs).get(item, default)
         if isinstance(value, dict) and value.get("$type", None) == "rdflib.term.Literal":
             return parse_typed_data(value)
         if isinstance(value, list):
