@@ -123,7 +123,7 @@ them is part of the task.
 
 For prose and navigation changes, install docs dependencies and build HTML
 without executing notebooks. The current Sphinx 8 documentation environment
-requires Python 3.10+, while the base package continues to support Python 3.9:
+requires Python 3.10+, matching the base package minimum:
 
 ```bash
 python -m pip install -e ".[docs]"
@@ -174,7 +174,7 @@ entry point is `h5tbx`, mapped to `h5rdmtoolbox_cli:h5tbx`.
 
 ## Refactoring and compatibility
 
-- Preserve Python `>=3.9,<3.14`, public import paths, signatures, defaults,
+- Preserve Python `>=3.10,<3.14`, public import paths, signatures, defaults,
   exceptions, HDF5 metadata conventions, and RDF semantics unless the task
   explicitly authorizes a compatibility change.
 - Follow existing style: four spaces, descriptive snake_case, PascalCase classes,

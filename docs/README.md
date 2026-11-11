@@ -3,7 +3,7 @@
 # Documentation
 
 Run these commands from the repository root with Python 3.10 or newer (required
-by the pinned Sphinx 8.0.0). The base package still supports Python 3.9.
+by the pinned Sphinx 8.0.0 and the base package).
 First install the documentation dependencies:
 
 ```bash

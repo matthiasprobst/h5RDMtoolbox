@@ -18,6 +18,8 @@ Prepared 2026-11-08. Reserved release DOI: [10.5281/zenodo.24057487](https://doi
 
 ### Compatibility
 
+- require Python 3.10-3.13; remove Python 3.9 from package metadata and CI after
+  the Ubuntu 26.04 runner migration made its interpreter setup unavailable
 - date-like strings now remain strings; use explicit `rdflib.Literal` date or
   dateTime annotations when those RDF datatypes are required
 - newly stored non-language literals use typed JSON descriptors in `RDF_OBJECT`
