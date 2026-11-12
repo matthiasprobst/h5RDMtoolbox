@@ -17,6 +17,16 @@ coverage files named `.coverage.*` are ignored local artifacts. Choose focused t
 python -m pylint h5rdmtoolbox --rcfile=.pylintrc --output=.pylint
 ```
 
+## README examples
+
+`python -m pytest tests/test_readme_examples.py -q` executes the Python blocks
+directly from the README in per-test temporary directories. It verifies the
+measurement values, compares the displayed Turtle with the generated graphs,
+checks each block's imports, and parses both CLI serialization examples.
+The metrics block uses `example.h5` from the quickstart; other blocks import
+their own APIs. Server commands additionally need `.[test-server]` for checks
+or the `server` extra for normal use.
+
 ## Distribution regression
 
 `python -m pytest tests/test_distribution.py -q` builds an sdist from a fresh
