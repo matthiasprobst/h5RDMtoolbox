@@ -39,7 +39,7 @@ M4I = rdflib.Namespace("http://w3id.org/nfdi4ing/metadata4ing#")
 
 # Create a new HDF5 file with FAIR metadata
 with h5tbx.File("example.h5", "w") as h5:
-    ds = h5.create_dataset("temperature", data=np.array([20, 21, 19, 22]))
+    ds = h5.create_dataset("temperature", data=np.array([20, 21, 19, 22], dtype=np.int64))
     ds.attrs["units"] = h5tbx.Attribute(
         value="degree_Celsius",
         rdf_predicate=M4I.hasUnit,
@@ -164,7 +164,15 @@ h5tbx ld dump example.h5 -o example.jsonld
 
 The dump command accepts `--format`, `--file-uri`, `--prefix`, `--structural=false`, and `--contextual=false`, so you can choose RDF output, assign stable RDF subject URIs, bind a compact prefix, and include only structural or user-provided contextual metadata when needed.
 
-To inspect files in a browser, run:
+To inspect files in a browser, install the optional server dependencies first:
+
+```bash
+python -m pip install "h5RDMtoolbox[server]"
+```
+
+Then serve the `example.h5` created above. The directory example assumes `data/`
+already contains HDF5 files. Run one server command at a time, open
+`http://127.0.0.1:8000/`, and stop the server with Ctrl+C:
 
 ```bash
 h5tbx serve example.h5
@@ -420,6 +428,7 @@ Contextual RDF export preserves string attributes as strings, including `"3"`,
 To export a date or timestamp, declare its RDF datatype explicitly:
 
 ```python
+import h5rdmtoolbox as h5tbx
 from rdflib import Literal, XSD
 
 with h5tbx.File("experiment.h5", "w") as h5:
@@ -442,9 +451,12 @@ Pint display format on exit, including when an exception is raised. Invalid
 keys or values are rejected before settings change.
 
 ```python
+import h5rdmtoolbox as h5tbx
+
 with h5tbx.set_config(hdf_compression=None, hdf_compression_opts=None):
-    # Create datasets without the configured default compression.
-    ...
+    with h5tbx.File("uncompressed.h5", "w") as h5:
+        ds = h5.create_dataset("data", data=[1, 2, 3])
+        assert ds.compression is None
 ```
 
 `plotting_name_order` accepts a nonempty list or tuple of `plot_name`,
