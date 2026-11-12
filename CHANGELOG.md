@@ -2,9 +2,9 @@
 
 Log of changes in the versions
 
-## v2.8.4
+## v2.9.0
 
-Prepared 2026-11-08. Reserved release DOI: [10.5281/zenodo.24057487](https://doi.org/10.5281/zenodo.24057487).
+Prepared 2026-11-12. Reserved release DOI: [10.5281/zenodo.24057487](https://doi.org/10.5281/zenodo.24057487).
 
 - resolve fresh request contexts and worker threads to the default `h5py`
   convention so metadata writes work after another context imported the toolbox;
@@ -18,6 +18,8 @@ Prepared 2026-11-08. Reserved release DOI: [10.5281/zenodo.24057487](https://doi
 
 ### Compatibility
 
+- advance the planned release from 2.8.4 to 2.9.0 because Python 3.9 support
+  was dropped; Python 3.10 is now the minimum supported version
 - require Python 3.10-3.13; remove Python 3.9 from package metadata and CI after
   the Ubuntu 26.04 runner migration made its interpreter setup unavailable
 - date-like strings now remain strings; use explicit `rdflib.Literal` date or

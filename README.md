@@ -357,7 +357,7 @@ for their purpose. The authoritative dependency lists and version constraints ar
 ## Citing the package
 
 If you use the package in your work, cite the software using its version-specific
-[Zenodo DOI for version 2.8.4](https://doi.org/10.5281/zenodo.24057487).
+[Zenodo DOI for version 2.9.0](https://doi.org/10.5281/zenodo.24057487).
 This DOI is reserved for the release and will resolve once the Zenodo record is published.
 A related paper is published in the
 journal [inggrid](https://www.inggrid.org/article/id/4028/). Thank you!

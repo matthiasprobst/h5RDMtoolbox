@@ -208,10 +208,12 @@ do not mix those numbers with the process benchmark.
 
 ## DOI-first release checklist
 
-Release **2.8.4** is prepared on `fix/context-defaults-and-rdf-literals` from
+Release **2.9.0** is prepared on `release/2.9.0` from
 `main`, with the user-supplied reserved DOI `10.5281/zenodo.24057487` and
-preparation date **2026-11-08** (Europe/Berlin). Its release notes include the
-context-default and explicit RDF literal fixes. Publication remains a separate
+preparation date **2026-11-12** (Europe/Berlin). This replaces the planned 2.8.4
+release; the user confirmed that the reserved DOI stays the same. Its release
+notes include the context-default and explicit RDF literal fixes and removal of
+Python 3.9 support (Python 3.10-3.13 are supported). Publication remains a separate
 action. The previous release preparation is retained below for reference.
 
 Release **2.8.3** is prepared on `release/2.8.3` from
