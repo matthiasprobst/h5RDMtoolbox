@@ -4,7 +4,7 @@
 [![codecov](https://codecov.io/gh/matthiasprobst/h5RDMtoolbox/graph/badge.svg?token=IVG4AQEW47)](https://codecov.io/gh/matthiasprobst/h5RDMtoolbox)
 [![Documentation Status](https://readthedocs.org/projects/h5rdmtoolbox/badge/?version=latest)](https://h5rdmtoolbox.readthedocs.io/en/latest/?badge=latest)
 [![PyPI version](https://badge.fury.io/py/h5RDMtoolbox.svg)](https://badge.fury.io/py/h5RDMtoolbox)
-![pyvers](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue)
+![pyvers](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue)
 [![Paper](https://img.shields.io/badge/Paper-View-green?style=flat&logo=adobeacrobatreader)](https://preprints.inggrid.org/repository/view/23/)
 
 A Python package that helps researchers achieve sustainable 
@@ -271,7 +271,7 @@ A paper is published in the journal [inggrid](https://preprints.inggrid.org/repo
 
 ## Installation
 
-Use Python 3.9 through 3.13. If you are a regular user, you can install the
+Use Python 3.10 through 3.13. If you are a regular user, you can install the
 package via pip:
 
     pip install h5RDMtoolbox
@@ -522,6 +522,8 @@ See the [testing guide](./tests/README.md) for commands and skip reasons.
 
 CI runs on pushes, pull requests, and manual dispatch with read-only repository
 permissions and without Zenodo write credentials or automatic account cleanup.
+The matrix covers Python 3.10-3.13 on Linux, macOS, and Windows. Python 3.9 is
+no longer supported; package metadata requires Python 3.10 or newer.
 Manual Sandbox cleanup requires an explicit list of deposition IDs; it never
 enumerates or deletes all drafts in an account.
 

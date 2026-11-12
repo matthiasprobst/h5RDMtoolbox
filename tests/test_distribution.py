@@ -11,6 +11,7 @@ import tarfile
 import zipfile
 
 from build import ProjectBuilder
+from packaging.specifiers import SpecifierSet
 
 
 def test_sdist_wheel_contains_resources_and_runs_independently(tmp_path):
@@ -46,7 +47,17 @@ def test_sdist_wheel_contains_resources_and_runs_independently(tmp_path):
         assert not any(name.startswith(('.playground/', '.work/', 'h5rdmtoolbox/llm/')) for name in names)
         assert any(name.endswith('/LICENSE') for name in names)
         metadata_path, = [name for name in names if name.endswith('.dist-info/METADATA')]
-        version = Parser().parsestr(archive.read(metadata_path).decode('utf-8'))['Version']
+        metadata = Parser().parsestr(archive.read(metadata_path).decode('utf-8'))
+        version = metadata['Version']
+        supported = SpecifierSet(metadata['Requires-Python'])
+        assert '3.9' not in supported
+        assert '3.14' not in supported
+        for python_version in ('3.10', '3.11', '3.12', '3.13'):
+            assert python_version in supported
+        classifiers = {value.removeprefix('Programming Language :: Python :: ')
+                       for value in metadata.get_all('Classifier', [])
+                       if value.startswith('Programming Language :: Python :: ')}
+        assert classifiers == {'3.10', '3.11', '3.12', '3.13'}
         assert archive.read('h5rdmtoolbox/data/codemeta.json') == canonical_metadata
         archive.extractall(installed)
     env = os.environ.copy()

@@ -1,11 +1,14 @@
 """Check CI boundaries and scoped cleanup using mocks only."""
 
+import json
 from pathlib import Path
 from unittest.mock import Mock, call
 
 import pytest
 import requests
+import toml
 import yaml
+from packaging.specifiers import SpecifierSet
 
 from tests.clean_zenodo_sandbox import delete_sandbox_deposits
 
@@ -69,7 +72,7 @@ def test_default_ci_has_pr_checks_and_no_zenodo_writes():
     assert 'secrets.ZENODO' not in text
     assert workflow['jobs']['test']['strategy']['fail-fast'] == 'false'
     assert workflow['jobs']['test']['strategy']['matrix']['python-version'] == [
-        '3.9', '3.10', '3.11', '3.12', '3.13',
+        '3.10', '3.11', '3.12', '3.13',
     ]
     steps = workflow['jobs']['server']['steps']
     assert any('.[test-server]' in step.get('run', '') for step in steps)
@@ -78,3 +81,26 @@ def test_default_ci_has_pr_checks_and_no_zenodo_writes():
     report_step = next(step for step in steps if 'tests.check_test_report' in step.get('run', ''))
     assert steps.index(report_step) > steps.index(required_step)
     assert 'if' not in report_step and 'continue-on-error' not in report_step
+
+
+def test_ci_python_matrix_matches_package_support():
+    repository = Path(__file__).parents[1]
+    project = toml.load(repository / 'pyproject.toml')['project']
+    supported = SpecifierSet(project['requires-python'])
+    workflow = yaml.load((repository / '.github/workflows/tests.yml').read_text(encoding='utf-8'),
+                         Loader=yaml.BaseLoader)
+    matrix = workflow['jobs']['test']['strategy']['matrix']
+    assert matrix['os'] == ['ubuntu-latest', 'macos-latest', 'windows-latest']
+    assert matrix['python-version'] == ['3.10', '3.11', '3.12', '3.13']
+    assert workflow['jobs']['test']['runs-on'] == '${{ matrix.os }}'
+    assert '3.9' not in supported
+    assert '3.14' not in supported
+    assert all(version in supported for version in matrix['python-version'])
+    classifiers = {value.removeprefix('Programming Language :: Python :: ')
+                   for value in project['classifiers']
+                   if value.startswith('Programming Language :: Python :: ')}
+    assert classifiers == set(matrix['python-version'])
+    codemeta = json.loads((repository / 'codemeta.json').read_text(encoding='utf-8'))
+    assert set(codemeta['programmingLanguage']) == {'Python 3'} | {
+        f'Python {version}' for version in matrix['python-version']
+    }

@@ -1,7 +1,7 @@
 # Testing
 
 Run commands from the repository root using the same Python interpreter.
-The package supports Python 3.9-3.13; `pyproject.toml` is the source of truth.
+The package supports Python 3.10-3.13; `pyproject.toml` is the source of truth.
 
 ```bash
 python -m pip install -e ".[test]"
@@ -100,6 +100,10 @@ these checks are not an offline test selection.
 Matrix jobs have fail-fast disabled so independent platform/Python results remain
 visible even when one combination fails. Quantity-attribute regressions include
 square-bracket notation to protect compatibility with newer Pint releases.
+The matrix runs Python 3.10-3.13 across Linux, macOS, and Windows. Python 3.9
+support was removed after `ubuntu-latest` moved to Ubuntu 26.04, which has no
+Python 3.9 build in `actions/setup-python`. Package requirements, classifiers,
+and the CI matrix are checked together in `tests/test_ci_policy.py`.
 The configured checkout/setup-python/cache versions use Node 24 and require
 Actions Runner 2.327.1 or newer if the workflow is reused on self-hosted runners.
 

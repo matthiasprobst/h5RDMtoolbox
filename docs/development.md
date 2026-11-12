@@ -361,10 +361,18 @@ isolation remains a separate design question. The reports
 preserve baseline evidence, alternatives, and acceptance checks; see completed
 changes here for subsequent fixes.
 
-The pinned Sphinx 8 documentation environment requires Python 3.10+, independently
-of the base package's Python 3.9 support.
+The pinned Sphinx 8 documentation environment and base package require Python 3.10+.
 
 ### Completed refactorings
+
+Python support now starts at 3.10. In main-branch run
+[42573771162](https://github.com/matthiasprobst/h5RDMtoolbox/actions/runs/42573771162/attempts/1),
+the Ubuntu/Python 3.9 job failed during interpreter setup after `ubuntu-latest`
+moved to Ubuntu 26.04; the other 14 matrix jobs and the server job passed.
+The matrix now covers Python 3.10-3.13 on all three operating systems, matching
+the package requirement, classifiers, and CodeMeta metadata. CI policy tests
+guard the supported versions, and the distribution test checks built metadata.
+The later rerun reported a separate GitHub Actions startup error before jobs ran.
 
 Scale/offset decoding now removes both calibration role flags before every
 processing branch. The former cleanup duplicated `IS_DATA_SCALE`, concatenated
@@ -483,7 +491,7 @@ existing difference in URI validation.
 
 The first modernization stage changed workspace organization and documentation.
 The following are proposed follow-up steps, each suitable for independent,
-verified commits. Public import paths, Python 3.9–3.13 support, HDF5 semantics,
+verified commits. Public import paths, Python 3.10–3.13 support, HDF5 semantics,
 and existing RDF behavior remain compatibility constraints.
 
 | Maintenance area | Evidence and proposed change | Verification and completion criteria |
