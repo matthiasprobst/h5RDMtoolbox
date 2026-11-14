@@ -49,3 +49,16 @@ per call on the small graph used here. No timing threshold is enforced in CI.
 
 The CLI already deferred package loading in 2.9.0. Separate nine-process CLI
 help medians were 1.193 s and 1.224 s, including process and test-runner startup.
+
+## Python compatibility
+
+On Windows with CPython 3.14.0, the complete default suite passed with
+**425 passed and 19 skipped**. The documentation also built with Sphinx warnings
+treated as errors. Live Zenodo reads and writes require explicit opt-ins; local
+metadata and credential tests run independently of the Python minor version.
+
+CPython 3.15.0 compiled all package source successfully. Full runtime validation
+is incomplete: the dependency installation required source builds for packages
+including h5py, and the local Windows environment lacks the required C++ build
+tools. Python 3.15 CI jobs are experimental and may fail without blocking the
+validated Python-version matrix. This does not establish full 3.15 support.
