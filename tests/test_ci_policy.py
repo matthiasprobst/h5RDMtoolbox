@@ -86,7 +86,7 @@ def test_ci_python_matrix_matches_package_support():
     workflow = yaml.load((repository / '.github/workflows/tests.yml').read_text(encoding='utf-8'),
                          Loader=yaml.BaseLoader)
     matrix = workflow['jobs']['test']['strategy']['matrix']
-    assert matrix['os'] == ['ubuntu-latest', 'macos-latest', 'windows-latest']
+    assert matrix['os'] == ['ubuntu-24.04', 'macos-latest', 'windows-latest']
     assert matrix['python-version'] == ['3.10', '3.11', '3.12', '3.13', '3.14']
     assert workflow['jobs']['test']['runs-on'] == '${{ matrix.os }}'
     assert '3.9' not in supported

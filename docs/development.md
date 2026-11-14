@@ -41,6 +41,9 @@ Public-resource reads may occur in integration tests; the full suite is not
 universally offline. CI uses read-only permissions and no Zenodo write tokens.
 Distribution tests build an sdist and wheel and exercise the installed artifact.
 
+Linux CI uses the explicit `ubuntu-24.04` runner label so Ubuntu upgrades are
+deliberate rather than inherited from `ubuntu-latest` migrations.
+
 Local verification results and performance limitations are documented in
 [verification](verification-3.md).
 
