@@ -5,7 +5,7 @@ import pytest
 import xarray as xr
 
 import h5rdmtoolbox as h5tbx
-from h5rdmtoolbox.wrapper.ds_decoder import scale_and_offset_decoder
+from h5rdmtoolbox.science.calibration import scale_and_offset_decoder
 
 
 @pytest.mark.parametrize('with_scale,with_offset', [
@@ -13,7 +13,7 @@ from h5rdmtoolbox.wrapper.ds_decoder import scale_and_offset_decoder
 ])
 @pytest.mark.parametrize('reference_kind', ['path', 'dataset'])
 def test_decoder_removes_storage_markers(tmp_h5_file, with_scale, with_offset, reference_kind):
-    with h5tbx.use('h5tbx'):
+    with h5tbx.File(tmp_h5_file.id, decode_calibration=True) as tmp_h5_file:
         scale = tmp_h5_file.create_dataset('scale', data=2., attrs={'units': ''})
         offset = tmp_h5_file.create_dataset('offset', data=3., attrs={'units': 'm'})
         dataset = tmp_h5_file.create_dataset('signal', data=[1., 2.], attrs={'units': 'm'})
@@ -34,7 +34,7 @@ def test_decoder_removes_storage_markers(tmp_h5_file, with_scale, with_offset, r
 
 
 def test_decoded_read_preserves_stored_calibration(tmp_h5_file):
-    with h5tbx.use('h5tbx'):
+    with h5tbx.File(tmp_h5_file.id, decode_calibration=True) as tmp_h5_file:
         scale = tmp_h5_file.create_dataset('scale', data=2., attrs={'units': ''})
         offset = tmp_h5_file.create_dataset('offset', data=3., attrs={'units': 'm'})
         dataset = tmp_h5_file.create_dataset('signal', data=[1., 2.], attrs={'units': 'm'})
@@ -50,3 +50,41 @@ def test_decoded_read_preserves_stored_calibration(tmp_h5_file):
         assert 'IS_DATA_OFFSET' not in offset[()].attrs
         assert bool(scale.attrs['IS_DATA_SCALE'])
         assert bool(offset.attrs['IS_DATA_OFFSET'])
+
+
+def test_calibration_is_per_open_file_and_propagates(tmp_path):
+    filename = tmp_path / "calibrated.h5"
+    with h5tbx.File(filename, "w") as file:
+        group = file.create_group("nested")
+        scale = group.create_dataset("scale", data=2., attrs={"units": ""})
+        offset = group.create_dataset("offset", data=3., attrs={"units": "m"})
+        signal = group.create_dataset("signal", data=[1., 2.], attrs={"units": "m"})
+        signal.attach_data_scale_and_offset(scale, offset)
+    with h5tbx.File(filename) as raw, h5tbx.File(filename, decode_calibration=True) as decoded:
+        assert not raw.decode_calibration
+        assert decoded.decode_calibration
+        for obj in (decoded["nested/signal"], decoded["nested"]["signal"],
+                    decoded["nested/signal"].parent["signal"],
+                    decoded["nested"].rootparent["nested/signal"]):
+            assert obj.decode_calibration
+            np.testing.assert_allclose(obj[()].values, [5., 7.])
+            np.testing.assert_allclose(obj.values[()], [1., 2.])
+        np.testing.assert_allclose(raw["nested/signal"][()].values, [1., 2.])
+        assert decoded["nested/signal"].attrs["DATA_SCALE"] == "/nested/scale"
+
+
+def test_invalid_calibration_fails_only_on_decoded_read(tmp_path):
+    filename = tmp_path / "bad-calibration.h5"
+    with h5tbx.File(filename, "w") as file:
+        file.create_dataset("signal", data=[1., 2.], attrs={"units": "m", "DATA_SCALE": "/missing"})
+    with h5tbx.File(filename) as file:
+        np.testing.assert_allclose(file["signal"][()].values, [1., 2.])
+    with h5tbx.File(filename, decode_calibration=True) as file:
+        with pytest.raises(ValueError, match="Cannot decode calibration"):
+            file["signal"][()]
+        np.testing.assert_allclose(file["signal"].values[()], [1., 2.])
+
+
+def test_invalid_calibration_option(tmp_path):
+    with pytest.raises(TypeError, match="decode_calibration"):
+        h5tbx.File(tmp_path / "unused.h5", "w", decode_calibration="yes")

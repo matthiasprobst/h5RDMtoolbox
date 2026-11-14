@@ -1,4 +1,4 @@
-"""Test the mongoDB interface"""
+"""Test local HDF5 queries"""
 
 import unittest
 from typing import List
@@ -14,7 +14,6 @@ from h5rdmtoolbox.database.hdfdb.query import _basename
 
 
 class TestHDFDB(unittest.TestCase):
-    # Note: setUp removed - reset_convention fixture in conftest.py handles this
 
     def test_find_str(self):
         with h5tbx.File(attrs=dict(title="my file")) as h5:

@@ -3,11 +3,11 @@
 Catalog
 =======
 
+Catalogs remain part of the 3.0 scope. Install the ``catalog`` extra to use local
+RDF stores, SPARQL discovery, and HDF5 file stores.
 
-
-
-.. toctree::
-    :maxdepth: 2
-    :hidden:
-
-    catalog.ipynb
+Validation is explicit. ``CatalogManager.validate_catalog(path)`` returns the
+shared SHACL ``ValidationResult`` with ``conforms``, report graph, report text,
+and structured violations. Registering shapes on a store does not automatically
+validate uploads: pass ``validate=True`` when calling ``upload_file`` to request
+validation before insertion. Catalog initialization does not validate implicitly.

@@ -1,3 +1,11 @@
+# 3.0 development (unreleased)
+
+- Reduce scope to scientific HDF5 I/O, RDF/SHACL, queries, catalogs and Zenodo.
+- Remove conventions and layouts; validate explicitly using standard SHACL.
+- Select calibration per open file; make package initialization lazy.
+- Remove server, Qt, MongoDB and analysis conveniences; see the migration guide.
+- Release identity and package version remain 2.9.0 until a new DOI is reserved.
+
 # CHANGELOG
 
 Log of changes in the versions

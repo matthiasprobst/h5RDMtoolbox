@@ -1,143 +1,24 @@
 # Testing
 
-Run commands from the repository root using the same Python interpreter.
-The package supports Python 3.10-3.13; `pyproject.toml` is the source of truth.
+Install the src-layout project with `python -m pip install -e ".[test]"`.
+Run `python -m pytest --cov=h5rdmtoolbox --cov-report=html` for broad validation,
+or select an affected area. Python 3.10?3.13 is supported.
 
-```bash
-python -m pip install -e ".[test]"
-python -m pytest tests/test_version.py tests/test_config.py tests/test_cli.py -q
-python -m pytest --cov=h5rdmtoolbox --cov-report=html
-```
+Fixtures isolate data/cache/log directories and restore configuration. Use
+`tmp_path` for all generated files. The full suite can read public resources.
+Wikidata requires `H5RDMTOOLBOX_RUN_WIKIDATA_TESTS=1`; live Zenodo uploads require
+both `H5RDMTOOLBOX_RUN_ZENODO_UPLOAD_TESTS=1` and `ZENODO_SANDBOX_API_TOKEN`.
+Ordinary CI has neither write tokens nor cleanup permissions. Mock-based cleanup
+checks only permit explicitly supplied owned deposition IDs.
 
-HTML coverage is written to `htmlcov/index.html`; `.coverage` and subprocess
-coverage files named `.coverage.*` are ignored local artifacts. Choose focused tests using the
-[source/test map](../AGENTS.md). Static analysis uses the existing configuration:
+- `tests/test_readme_examples.py` executes the actual README code and compares RDF.
+- `tests/ld/test_validation.py` tests layout replacements and zero-payload reads.
+- `tests/wrapper/test_decoders.py` and `tests/database/test_calibration_policy.py`
+  check calibrated/raw values and per-file/lazy policy propagation.
+- `tests/catalog/test_validation_contract.py` checks explicitly requested validation.
+- `tests/test_startup.py` checks lazy imports and first scientific use.
+- `tests/test_distribution.py` builds an sdist and wheel, then imports outside the
+  checkout; required build tools are in the test extra.
 
-```bash
-python -m pylint h5rdmtoolbox --rcfile=.pylintrc --output=.pylint
-```
-
-## README examples
-
-`python -m pytest tests/test_readme_examples.py -q` executes the Python blocks
-directly from the README in per-test temporary directories. It verifies the
-measurement values, compares the displayed Turtle with the generated graphs,
-checks each block's imports, and parses both CLI serialization examples.
-The metrics block uses `example.h5` from the quickstart; other blocks import
-their own APIs. Server commands additionally need `.[test-server]` for checks
-or the `server` extra for normal use.
-
-## Distribution regression
-
-`python -m pytest tests/test_distribution.py -q` builds an sdist from a fresh
-source copy, builds its wheel with the current interpreter's backend, checks
-metadata/resources/license, and imports the extracted wheel in an isolated
-process outside the checkout. `.[test]` includes `build`, setuptools matching the
-build-system minimum, and `wheel`; this test does not download build dependencies.
-It avoids existing `build/` output and rejects archived experiment content.
-
-## Isolation and external resources
-
-`tests/conftest.py` configures unique temporary application data, cache, and log
-directories before importing the package and resets the active convention around
-each test. Use its HDF5 fixtures or `tmp_path` for generated files. Restore other
-global configuration explicitly. Checked-in sample files are inputs, not output
-locations. For scripts run outside pytest, set all three application directory
-environment variables before importing the package; see the
-[developer overview](../docs/development.md).
-
-Catalog/store tests place generated HDF5 files and local databases under
-`tmp_path`, separately for each test. Their checked-in RDF/JSON-LD inputs remain
-read-only. Tests can be run individually without relying on a previous test's
-generated files or deleting a shared source-tree database directory.
-
-The full suite still includes public resource downloads and service integrations.
-It is not an offline suite. Use `-rs` to see skip reasons; a skipped integration
-is not evidence that its behavior was verified.
-
-## Live Zenodo Sandbox uploads
-
-Tests marked `zenodo_upload` create remote Sandbox deposits. They run only when
-both `H5RDMTOOLBOX_RUN_ZENODO_UPLOAD_TESTS=1` and a nonempty
-`ZENODO_SANDBOX_API_TOKEN` are present. A token by itself never enables uploads.
-Set the token in your local environment, then opt in explicitly. For PowerShell:
-
-```powershell
-$env:H5RDMTOOLBOX_RUN_ZENODO_UPLOAD_TESTS = '1'
-python -m pytest -m zenodo_upload -rs
-```
-
-For bash:
-
-```bash
-H5RDMTOOLBOX_RUN_ZENODO_UPLOAD_TESTS=1 python -m pytest -m zenodo_upload -rs
-```
-
-Existing Python-version restrictions still apply; inspect skip reasons. Keep
-credentials out of version control. The test application directories are
-isolated, so local user `zenodo.ini` files are not reused by the suite.
-
-## Optional server tests
-
-Install the dedicated test extra and require server tests explicitly:
-
-```bash
-python -m pip install -e ".[test-server]"
-```
-
-In PowerShell:
-
-```powershell
-$env:H5RDMTOOLBOX_REQUIRE_SERVER_TESTS = '1'
-python -m pytest tests/test_server.py -q --junitxml=server-test-results.xml
-python -m tests.check_test_report server-test-results.xml
-```
-
-In bash, prefix the pytest command with `H5RDMTOOLBOX_REQUIRE_SERVER_TESTS=1`.
-The extra combines existing server/test requirements with HTTPX. Missing FastAPI
-or HTTPX skips the module only in optional runs; required runs fail. Unexpected
-errors from installed dependencies are not treated as missing packages. The
-report check requires executed cases with no skips, failures, or errors.
-`tests/test_server_policy.py` verifies these boundaries without service calls.
-
-## CI and manual cleanup
-
-The test workflow runs on pushes, pull requests, and manual dispatch. It preserves
-the supported Python/OS matrix, uses read-only repository permissions, and does
-not receive Zenodo credentials. Upload and Wikidata opt-ins are explicitly off.
-Coverage upload is restricted to push events. Public resource reads still occur;
-these checks are not an offline test selection.
-Matrix jobs have fail-fast disabled so independent platform/Python results remain
-visible even when one combination fails. Quantity-attribute regressions include
-square-bracket notation to protect compatibility with newer Pint releases.
-The matrix runs Python 3.10-3.13 across Linux, macOS, and Windows. Python 3.9
-support was removed after `ubuntu-latest` moved to Ubuntu 26.04, which has no
-Python 3.9 build in `actions/setup-python`. Package requirements, classifiers,
-and the CI matrix are checked together in `tests/test_ci_policy.py`.
-The configured checkout/setup-python/cache versions use Node 24 and require
-Actions Runner 2.327.1 or newer if the workflow is reused on self-hosted runners.
-
-There is no automatic Sandbox cleanup job. Opted-in integration tests clean their
-own records in `finally` blocks. If manual cleanup is needed, first identify and
-verify the specific Sandbox deposition IDs you own, configure Sandbox credentials
-locally, then run:
-
-```bash
-python -m tests.clean_zenodo_sandbox 12345 67890
-```
-
-The example IDs are placeholders, not records to delete. The tool rejects empty
-or invalid selections before making requests, deletes duplicate IDs only once,
-uses a fixed Sandbox endpoint with a timeout, and stops on HTTP errors. It never
-lists account drafts or follows arbitrary deletion URLs. Its automated tests
-mock all requests; they perform no real deletion.
-
-## Wikidata and MongoDB
-
-Wikidata Query Service tests require `H5RDMTOOLBOX_RUN_WIKIDATA_TESTS=1`; select
-them with `python -m pytest -m wikidata -rs`. This opt-in does not enable uploads.
-
-MongoDB tests probe a local server and can fall back to mongomock on Python below
-3.13. On Python 3.13, the affected tests skip if a real server is unavailable.
-Server/GUI and other optional features require their corresponding extras;
-check test skip reasons when validating changes in those areas.
+Use `python -m pylint src/h5rdmtoolbox --rcfile=.pylintrc` for linting and
+`python -m sphinx -b html -D nb_execution_mode=off docs docs/_build/html` for docs.

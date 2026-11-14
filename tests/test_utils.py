@@ -100,18 +100,16 @@ class TestUtils(unittest.TestCase):
         self.assertEqual((None, [], [], []), h5tbx.utils.DocStringParser.parse_docstring(''))
 
     def test_has_datasets(self):
-        with h5tbx.use(None):
-            with h5tbx.set_config(auto_create_h5tbx_version=False):
-                with h5tbx.File() as h5:
-                    self.assertFalse(h5tbx.utils.has_datasets(h5))
-                    h5.create_dataset('test', data=1)
-                    self.assertTrue(h5tbx.utils.has_datasets(h5))
-                    self.assertFalse(h5tbx.utils.has_groups(h5))
-                    h5.create_group('testgroup')
-                    self.assertTrue(h5tbx.utils.has_groups(h5))
-
-                self.assertTrue(h5tbx.utils.has_datasets(h5.hdf_filename))
-                self.assertTrue(h5tbx.utils.has_groups(h5.hdf_filename))
+        with h5tbx.set_config(auto_create_h5tbx_version=False):
+            with h5tbx.File() as h5:
+                self.assertFalse(h5tbx.utils.has_datasets(h5))
+                h5.create_dataset('test', data=1)
+                self.assertTrue(h5tbx.utils.has_datasets(h5))
+                self.assertFalse(h5tbx.utils.has_groups(h5))
+                h5.create_group('testgroup')
+                self.assertTrue(h5tbx.utils.has_groups(h5))
+            self.assertTrue(h5tbx.utils.has_datasets(h5.hdf_filename))
+            self.assertTrue(h5tbx.utils.has_groups(h5.hdf_filename))
 
     @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
                          reason=f"Nur auf Python {TESTING_VERSIONS} testen")

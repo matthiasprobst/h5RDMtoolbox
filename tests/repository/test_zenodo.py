@@ -20,7 +20,7 @@ from h5rdmtoolbox.repository.interface import RepositoryFile
 from h5rdmtoolbox.repository.zenodo.core import _bump_version, USER_AGENT_HEADER
 from h5rdmtoolbox.repository.zenodo.metadata import Metadata, Creator, Contributor
 from h5rdmtoolbox.repository.zenodo.tokens import get_api_token, set_api_token
-from h5rdmtoolbox.tutorial import TutorialSNTZenodoRecordID
+TutorialSNTZenodoRecordID = 10428795  # Historical public test fixture.
 from h5rdmtoolbox.user import USER_DATA_DIR
 
 logger = logging.getLogger(__name__)

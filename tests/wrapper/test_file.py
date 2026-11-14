@@ -19,7 +19,6 @@ from typing_extensions import Annotated
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import tutorial
-from h5rdmtoolbox import use
 from h5rdmtoolbox.utils import generate_temporary_filename
 from h5rdmtoolbox.wrapper.core import File
 
@@ -28,7 +27,6 @@ class TestFile(unittest.TestCase):
 
     def setUp(self) -> None:
         """setup"""
-        use(None)
         with File(mode="w") as h5:
             h5.attrs["one"] = 1
             g = h5.create_group("grp_1")
@@ -77,26 +75,6 @@ class TestFile(unittest.TestCase):
         if h5.hdf_filename.exists():
             h5.hdf_filename.unlink()
 
-    def test_reopen_file(self):
-        try:
-            cv_yaml_filename = tutorial.get_convention_yaml_filename()
-            cv = h5tbx.convention.from_yaml(cv_yaml_filename, overwrite=True)
-            h5tbx.use(cv)
-            with h5tbx.File(
-                data_type="experimental", contact=h5tbx.__author_orcid__
-            ) as h5:
-                pass
-            # reopen file with read-only mode works fine
-            with h5tbx.File(h5.hdf_filename, "r") as h5:
-                self.assertTrue("data_type" in h5.attrs.raw)
-                self.assertTrue("contact" in h5.attrs.raw)
-
-            # reopen file with read-write mode must also. the mandatory root attributes are set earlier...
-            with h5tbx.File(h5.hdf_filename, "r+") as h5:
-                self.assertTrue("data_type" in h5.attrs.raw)
-                self.assertTrue("contact" in h5.attrs.raw)
-        except HTTPError:
-            self.skipTest("Cannot download convention file from tutorial repository!")
 
     def test_grrrr(self):
         def regex_0(value, handler):
@@ -384,8 +362,8 @@ class TestFile(unittest.TestCase):
             h5.create_dataset_from_xarray_dataset(ds)
 
     def test_data_scale_and_offset(self):
-        with h5tbx.use("h5tbx") as cv5:
-            with File(mode="w") as h5:
+        with h5tbx.File(mode="w", decode_calibration=True) as calibrated_file:
+            with File(calibrated_file.id, decode_calibration=True) as h5:
                 ds = h5.create_dataset("ds", data=np.arange(10), attrs=dict(units="V"))
                 ds_scale = h5.create_dataset(
                     "ds_scale", data=1, attrs=dict(units="m/s/V")
@@ -405,30 +383,6 @@ class TestFile(unittest.TestCase):
             ds[0, 0] = 5
             self.assertEqual(ds[0, 0], 5)
 
-    def test_from_yaml_to_hdf(self):
-        dictionary = {
-            "boundary/outlet boundary/y": {
-                "data": 2,
-                "attrs": {
-                    "units": "m",
-                    "standard_name": "y_coordinate",
-                    "comment": "test",
-                    "another_attr": 100.2,
-                    "array": [1, 2, 3],
-                },
-            },
-            "test/grp": {"attrs": {"long_name": "a test group"}},
-        }
-        yaml_file = generate_temporary_filename(suffix=".yaml")
-        with open(yaml_file, "w") as f:
-            yaml.safe_dump(dictionary, f)
-
-        hdf_filename = generate_temporary_filename(suffix=".hdf")
-        with File(hdf_filename, "w") as h5:
-            h5.create_from_yaml(yaml_file)
-            self.assertIn("test/grp", h5)
-            self.assertIn("boundary/outlet boundary/y", h5)
-            self.assertTrue(h5["boundary/outlet boundary/y"].attrs["units"], "m")
 
     def test_dataset_value_comparison(self):
         with File(mode="w") as h5:

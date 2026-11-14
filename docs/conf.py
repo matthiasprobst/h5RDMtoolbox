@@ -13,7 +13,7 @@
 import pathlib
 import sys
 
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
 
 # -- Project information -----------------------------------------------------
 
@@ -87,6 +87,15 @@ templates_path = ["_templates"]
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = [
     "_build",
+    "history",
+    "userguide/**/*.ipynb",
+    "userguide/ld/cli.rst",
+    "gettingstarted",
+    "practical_examples",
+    "faq.rst",
+    "faq",
+    "glossary",
+    "userguide/misc",
     "jupyter_execute",
     ".jupyter_cache",
     "README.md",

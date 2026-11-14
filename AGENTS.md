@@ -1,64 +1,40 @@
-# Repository Guidelines
+# Repository guidelines
 
-## Purpose and orientation
+## Scope and workflow
 
-`h5rdmtoolbox` supports FAIR research data management with HDF5: metadata-aware
-`h5py` wrappers, scientific conventions, xarray/pint integration, RDF export and
-validation, queries, and repository publication. Read
-[the developer overview](docs/development.md) for data flow, import dependencies,
-and the prioritized maintenance backlog.
+The approved 3.0 implementation keeps scientific HDF5 I/O, xarray/Pint,
+RDF/SPARQL, explicit SHACL validation, local queries, catalogs and Zenodo.
+Conventions, layouts, HTTP server, Qt GUI, MongoDB and excluded analysis helpers
+are removed. See [development](docs/development.md) and
+[migration](docs/migration-3.md).
 
-## Workspace and Git workflow
-
-- Check `git status --short --branch` before editing. Preserve existing work.
-- Create or use the task's agreed working branch before changing files. For the
-  current 2.9.0 release preparation, use
-  `release/2.9.0`, based on `main`.
-- **Never commit on `main`.** Before every staging operation and commit, run
-  `git branch --show-current` and verify the agreed branch. Stop if the branch
-  differs or HEAD is detached.
-- `.playground/` contains ignored local experiments and archived code ideas.
-  Keep it outside production imports, test collection, documentation sources,
-  and commits. Consult it only when the task calls for those ideas.
+- Check `git status --short --branch` before editing and preserve existing work.
+- Work on `feature/3.0-core`, based on main. Never commit on main.
+- Before every staging operation and commit, verify the agreed branch with
+  `git branch --show-current`; stop on another branch or detached HEAD.
 - Stage explicit paths or reviewed hunks. Inspect `git diff --cached` and run
-  `git diff --cached --check` before committing; avoid blanket staging commands.
-- Commit regularly after each coherent, verified step, using a short, specific
-  imperative subject. Keep unrelated changes in separate commits. Make routine
-  commits on the agreed non-main branch without asking for confirmation.
-- Git commands relevant to the task are authorized without extra confirmation.
-  **Never run `git merge` or merge branches/PRs.** Keep the non-main branch checks
-  above. Report completed checks and any failures or skips; publish releases only
-  when the task calls for them.
-- Keep documentation, including `README.md`, current with every change. Review
-  the README alongside affected API docstrings, user guides, developer overview,
-  and agent instructions; update them in the same commit
-  whenever behavior, architecture, or development workflows change.
+  `git diff --cached --check` before each commit. Commit coherent verified steps.
+- Relevant Git operations are authorized. Never merge branches or PRs.
+- Keep README, API documentation, guides and these instructions current together.
+- `.playground/` and `.work/` are local experiments/evidence, outside production
+  imports, test collection and commits. Consult archived experiments only when
+  the task calls for them. Never commit credentials, user data, caches or builds.
 
-## FAIR versioning and release metadata
+## Release identity
 
-- **DOI first: do not bump the version until the user supplies the reserved,
-  version-specific Zenodo DOI.** Never reuse the previous version's DOI, invent
-  an identifier, or commit a placeholder. A concept DOI identifies the version
-  family; the release citation must identify the specific version.
-- The agreed next release is `2.9.0`, with user-supplied reserved DOI
-  `10.5281/zenodo.24057487` in the existing Zenodo version family. The release
-  metadata preparation date is `2026-11-12` (Europe/Berlin).
-- Update `pyproject.toml`, `CITATION.cff` (version, DOI, release date), root
-  `codemeta.json` (version and DOI URL in `@id`), and the Colab quickstart pin
-  together. Update the changelog and README release citation in the same commit.
-  Use the preparation date in Europe/Berlin unless the user specifies another.
-- Runtime `__version__` comes from installed distribution metadata. Refresh the
-  editable install after a bump; do not hard-code a version in `_version.py`.
-  `_build.py` generates the packaged CodeMeta resource from the root source.
-- Preserve historical release notes, audit evidence, dataset/example DOIs, the
-  CodeMeta context DOI, and the separate paper citation. Do not globally replace
-  version strings or identifiers.
-- Validate local metadata consistency and built artifacts before committing.
-  A reserved DOI need not resolve until publication; do not reject it because
-  an HTTP lookup fails. See [the release checklist](docs/development.md#doi-first-release-checklist).
-- Repository preparation does not authorize tags, GitHub releases, Zenodo
-  publication, or PyPI uploads. Those are separate explicitly requested actions.
-  Do not run `.build.bat` during preparation: it uploads to PyPI immediately.
+Version metadata remains 2.9.0, DOI `10.5281/zenodo.24057487`, preparation date
+2026-11-12 (Europe/Berlin), until the user provides a new reserved version-specific
+3.0.0 Zenodo DOI in the existing version family. Do not reuse the old DOI, invent
+an identifier or commit a placeholder. A reserved DOI need not resolve yet.
+
+After receiving the DOI, update pyproject.toml, CITATION.cff, root codemeta.json,
+Colab quickstart pin, changelog and README citation in one coherent commit.
+Preserve historical releases, example DOIs, CodeMeta context and paper citation.
+Runtime version comes from installed metadata; refresh the editable install.
+`src/_build.py` generates packaged CodeMeta from the canonical root source.
+Validate metadata and built artifacts. Tags, GitHub/Zenodo releases and PyPI
+publication require separate explicit instructions. Never run `.build.bat`
+during preparation: it uploads immediately.
 
 ## Subagents and collaborative investigations
 
@@ -78,136 +54,51 @@ and the prioritized maintenance backlog.
 - Review agent findings before applying changes, and carry accepted decisions
   into the affected production code, README, and developer/user documentation.
 
-## Source map and focused tests
+## Architecture and compatibility
 
-Paths below are relative to the repository root. `tests/` mirrors package areas,
-with plural `conventions/` and `layouts/` test directories.
+Source lives under `src/h5rdmtoolbox/`; tests mirror its retained feature areas.
+`wrapper/` splits file/group/dataset/attribute implementations; `science/`
+contains xarray I/O, units and calibration; `ld/` owns RDF; `validation/` owns the
+shared SHACL service; `database/` owns local query/lazy access; `catalog/` and
+`repository/` own discovery/publication. The facade loads features on demand.
 
-| Area | Source | Focused tests |
-| --- | --- | --- |
-| HDF5 objects, attributes, decoders, accessors | `h5rdmtoolbox/wrapper/` | `tests/wrapper/`, `tests/test_xarray_export.py` |
-| Metadata conventions and dynamic signatures | `h5rdmtoolbox/convention/` | `tests/conventions/` |
-| HDF5 layout validation | `h5rdmtoolbox/layout/` | `tests/layouts/` |
-| RDF, SPARQL, SHACL, graph metrics | `h5rdmtoolbox/ld/` | `tests/ld/` |
-| HDF5 queries, lazy objects, MongoDB | `h5rdmtoolbox/database/` | `tests/database/`, `tests/wrapper/test_lazy.py` |
-| Data catalogs and stores | `h5rdmtoolbox/catalog/` | `tests/catalog/` |
-| Repository interface and Zenodo | `h5rdmtoolbox/repository/` | `tests/repository/` |
-| CLI implementation; package CLI shim | `h5rdmtoolbox_cli.py`; `h5rdmtoolbox/cli.py` | `tests/test_cli.py` |
-| HTTP server; templates and static assets | `h5rdmtoolbox/server.py`; `h5rdmtoolbox/server/` | `tests/test_server.py` |
-| Configuration, directories, utilities, display | `h5rdmtoolbox/_cfg.py`, `h5rdmtoolbox/user.py`, `h5rdmtoolbox/utils/`, `h5rdmtoolbox/_repr.py` | `tests/test_config.py`, `tests/test_user.py`, `tests/test_utils.py`, `tests/test_repr.py` |
-| Scientific extensions and plotting | `h5rdmtoolbox/extensions/`, `h5rdmtoolbox/plotting.py` | `tests/test_extensions.py`, `tests/test_plotting.py` |
+Preserve Python >=3.10,<3.14 and existing HDF5 values, attributes, coordinates,
+calibration references and RDF annotations. Deliberate API changes require a
+migration entry. Keep explicit imports, four-space indentation, descriptive names
+and NumPy-style public docstrings. Keep low-level imports independent of facade
+initialization. No ordinary import creates directories, prunes caches, starts
+network activity or installs application logging handlers.
 
-`h5rdmtoolbox/gui/` contains the optional Qt GUI. Documentation lives in `docs/`;
-package assets and sample conventions live in `h5rdmtoolbox/data/`.
+Calibration is per open file, default False, and propagates to children/lazy
+handles. `.values[...]` remains raw. SHACL validation is explicit and metadata-only
+by default; scalar payload extraction requires an opt-in. Compare RDF graph
+semantics and preserve literal lexical forms and datatypes. Keep RDF storage
+mutation and validation separate, including existing partial-write behavior.
 
-## Setup and checks
+## Setup and verification
 
-Run commands from the repository root using the same Python interpreter:
-
-```bash
-python -m pip install -e ".[test]"
-python -m pytest tests/test_version.py tests/test_config.py tests/test_cli.py -q
-python -m pytest tests/path/to/test_file.py -q
-```
-
-For broad implementation changes, run the full suite and coverage:
+Use one interpreter from the repository root:
 
 ```bash
+python -m pip install -e ".[test,docs]"
+python -m pytest tests/test_startup.py tests/test_distribution.py -q
 python -m pytest --cov=h5rdmtoolbox --cov-report=html
-python -m pylint h5rdmtoolbox --rcfile=.pylintrc --output=.pylint
-```
-
-Capture existing lint failures before broad refactors and distinguish them from
-new findings. Preserve the current tools and formatting style unless changing
-them is part of the task.
-
-For prose and navigation changes, install docs dependencies and build HTML
-without executing notebooks. The current Sphinx 8 documentation environment
-requires Python 3.10+, matching the base package minimum:
-
-```bash
-python -m pip install -e ".[docs]"
+python -m pylint src/h5rdmtoolbox --rcfile=.pylintrc
 python -m sphinx -b html -D nb_execution_mode=off docs docs/_build/html
 ```
 
-For notebook behavior changes, omit `-D nb_execution_mode=off` so the configured
-execution policy applies. Review warnings as well as the exit status. The CLI
-entry point is `h5tbx`, mapped to `h5rdmtoolbox_cli:h5tbx`.
+Focused regression areas are tests/wrapper, tests/ld, tests/database,
+tests/catalog and tests/repository. Test fixtures create isolated application
+directories and restore configuration. Use tmp_path, tmp_h5_file/group/dataset;
+do not write into tracked sample directories. For standalone scripts set
+H5RDMTOOLBOX_USER_DATA_DIR, H5RDMTOOLBOX_CACHE_DIR and H5RDMTOOLBOX_LOG_DIR before
+imports that exercise package features.
 
-## Test isolation and external dependencies
-
-- `tests/conftest.py` sets unique temporary data/cache/log directories before
-  package import, resets the active convention around each test, and provides
-  `tmp_h5_file`, `tmp_h5_group`, and `tmp_h5_dataset` fixtures. Reuse these fixtures
-  or `tmp_path`; do not write generated data into tracked sample directories.
-- For standalone import benchmarks or scripts exercising user-directory resets,
-  set `H5RDMTOOLBOX_USER_DATA_DIR`, `H5RDMTOOLBOX_CACHE_DIR`, and
-  `H5RDMTOOLBOX_LOG_DIR` to disposable locations **before** importing the package.
-  Import creates directories and can prune old cache files.
-- Some tests download remote resources or use Zenodo credentials. Wikidata tests
-  are skipped unless `H5RDMTOOLBOX_RUN_WIKIDATA_TESTS=1`. There is no universal
-  offline test marker; do not describe the full suite as offline.
-- Tests marked `zenodo_upload` require both
-  `H5RDMTOOLBOX_RUN_ZENODO_UPLOAD_TESTS=1` and `ZENODO_SANDBOX_API_TOKEN`.
-  Supplying credentials alone does not enable remote writes. Check skip reasons
-  with `python -m pytest -m zenodo_upload -rs`; existing Python-version skips
-  still apply. See `tests/README.md` for the integration-test workflow.
-- Ordinary CI runs on push/PR/manual dispatch with read-only repository
-  permissions and no Zenodo write tokens. Do not reintroduce account-wide
-  cleanup. The manual cleanup tool requires explicit owned deposition IDs;
-  validate changes using mocked requests in `tests/test_ci_policy.py`.
-- MongoDB tests probe a local server and can fall back to mongomock on Python
-  below 3.13. For server work, install `.[test-server]` (including HTTPX) and set
-  `H5RDMTOOLBOX_REQUIRE_SERVER_TESTS=1`. Missing optional server dependencies can
-  skip the module otherwise; broken installed imports must fail. The dedicated
-  server CI job checks its JUnit report using `tests.check_test_report` to reject
-  empty/skipped runs. See `tests/README.md` for the exact commands.
-- Add meaningful regression tests for changed behavior. For RDF changes, compare
-  graph semantics rather than incidental triple order, unless output formatting
-  is itself the contract. Documentation-only changes need documentation checks,
-  not new behavioral tests.
-- For RDF storage refactoring, also run `tests/ld/test_rdf_storage.py`. Preserve
-  exact raw attribute representations and mutation order, including partial
-  writes on invalid sequences. See the storage contract in `docs/development.md`.
-  Keep RDF validation/preparation in `ld/rdf.py` and shared storage mutations in
-  `ld/_rdf_storage.py`; keep the latter independent of wrapper/facade imports.
-
-## Refactoring and compatibility
-
-- Preserve Python `>=3.10,<3.14`, public import paths, signatures, defaults,
-  exceptions, HDF5 metadata conventions, and RDF semantics unless the task
-  explicitly authorizes a compatibility change.
-- Follow existing style: four spaces, descriptive snake_case, PascalCase classes,
-  explicit imports, and NumPy-style public docstrings.
-- Extract common behavior only where semantics agree. Inspect existing helpers
-  before introducing another abstraction; separate behavior fixes from refactors.
-- Convention changes require `tests/conventions/test_context_state.py`, whose
-  local tests block network requests and check names, signatures, decoding, and
-  restoration. Preserve immediate `use(...)` activation and context return
-  identity. Convention pointers are context-local; signatures and decoders remain
-  process-global. Do not describe this as full thread/task isolation.
-- Prefer imports from defining internal modules over new back-imports through
-  the package facade where this avoids cycles. Check initialization order before
-  changing existing imports. Preserve shared unit-registry identity, convention
-  activation, decoder registration, and accessor registration.
-- Keep expensive or optional feature imports at their point of use when safe;
-  CLI help already delays package imports until command execution. Measure
-  startup changes in fresh processes with isolated application directories,
-  record environment and repeated timings, and test the first use of deferred
-  features. Use `-X importtime` for attribution, not as a wall-time benchmark.
-  Run `python -m pytest tests/test_startup.py -q` to check deferred engine imports
-  and first-use behavior in a fresh process.
-- Required dependencies and feature extras are defined in `pyproject.toml`.
-  Reuse existing extras and pins; avoid silently changing installation contracts.
-- For metadata, packaging, or resource changes, run
-  `python -m pytest tests/test_distribution.py -q`. It checks an sdist-built wheel
-  outside the checkout. Keep root `codemeta.json` authoritative; `_build.py`
-  generates its package-resource copy. Never maintain a second JSON copy by hand.
-
-## Credentials and generated files
-
-Use environment variables such as `ZENODO_SANDBOX_API_TOKEN` for secrets. Never
-commit tokens, local `zenodo.ini`, user data, logs, coverage reports, build output,
-or caches. PR descriptions should explain behavior, validation, and any new
-optional dependency or configuration; include screenshots when they help review
-visible GUI or documentation changes.
+The full suite can read public resources. Wikidata requires its explicit opt-in.
+Zenodo uploads require both H5RDMTOOLBOX_RUN_ZENODO_UPLOAD_TESTS=1 and
+ZENODO_SANDBOX_API_TOKEN. CI is read-only with no Zenodo write tokens. Never
+reintroduce account-wide cleanup; manual cleanup requires explicit owned IDs.
+Report failures and skips. For packaging changes verify the sdist-built wheel
+outside the checkout. Measure startup and first-use costs separately with fresh
+processes and isolated application directories. Capture baseline lint findings
+and distinguish new diagnostics from existing ones.

@@ -13,7 +13,7 @@ from ssnolib import SSNO, ssno
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import Attribute
-from h5rdmtoolbox import use
+
 from h5rdmtoolbox.ld.rdf import RDFError
 from h5rdmtoolbox.ld.rdf import RDF_PREDICATE_ATTR_NAME
 from h5rdmtoolbox.ld.utils import get_obj_bnode

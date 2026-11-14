@@ -8,9 +8,8 @@ implemented. It defines the methods that a repository interface has to implement
 interface is implemented. It is a popular choice among scientists. Please feel free to contribute other repository
 interfaces.
 
-
-.. toctree::
-    :titlesonly:
-    :glob:
-
-    zenodo.ipynb
+Zenodo publication remains supported in 3.0. Validate files explicitly with the
+SHACL service before upload when a publication workflow requires validation.
+Importing the toolbox or a catalog does not initiate publication or load Zenodo
+credentials. Live integration tests require the documented upload opt-in and a
+Sandbox token; ordinary tests use mocked remote operations.

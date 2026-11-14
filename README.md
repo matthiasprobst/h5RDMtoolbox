@@ -1,33 +1,13 @@
 # HDF5 Research Data Management Toolbox
 
-![Tests](https://github.com/matthiasprobst/h5RDMtoolbox/actions/workflows/tests.yml/badge.svg)
-[![codecov](https://codecov.io/gh/matthiasprobst/h5RDMtoolbox/graph/badge.svg?token=IVG4AQEW47)](https://codecov.io/gh/matthiasprobst/h5RDMtoolbox)
-[![Documentation Status](https://readthedocs.org/projects/h5rdmtoolbox/badge/?version=latest)](https://h5rdmtoolbox.readthedocs.io/en/latest/?badge=latest)
-[![PyPI version](https://badge.fury.io/py/h5RDMtoolbox.svg)](https://badge.fury.io/py/h5RDMtoolbox)
-![pyvers](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue)
-[![Paper](https://img.shields.io/badge/Paper-View-green?style=flat&logo=adobeacrobatreader)](https://preprints.inggrid.org/repository/view/23/)
+Scientific HDF5 access with xarray/Pint, RDF metadata, explicit SHACL validation,
+local queries, catalogs, and Zenodo publication. This branch implements the 3.0
+API; release metadata remains at 2.9.0 pending a new reserved DOI.
 
-A Python package that helps researchers achieve sustainable 
-[**FAIR (Findable, Accessible, Interoperable, Reusable)**](https://www.nature.com/articles/sdata201618) data management with HDF5 files. The toolbox provides a comprehensive
-approach to the research data lifecycle through five main stages: **planning**, **collecting**, **analyzing**,
-**sharing**, and **reusing** data.
+Python 3.10?3.13 is supported. Install with `pip install h5RDMtoolbox`;
+use `[catalog]` for catalog dependencies and `[notebook]` for notebook display.
 
-> **Note**: This project is actively under development.
-
-
-
-
-## ✨ Quick Start
-
-
-One of the core features of the toolbox and success factors for achieving FAIR data, is using semantic metadata.
-
-Let's see how we can use RDF (semantic metadata) together with HDF5 files using the toolbox:
-
-```bash
-# Install the package
-pip install h5RDMtoolbox
-```
+## Scientific data and semantic metadata
 
 ```python
 import h5rdmtoolbox as h5tbx
@@ -152,215 +132,52 @@ hdf:H5T_INTEL_I64 a hdf:Datatype .
     hdf:size 4 .
 ```
 
-## Command Line Interface
+## Explicit validation
 
-The `h5tbx` command provides quick access to linked-data serialization and local inspection from the shell.
+SHACL replaces conventions and the old layout engine. Writes accept ordinary
+`attrs`; validation runs only when requested. By default it inspects structure
+and metadata without reading dataset values. Set `include_scalar_values=True`
+when scalar numerical values belong in the validation graph.
 
-Use `h5tbx ld dump example.h5` to print Turtle RDF, or write a specific format with:
+```python
+from pathlib import Path
+import rdflib
+from h5rdmtoolbox.validation import validate
+
+shapes = rdflib.Graph().parse(data='''
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#> .
+@prefix ex: <https://example.org/> .
+ex:NamedDataset a sh:NodeShape; sh:targetClass hdf:Dataset;
+    sh:property [sh:path hdf:name; sh:minCount 1] .
+''', format="turtle")
+result = validate(Path("example.h5"), shapes)
+assert result.conforms
+```
+
+## Calibration and raw values
+
+Reads return xarray data by default. Open with
+`File("measurement.h5", decode_calibration=True)` to apply attached scale/offset
+calibration. The setting belongs to that open file. `.values[...]` always reads
+stored values. Units and coordinates remain available without conventions.
+
+## Command line
+
+Run `h5tbx ld dump example.h5` to print RDF, or write JSON-LD:
 
 ```bash
 h5tbx ld dump example.h5 -o example.jsonld
 ```
 
-The dump command accepts `--format`, `--file-uri`, `--prefix`, `--structural=false`, and `--contextual=false`, so you can choose RDF output, assign stable RDF subject URIs, bind a compact prefix, and include only structural or user-provided contextual metadata when needed.
+## Scope and migration
 
-To inspect files in a browser, install the optional server dependencies first:
-
-```bash
-python -m pip install "h5RDMtoolbox[server]"
-```
-
-Then serve the `example.h5` created above. The directory example assumes `data/`
-already contains HDF5 files. Run one server command at a time, open
-`http://127.0.0.1:8000/`, and stop the server with Ctrl+C:
-
-```bash
-h5tbx serve example.h5
-h5tbx serve data/ --h5ext=.h5 --h5ext=.hdf5
-```
-This allows you to serve a single HDF5 file or a directory of HDF5 files, and view their metadata and structure in a web interface.
-
-You may perform SPARQL queries or view the file as a graph, as shown below:
-
-<p align="center">
-  <img src="docs/_static/screenshot-served-hdf5-as-graph.png" alt="Serve UI screenshot" width="640">
-</p>
-
-
-The same graph metrics are available from Python:
-
-```python
-import h5rdmtoolbox as h5tbx
-
-metrics = h5tbx.compute_metrics("example.h5")
-
-with h5tbx.File("example.h5") as h5:
-    metrics = h5.metrics()
-```
-
-## 🚀 Key Features
-
-- **🔗 HDF5 + [Xarray](https://docs.xarray.dev/en/stable/) Integration**: Seamless access to metadata during data analysis with native xarray support
-- **🏷️ Persistent Identifiers**: Assign globally unique identifiers using RDF triples for FAIR compliance  
-- **📋 Standardized Conventions**: Define and enforce community-specific metadata standards
-- **☁️ Repository Integration**: Direct upload to Zenodo and other research repositories
-- **🗄️ Database Support**: Use HDF5 files with MongoDB or native HDF5 databases
-- **🔒 Semantic Enrichment**: Add RDF-based semantic meaning to your data
-- **🌐 Catalog Integration**: Search and discover datasets through SPARQL-based catalogs
-
-
-Find an example code in  [![In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/matthiasprobst/h5RDMtoolbox/blob/main/docs/colab/quickstart.ipynb) or check out the 
-[📚 full Documentation](https://h5rdmtoolbox.readthedocs.io/en/latest/)
-
-## Who is the package for?
-
-For everybody, who is...
-
-- ... looking for a management approach for his or her data.
-- ... community has not yet established a stable convention.
-- ... working with small and big data, that fits into HDF5 files.
-- ... looking for an easy way to work with HDF5, especially
-  through [Jupyter Notebooks](https://jupyterlab.readthedocs.io/en/stable/getting_started/installation.html).
-- ... trying to integrate HDF5 with repositories and databases.
-- ... wishing to enrich data semantically with the RDF standard.
-- ... looking for a way to do all the above whiles not needing to learn a new syntax.
-- ... new to HDF5 and wants to learn about it, especially with respect to the FAIR principles and data management.
-
-## Who is it not for?
-
-For everybody, who ...
-
-- ... is looking for a management approach which at the same time allows high-performance and/or parallel work with HDF5
-- ... has already well-established conventions and managements approaches in his or her community
-
-## Package Architecture/structure
-
-The toolbox implements six modules, which are shown below. The numbers reference to their main usage in the stages in
-the data lifecycle shown [here](https://h5rdmtoolbox.readthedocs.io/en/latest/gettingstarted/index.html). The wrapper
-module implements the main interface between the user and the HDF5 file. It
-extends the features of the underlying `h5py` library. Some of the features are implemented in other modules, hence the
-wrapper module depends on the convention, database and linked data (ld) module.
-
-<a href="https://h5rdmtoolbox.readthedocs.io/en/latest/"><img src="docs/_static/h5tbx_modules.svg" alt="H5TBX modules" style="width:600px;"></a>
-
-Current implementation highlights in the modules:
-
-- The **wrapper** module adds functionality on top of the `h5py` package. It allows to include so-called standard names,
-  which are defined in conventions. And it implements interfaces, such as to the package `xarray`, which allows to carry
-  metadata from HDF5 to the user. Other high-level interfaces like `.rdf` allows assigning semantic information to the
-  HDF5 file.
-- For the **database** module, `hdfDB` and `mongoDB` are implemented. The `hdfDB` module allows to use HDF5 files as a
-  database. The `mongoDB` module allows to use mongoDB as a database by mapping the metadata of HDF5 files to the
-  database.
-- For the **repository** module, a Zenodo interface is implemented. Zenodo is a repository, which allows to upload and
-  download data with a persistent identifier.
-- For the **convention** module,
-  the [standard attributes](https://h5rdmtoolbox.readthedocs.io/en/latest/userguide/convention/index.html)
-  are implemented.
-- The **layout** module allows to define expectations on the internal layout (object names, location, attributes,
-  properties) of HDF5 files.
-- The **catalog** module allows interfacing to HDF5 and RDF data published on Zenodo. Via a catalog file, a providers
-  describe the data in various zenodo records they want to share. Through the catalog file, users can work with the
-  data without downloading the full HDF5 files first.
-
-## Quickstart
-
-A quickstart notebook can be tested by clicking on the following badge:
-
-[![Open Quickstart Notebook](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/matthiasprobst/h5RDMtoolbox/blob/main/docs/colab/quickstart.ipynb)
-
-## Documentation
-
-Please find a comprehensive documentation with many examples [here](https://h5rdmtoolbox.readthedocs.io/en/latest/) or
-by click on the image, which shows the research data lifecycle in the center and the respective toolbox features on the
-outside:
-
-A paper is published in the journal [inggrid](https://preprints.inggrid.org/repository/view/23/).
-
-## Installation
-
-Use Python 3.10 through 3.13. If you are a regular user, you can install the
-package via pip:
-
-    pip install h5RDMtoolbox
-
-### Install from source:
-
-Developers may clone the repository and install the package from source. Clone the repository first:
-
-    git clone --branch main https://github.com/matthiasprobst/h5RDMtoolbox.git
-
-Then, run
-
-    pip install h5RDMtoolbox/
-
-Add `--user` if you do not have root access.
-
-For development installation run
-
-    pip install -e h5RDMtoolbox/
-
-### Dependencies
-
-The core functionality depends on the following packages. Some of them are for general management others are very
-specific to the features of the package:
-
-**General dependencies are ...**
-
-- `numpy`: Scientific computing, handling of arrays
-- `matplotlib`: Plotting
-- `appdirs`: Managing user and application directories
-- `importlib_resources`: Accessing package resources consistently
-- `packaging`: Version handling
-- `IPython`: Pretty display of data in notebooks
-- `regex`: Working with regular expressions
-
-**Specific to the package are ...**
-
-- `h5py`: HDF5 file interface
-- `xarray`: Working with scientific arrays in combination with attributes. Allows carrying metadata from HDF5
-  to user
-- `pint`: Allows working with units
-- `pint_xarray`: Working with units for usage with xarray
-- `python-forge`: Used to update function signatures when using
-  the [standard attributes](https://h5rdmtoolbox.readthedocs.io/en/latest/userguide/convention/index.html)
-- `pydantic`: Used to
-  validate [standard attributes](https://h5rdmtoolbox.readthedocs.io/en/latest/userguide/convention/index.html)
-- `pyyaml`: Reading and writing of yaml files, e.g. metadata definitions (conventions). Note, lower versions
-  collide with python 3.11
-- `requests`: Used to download files from the internet or validate URLs, e.g. metadata definitions (conventions)
-- `rdflib`: Used to enable working with RDF
-- `ontolutils`: Required to work with RDF and derive semantic description of HDF5 file content
-- `cftime`: Handling non-standard calendars and time coordinates
-- `pyshacl`: Validating RDF graphs against SHACL shapes
-- `typer`: Providing the `h5tbx` command-line interface
-
-#### Optional dependencies
-
-To run unit tests or to enable certain features, additional dependencies must be installed.
-
-Install optional dependencies by specifying them in square brackets after the package name, e.g.:
-
-    pip install h5RDMtoolbox[database]
-
-[database]
-
-- `pymongo`: Database solution for HDF5 files
-
-[csv]
-
-- `pandas`: Mainly used for reading csv and pretty printing
-
-[snt]
-
-- `xmltodict`: Reading of xml files
-- `tabulate`: Pretty printing of tables
-- `python-gitlab`: Access to gitlab repositories
-- `pypandoc`: Conversion of markdown files to html
-
-Other supported extras are `layout_validation`, `catalog`, `gui`, `server`, `test`, `test-server`, `docs`, `complete`, and
-`complete-with-docs`. See the [installation guide](https://h5rdmtoolbox.readthedocs.io/en/latest/gettingstarted/installation.html)
-for their purpose. The authoritative dependency lists and version constraints are in [`pyproject.toml`](./pyproject.toml).
+Catalogs, local queries, SPARQL, and Zenodo publication remain supported.
+Conventions, layouts, MongoDB, the HTTP server, Qt GUI, custom plotting,
+vector/magnitude/normalization helpers, CSV/YAML constructors, and graph metrics
+are removed. Use xarray, Pint, pandas, matplotlib, or RDFLib directly for those
+analysis conveniences. See [the migration guide](docs/migration-3.md) and
+[developer guide](docs/development.md).
 
 ## Citing the package
 
@@ -390,176 +207,4 @@ Here is the BibTeX entry:
 	journal = {ing.grid}
 }
 ```
-
-## Attribute quantities
-
-Quantity-valued attribute strings keep their original HDF5 text.
-`attribute.to_pint()` accepts plain, parenthesized, and square-bracket unit
-annotations such as `1.2 m`, `1.2 (m)`, and `1.2 [m]`, including newer Pint parsers.
-
-## Decoded calibration data
-
-When a convention enables scale/offset decoding, returned xarray data omits the
-storage attributes `DATA_SCALE`, `DATA_OFFSET`, `IS_DATA_SCALE`, and
-`IS_DATA_OFFSET`. Calibration links, role flags, and raw values remain available
-on the HDF5 datasets.
-
-## Convention contexts
-
-`with convention:` restores the preceding convention on exit, including when
-the same Convention object is nested repeatedly or the body raises an exception.
-`h5tbx.use(...)` activates immediately when constructed; create a fresh `use`
-manager for each context.
-
-Fresh request contexts and worker threads without an explicitly selected
-convention resolve to the registered empty `h5py` convention. Looking up this
-default does not activate a convention or change global signatures and decoders.
-
-Convention-name lookup is context-local, but activation changes shared wrapper
-method signatures and decoder selection. Convention-dependent operations should
-run sequentially: different conventions are not isolated across concurrent
-threads or asynchronous tasks, and an open file is not an isolated decoding
-environment merely because it remembers its opening convention.
-
-## RDF literal types
-
-Contextual RDF export preserves string attributes as strings, including `"3"`,
-`"00123"`, and `"2025-01-10"`. It no longer guesses dates from their spelling.
-To export a date or timestamp, declare its RDF datatype explicitly:
-
-```python
-import h5rdmtoolbox as h5tbx
-from rdflib import Literal, XSD
-
-with h5tbx.File("experiment.h5", "w") as h5:
-    h5.attrs["created"] = "2025-01-10"
-    h5.frdf["created"].predicate = "http://purl.org/dc/terms/created"
-    h5.frdf["created"].object = Literal("2025-01-10", datatype=XSD.date)
-```
-
-Use `obj.rdf` for group and dataset metadata. Existing explicit RDF literal
-annotations keep their datatype and language. Newly stored literals use a typed
-JSON descriptor in `RDF_OBJECT` or `RDF_FILE_OBJECT`; historical bare-string
-entries remain readable as strings. Previously inferred dates need
-explicit annotations when their date datatype is part of the intended contract.
-
-## Configuration
-
-Use `h5tbx.set_config(...)` for persistent settings, or as a context manager for
-temporary overrides. Nested contexts restore both configuration and the shared
-Pint display format on exit, including when an exception is raised. Invalid
-keys or values are rejected before settings change.
-
-```python
-import h5rdmtoolbox as h5tbx
-
-with h5tbx.set_config(hdf_compression=None, hdf_compression_opts=None):
-    with h5tbx.File("uncompressed.h5", "w") as h5:
-        ds = h5.create_dataset("data", data=[1, 2, 3])
-        assert ds.compression is None
-```
-
-`plotting_name_order` accepts a nonempty list or tuple of `plot_name`,
-`long_name`, and/or `standard_name` in the desired priority order.
-
-## Contribution
-
-Releases follow a **DOI-first** workflow: supply the reserved, version-specific
-Zenodo DOI before bumping the version, then update package and citation metadata
-together. See the [release checklist](./docs/development.md#doi-first-release-checklist)
-and [agent instructions](./AGENTS.md#fair-versioning-and-release-metadata).
-Release preparation and publication are separate steps.
-
-RDF storage refactoring preserves the existing HDF5 attribute representation.
-RDF validation and object preparation stay separate from shared mapping updates;
-the existing wrapper continues to encode attributes for HDF5.
-The compatibility checks in `tests/ld/test_rdf_storage.py` inspect raw h5py
-values, string types, shapes, and reopened files. See the
-[storage contract](./docs/development.md#rdf-metadata-storage-contract).
-
-Start with the [developer overview](./docs/development.md) for module responsibilities,
-initialization behavior, startup measurements, and maintenance priorities. The
-[repository guidelines](./AGENTS.md) map code areas to focused tests and describe
-the Git workflow. Work on a dedicated branch and keep changes in coherent commits.
-For the current modernization, Git operations are authorized without repeated
-confirmation, with `git merge` excluded and commits confined to the working branch.
-
-Subagent investigations require explicit approval before agents are started.
-Approved architecture, quality, feature, or difficult-problem discussions are
-documented under `.work/<topic>/`, with evidence, alternatives, and a final
-recommendation. See the repository guidelines for the delegation workflow.
-
-The [architecture and quality review](./.work/architecture-quality/README.md)
-records independently reviewed CI, installed-wheel, test-coverage, and convention
-state findings, with reproductions and prioritized follow-up checks.
-
-The toolbox loads the SHACL validation engine and notebook HTML display support
-when those features are first used. A normal package import avoids loading them;
-both remain included in the required dependencies. See the developer overview
-for the startup measurement protocol and local before/after results.
-
-Internally, wrappers and shared utilities access configuration through its
-defining module; public configuration helpers remain available on `h5tbx`.
-Utility logging continues to use the shared `h5rdmtoolbox` logger and handlers.
-
-Distribution builds copy the canonical root `codemeta.json` into package data,
-so `h5tbx.get_package_meta()` also works outside an editable checkout. The test
-extra includes the build frontend and backend needed to verify an sdist-built
-wheel without downloading build dependencies during the test:
-
-```bash
-python -m pytest tests/test_distribution.py -q
-```
-
-This check builds from a fresh source copy, verifies metadata and runtime assets,
-and imports the resulting package outside the checkout. Use clean source trees
-for release builds so stale local build files cannot enter a distribution.
-
-From the repository root, install the test dependencies and run the local smoke checks:
-
-```bash
-python -m pip install -e ".[test]"
-python -m pytest tests/test_version.py tests/test_config.py tests/test_cli.py -q
-```
-
-Add regression tests in `tests/` for changed behavior and run the relevant test
-modules. The full suite includes downloads and external integrations; the developer
-overview explains test isolation and service requirements. Use existing code style
-and **NumPy-style docstrings** for public APIs.
-
-Live Zenodo uploads are opt-in: tests marked `zenodo_upload` require both
-`H5RDMTOOLBOX_RUN_ZENODO_UPLOAD_TESTS=1` and `ZENODO_SANDBOX_API_TOKEN`.
-Ordinary test runs skip these remote writes, even if a token is available.
-See the [testing guide](./tests/README.md) for commands and skip reasons.
-
-CI runs on pushes, pull requests, and manual dispatch with read-only repository
-permissions and without Zenodo write credentials or automatic account cleanup.
-The matrix covers Python 3.10-3.13 on Linux, macOS, and Windows. Python 3.9 is
-no longer supported; package metadata requires Python 3.10 or newer.
-Manual Sandbox cleanup requires an explicit list of deposition IDs; it never
-enumerates or deletes all drafts in an account.
-
-Server validation has its own CI job using `.[test-server]`, which includes HTTPX
-for FastAPI's TestClient. Missing optional dependencies are reported as a module
-skip in ordinary test runs, but fail when `H5RDMTOOLBOX_REQUIRE_SERVER_TESTS=1`.
-Broken installed dependencies always fail visibly. CI checks the JUnit report
-for actual passing test cases and rejects skips or an empty run. Workflow actions
-use Node 24-compatible versions; self-hosted runners need version 2.327.1 or newer.
-
-Catalog tests generate their HDF5 files and local indexes in per-test temporary
-directories, keeping checked-in sample data read-only and avoiding shared state
-between test cases.
-
-Keep this README, API documentation, affected guides, and developer instructions
-up to date in the same commit as the change. Add or update notebooks when they help
-explain user-facing behavior. See the [documentation guide](./docs/README.md) for
-build requirements. For prose-only changes, a build without notebook execution is:
-
-```bash
-python -m sphinx -W -b html -D nb_execution_mode=off docs docs/_build/html
-```
-
-For notebook behavior changes, omit `-D nb_execution_mode=off` to use the configured
-execution policy.
-
 

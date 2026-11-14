@@ -240,9 +240,9 @@ ex:PersonShape
         """
         with open("valid_person.ttl", "w") as f:
             f.write(valid_person_data)
-        gdb.upload_file("valid_person.ttl")
+        gdb.upload_file("valid_person.ttl", validate=True)
         with self.assertRaises(ValueError):
-            gdb.upload_file("invalid_person.ttl")
+            gdb.upload_file("invalid_person.ttl", validate=True)
 
         pathlib.Path("valid_person.ttl").unlink()
         pathlib.Path("invalid_person.ttl").unlink()
