@@ -11,4 +11,5 @@ local discovery, catalogs, and Zenodo publication.
    userguide/index
    api
    development
+   verification-3
    references

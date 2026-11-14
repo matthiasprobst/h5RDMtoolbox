@@ -46,6 +46,7 @@ against v2.9.0 with matched interpreter and dependencies. Use nine repeated
 samples and report medians, first-use costs and peak memory separately. The
 acceptance targets are 20% lower startup time and at most 10% slowdown in retained
 workloads. Timing results belong with the validation evidence, not assumptions.
+See [the current measurements and remaining performance gate](verification-3.md).
 
 ## DOI-first release checklist
 
