@@ -16,6 +16,10 @@ are removed. See [development](docs/development.md) and
   `git diff --cached --check` before each commit. Commit coherent verified steps.
 - Relevant Git operations are authorized. Never merge branches or PRs.
 - Keep README, API documentation, guides and these instructions current together.
+- Public documentation describes supported behavior and reproducible workflows.
+  Keep agent discussions, implementation-session notes and decision deliberations
+  under `.work/`; do not include them in published guides or README files.
+  Mark historical examples explicitly and exclude them from the current build.
 - `.playground/` and `.work/` are local experiments/evidence, outside production
   imports, test collection and commits. Consult archived experiments only when
   the task calls for them. Never commit credentials, user data, caches or builds.

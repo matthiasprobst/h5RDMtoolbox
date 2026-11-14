@@ -1,21 +1,18 @@
 # Zenodo repository interface
 
+The Zenodo interface supports access to production and Sandbox repositories.
+Supply credentials through environment variables:
 
-## Provide Token(s)
-In order to connect to Zenodo and interact with it, tokens for either the productive or
-sandbox version must be provided. Either by providing a `zenodo.ini` file in the local
-user directory (find it here: `h5rdmtoolbox.get_user_dir()`)
+- `ZENODO_API_TOKEN` for production.
+- `ZENODO_SANDBOX_API_TOKEN` for Sandbox.
 
-The file content should look like the following (displayed tokens are not real, replace them
-with yours):
+Alternatively, store tokens in `UserDir['repository'] / 'zenodo.ini'`, where
+`UserDir` is available from `h5rdmtoolbox.user`. The file uses a `[zenodo]` section
+for production and a `[zenodo:sandbox]` section for Sandbox, each with an
+`access_token` entry. Environment variables take precedence over the file.
+Keep tokens and local credential files out of version control.
 
-    [zenodo:sandbox]
-    access_token = 123kwadhulahw7d8o141lhualwedhuao810g208
-    [zenodo]
-    access_token = jdalwd814o8h3aulih7o3r01h12ulieh218e7081
-
-You may alo set them as environment variables. Please use `ZENODO_API_TOKEN` and `ZENODO_SANDBOX_API_TOKEN`,
-respectively.
-
-**Note**, that environment variables are checked first! If set the ini-file is not 
-checked!
+Validate research data explicitly with `h5rdmtoolbox.validation.validate` before
+upload when required by the publication workflow. See the
+[repository guide](../../../../docs/userguide/repository/index.rst) for scope and
+[testing guide](../../../../tests/README.md) for live Sandbox test requirements.

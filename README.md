@@ -1,11 +1,21 @@
 # HDF5 Research Data Management Toolbox
 
 Scientific HDF5 access with xarray/Pint, RDF metadata, explicit SHACL validation,
-local queries, catalogs, and Zenodo publication. This branch implements the 3.0
-API; release metadata remains at 2.9.0 pending a new reserved DOI.
+local queries, catalogs, and Zenodo publication. This documentation describes the unreleased 3.0 API.
+The latest release is 2.9.0; see the [migration guide](docs/migration-3.md) for API changes.
 
-Python 3.10?3.13 is supported. Install with `pip install h5RDMtoolbox`;
-use `[catalog]` for catalog dependencies and `[notebook]` for notebook display.
+Python 3.10 through 3.13 is supported. To use this development checkout:
+
+```bash
+python -m pip install -e .
+```
+
+Install `".[catalog]"` for catalog dependencies or `".[notebook]"` for notebook
+display. `python -m pip install h5RDMtoolbox` installs the published release,
+whose API differs from the development version documented here.
+
+See [installation](docs/installation.md), the [user guide](docs/userguide/index.rst), [API reference](docs/api.rst),
+and [documentation build instructions](docs/README.md).
 
 ## Scientific data and semantic metadata
 
@@ -40,14 +50,11 @@ with h5tbx.File("example.h5", "w") as h5:
     ttl_full = h5.serialize("ttl", file_uri="https://example.org#example.h5/")
 ```
 
-The above saves three different serializations of the HDF5 content as RDF in Turtle (ttl) format.
-The first one (`ttl_ctx`) is the **contextual** RDF serialization, which only includes the RDF triples that the user
-has enriched the HDF5 file with. The second one (`ttl_struc`) is the **structural** RDF serialization, which includes 
-all RDF triples that can be derived from the HDF5 file content. the third one (`ttl_full`) is the combination of the 
-first two, which includes both the user enriched RDF triples and the RDF triples that can be derived from the HDF5 file 
-content.
-
-Below we show the first two serializations.
+The example produces three Turtle serializations. `ttl_ctx` contains semantic
+annotations, `ttl_struc` describes HDF5 structure and metadata, and `ttl_full`
+combines both views. The contextual and structural graphs are shown below.
+RDF export can include dataset values; validation uses a separate metadata-only
+default.
 
 `ttl_ctx`:
 ```ttl
@@ -183,7 +190,6 @@ analysis conveniences. See [the migration guide](docs/migration-3.md) and
 
 If you use the package in your work, cite the software using its version-specific
 [Zenodo DOI for version 2.9.0](https://doi.org/10.5281/zenodo.24057487).
-This DOI is reserved for the release and will resolve once the Zenodo record is published.
 A related paper is published in the
 journal [inggrid](https://www.inggrid.org/article/id/4028/). Thank you!
 

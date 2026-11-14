@@ -2,7 +2,7 @@
 
 Install the src-layout project with `python -m pip install -e ".[test]"`.
 Run `python -m pytest --cov=h5rdmtoolbox --cov-report=html` for broad validation,
-or select an affected area. Python 3.10?3.13 is supported.
+or select an affected area. Python 3.10 through 3.13 is supported.
 
 Fixtures isolate data/cache/log directories and restore configuration. Use
 `tmp_path` for all generated files. The full suite can read public resources.

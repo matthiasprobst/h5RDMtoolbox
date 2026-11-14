@@ -41,26 +41,10 @@ extensions = [
     "sphinxcontrib.bibtex",
 ]
 
-# Execute self-contained examples on every build in an isolated temporary
-# directory. Examples that intentionally need network access, credentials,
-# external services, or optional visualization packages retain their checked-in
-# outputs and are explicitly excluded from execution.
-nb_execution_mode = "force"
+# Current guides use text examples. Historical notebooks are excluded below.
+nb_execution_mode = "off"
 nb_execution_in_temp = True
 nb_execution_timeout = 60
-nb_execution_excludepatterns = [
-    "**/gettingstarted/quickoverview.ipynb",
-    "**/practical_examples/knowledge_graph.ipynb",
-    "**/practical_examples/metadata4ing.ipynb",
-    "**/practical_examples/nexus.ipynb",
-    "**/practical_examples/photon_hdf5.ipynb",
-    "**/userguide/catalog/catalog.ipynb",
-    "**/userguide/convention/creating_a_new_convention.ipynb",
-    "**/userguide/database/mongoDB.ipynb",
-    "**/userguide/misc/Visualization.ipynb",
-    "**/userguide/repository/zenodo.ipynb",
-    "**/userguide/wrapper/FAIRAttributes.ipynb",
-]
 
 # These sites reject automated HEAD requests or are stale links inherited from
 # h5py docstrings. They are not actionable documentation links in this project.
@@ -86,28 +70,8 @@ templates_path = ["_templates"]
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = [
-    "_build",
-    "history",
-    "userguide/**/*.ipynb",
-    "userguide/ld/cli.rst",
-    "gettingstarted",
-    "practical_examples",
-    "faq.rst",
-    "faq",
-    "glossary",
-    "userguide/misc",
-    "jupyter_execute",
-    ".jupyter_cache",
-    "README.md",
-    "Thumbs.db",
-    ".DS_Store",
-    "tests",
-    "userguide/ld/generated",
-    "userguide/misc/generated",
-    "**.ipynb_checkpoints",
-    "colab",
-    "webinars",
-    "beyond/Validation-with-SHACL.ipynb",
+    "_build", "history", "colab", "jupyter_execute", ".jupyter_cache",
+    "README.md", "Thumbs.db", ".DS_Store", "tests", "**.ipynb_checkpoints",
 ]
 
 autodoc_member_order = "bysource"

@@ -1,8 +1,8 @@
 # Development
 
-The 3.0 implementation targets scientific HDF5 I/O, RDF, explicit SHACL validation,
-local discovery, catalogs, and Zenodo publication. The version remains 2.9.0 until
-the user supplies a reserved version-specific 3.0 DOI.
+The package provides scientific HDF5 I/O, RDF, explicit SHACL validation,
+local discovery, catalogs, and Zenodo publication. Install the development
+checkout before running tests or editing the source.
 
 ## Dependency boundaries
 
@@ -41,12 +41,8 @@ Public-resource reads may occur in integration tests; the full suite is not
 universally offline. CI uses read-only permissions and no Zenodo write tokens.
 Distribution tests build an sdist and wheel and exercise the installed artifact.
 
-Measure import/CLI startup, first read, slicing, RDF, SHACL and catalog indexing
-against v2.9.0 with matched interpreter and dependencies. Use nine repeated
-samples and report medians, first-use costs and peak memory separately. The
-acceptance targets are 20% lower startup time and at most 10% slowdown in retained
-workloads. Timing results belong with the validation evidence, not assumptions.
-See [the current measurements and remaining performance gate](verification-3.md).
+Local verification results and performance limitations are documented in
+[verification](verification-3.md).
 
 ## DOI-first release checklist
 
@@ -55,10 +51,7 @@ pyproject.toml, CITATION.cff, root codemeta.json, Colab pin, changelog and READM
 citation together. Runtime version comes from installed metadata. Refresh the
 editable install and verify built distributions. Never run .build.bat during
 preparation: it uploads immediately. Tags and publication require separate
-instructions. The current reserved 2.9.0 DOI must not be reused for 3.0.0.
-
-Historical 2.x architecture and audit evidence is retained in
-`docs/history/development-2.md` in the repository.
+instructions. Each release requires its own version-specific DOI.
 
 ## Source map
 

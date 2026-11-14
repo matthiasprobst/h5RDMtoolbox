@@ -7,6 +7,7 @@ local discovery, catalogs, and Zenodo publication.
 .. toctree::
    :maxdepth: 2
 
+   installation
    migration-3
    userguide/index
    api

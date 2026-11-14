@@ -1,7 +1,7 @@
 # Migrating to the 3.0 API
 
 Existing HDF5 data and RDF annotations stay readable. Python APIs deliberately
-change; release metadata remains at 2.9.0 during implementation.
+change in the unreleased 3.0 API.
 
 ## Metadata and validation
 

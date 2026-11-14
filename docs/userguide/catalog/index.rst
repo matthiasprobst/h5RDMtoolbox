@@ -3,7 +3,7 @@
 Catalog
 =======
 
-Catalogs remain part of the 3.0 scope. Install the ``catalog`` extra to use local
+Install the ``catalog`` extra to use local
 RDF stores, SPARQL discovery, and HDF5 file stores.
 
 Validation is explicit. ``CatalogManager.validate_catalog(path)`` returns the

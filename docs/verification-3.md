@@ -41,21 +41,11 @@ Plain import and combined import/first scientific use improve substantially.
 First-use time alone increases because heavy dependencies are now loaded there.
 Peak memory after all measured features falls from about 209 MiB to 199 MiB.
 
-**The 10% retained-workload regression gate is not yet satisfied.** On this small
-fixture, slicing and RDF vary considerably between measurements: the earlier
-nine-process run measured improvements of 14% and 12%, while the alternating run
-above measured regressions. Repeated SHACL validation is consistently slower on
-this tiny graph (about 0.55 ms extra per call in the alternating run). The new
-service copies caller-owned shapes because PySHACL adds system triples to them;
-removing that protection would violate the read-only validation contract.
-
-These are local measurements, not cross-platform performance claims. A stable
-benchmark runner and representative larger metadata graphs are needed before
-declaring the performance gate passed. No timing threshold is enforced in CI.
+The measured slicing, RDF extraction, and repeated SHACL validation times exceed
+the 10% regression target on this fixture. Earlier measurements of slicing and
+RDF extraction varied substantially; these local timings do not establish
+cross-platform performance. Repeated SHACL validation adds approximately 0.55 ms
+per call on the small graph used here. No timing threshold is enforced in CI.
 
 The CLI already deferred package loading in 2.9.0. Separate nine-process CLI
 help medians were 1.193 s and 1.224 s, including process and test-runner startup.
-
-Measurements precede the final removal of no-op convention processing and import
-formatting. Raw samples and benchmark scripts are retained locally under
-`.work/3.0-core/`; they are not package resources.
