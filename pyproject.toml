@@ -10,7 +10,7 @@ name = "h5rdmtoolbox"
 version = "2.9.0"
 description = "Supporting a FAIR Research Data lifecycle using Python and HDF5."
 readme = "README.md"
-requires-python = ">=3.10, <3.14"
+requires-python = ">=3.10, <3.16"
 license = "MIT"
 authors = [
     {name = "Matthias Probst", email = "matth.probst@gmail.com"}
@@ -21,6 +21,8 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Operating System :: OS Independent",
     "Development Status :: 4 - Beta",
     "Topic :: Scientific/Engineering"
@@ -37,7 +39,8 @@ dependencies = [
     "packaging>=24.1",
     "ontolutils>=0.27.5, <0.28.0",
     "requests>=2.32.4",
-    "pydantic~=2.8",
+    "pydantic~=2.8; python_version < '3.14'",
+    "pydantic>=2.12,<3; python_version >= '3.14'",
     "rdflib~=7.1",
     "typer>=0.12",
     "cftime>=1.6.4",
@@ -51,7 +54,6 @@ catalog = [
     "SPARQLWrapper>=2.0.0"
 ]
 test-core = [
-    "ssnolib>=2.2.0.2, <3.0.0",
     "build>=1.2",
     # Artifact tests build without downloading dependencies into isolated envs.
     "setuptools>=78.1.1",
@@ -115,5 +117,6 @@ python_files = "test_*.py"
 testpaths = ["tests"]
 markers = [
     "wikidata: tests that call the public Wikidata Query Service",
+    "zenodo_read: live Zenodo reads requiring explicit opt-in",
     "zenodo_upload: live Zenodo Sandbox uploads requiring explicit opt-in and credentials",
 ]

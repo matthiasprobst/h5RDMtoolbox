@@ -36,3 +36,15 @@ def test_live_upload_requires_opt_in_and_token(pytester, monkeypatch, opt_in, to
     result = pytester.runpytest_subprocess("-q", "-rs")
     result.assert_outcomes(**{expected: 1})
     assert (pytester.path / "upload-executed").exists() == (expected == "passed")
+
+
+@pytest.mark.parametrize("opt_in,expected", [(None, "skipped"), ("1", "passed")])
+def test_live_read_requires_explicit_opt_in(pytester, monkeypatch, opt_in, expected):
+    monkeypatch.delenv("H5RDMTOOLBOX_RUN_ZENODO_READ_TESTS", raising=False)
+    if opt_in is not None:
+        monkeypatch.setenv("H5RDMTOOLBOX_RUN_ZENODO_READ_TESTS", opt_in)
+    pytester.makeconftest(pathlib.Path(__file__).with_name("_integration.py").read_text(encoding="utf-8"))
+    pytester.makeini("[pytest]\nmarkers =\n    zenodo_read: live reads\n")
+    pytester.makepyfile("import pytest\n@pytest.mark.zenodo_read\ndef test_read(): pass\n")
+    result = pytester.runpytest_subprocess("-q", "-rs")
+    result.assert_outcomes(**{expected: 1})

@@ -1,5 +1,8 @@
 # 3.0 development (unreleased)
 
+- Add Python 3.14 support and experimental Python 3.15 CI coverage.
+- Require explicit opt-ins for live Zenodo reads and uploads on all Python versions.
+- Replace the test-only ssnolib dependency with local ontology models.
 - Reduce scope to scientific HDF5 I/O, RDF/SHACL, queries, catalogs and Zenodo.
 - Remove conventions and layouts; validate explicitly using standard SHACL.
 - Select calibration per open file; make package initialization lazy.

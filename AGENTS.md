@@ -66,7 +66,7 @@ contains xarray I/O, units and calibration; `ld/` owns RDF; `validation/` owns t
 shared SHACL service; `database/` owns local query/lazy access; `catalog/` and
 `repository/` own discovery/publication. The facade loads features on demand.
 
-Preserve Python >=3.10,<3.14 and existing HDF5 values, attributes, coordinates,
+Preserve Python >=3.10,<3.16 (3.15 is experimental) and existing HDF5 values, attributes, coordinates,
 calibration references and RDF annotations. Deliberate API changes require a
 migration entry. Keep explicit imports, four-space indentation, descriptive names
 and NumPy-style public docstrings. Keep low-level imports independent of facade
@@ -99,6 +99,7 @@ H5RDMTOOLBOX_USER_DATA_DIR, H5RDMTOOLBOX_CACHE_DIR and H5RDMTOOLBOX_LOG_DIR befo
 imports that exercise package features.
 
 The full suite can read public resources. Wikidata requires its explicit opt-in.
+Live Zenodo reads require H5RDMTOOLBOX_RUN_ZENODO_READ_TESTS=1.
 Zenodo uploads require both H5RDMTOOLBOX_RUN_ZENODO_UPLOAD_TESTS=1 and
 ZENODO_SANDBOX_API_TOKEN. CI is read-only with no Zenodo write tokens. Never
 reintroduce account-wide cleanup; manual cleanup requires explicit owned IDs.

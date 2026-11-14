@@ -4,7 +4,10 @@ Scientific HDF5 access with xarray/Pint, RDF metadata, explicit SHACL validation
 local queries, catalogs, and Zenodo publication. This documentation describes the unreleased 3.0 API.
 The latest release is 2.9.0; see the [migration guide](docs/migration-3.md) for API changes.
 
-Python 3.10 through 3.13 is supported. To use this development checkout:
+Python 3.15 compatibility is experimental. CI tests it separately; current
+scientific dependencies may require source builds, including h5py.
+
+Python 3.10 through 3.14 is supported. To use this development checkout:
 
 ```bash
 python -m pip install -e .

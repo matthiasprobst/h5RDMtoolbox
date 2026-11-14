@@ -1,6 +1,9 @@
 # Installation
 
-Python 3.10 through 3.13 is supported. The current documentation describes the
+Python 3.15 compatibility is experimental. CI tests it separately; current
+scientific dependencies may require source builds, including h5py.
+
+Python 3.10 through 3.14 is supported. The current documentation describes the
 unreleased 3.0 API. To work with this version, clone the repository, check out the
 3.0 development branch, and install from the repository root:
 

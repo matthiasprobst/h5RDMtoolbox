@@ -9,7 +9,8 @@ from ontolutils.namespacelib import M4I, OBO, SSN_SYSTEM, SCHEMA
 from ontolutils.utils.qudt_units import qudt_lookup
 from rdflib import FOAF, PROV
 from rdflib.namespace import SOSA, SSN
-from ssnolib import SSNO, ssno
+from tests._rdf_models import SSNO
+from tests import _rdf_models as ssno
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import Attribute

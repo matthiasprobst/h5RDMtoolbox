@@ -3,10 +3,10 @@ import pathlib
 import unittest
 
 import rdflib
-import ssnolib
+from tests import _rdf_models as rdf_models
 from ontolutils.namespacelib import M4I, SCHEMA
 from ontolutils.namespacelib.hdf5 import HDF5
-from ssnolib.namespace import SSNO
+from tests._rdf_models import SSNO
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.ld.user.attributes import process_attribute, process_file_attribute
@@ -31,7 +31,7 @@ class TestUserGraph(unittest.TestCase):
             self.assertEqual(ds2.chunks, None)
             ds.rdf.type = M4I.NumericalVariable
             ds.attrs["standard_name", SSNO.hasStandardName] = "x_velocity"
-            ds.rdf["standard_name"].object = ssnolib.ssno.standard_name.StandardName(
+            ds.rdf["standard_name"].object = rdf_models.StandardName(
                 id="https://example.org/123",
                 standardName="x_velocity",
                 unit="m/s"

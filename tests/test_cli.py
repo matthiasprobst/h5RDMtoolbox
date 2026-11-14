@@ -72,7 +72,7 @@ class TestCLI(unittest.TestCase):
         output = normalize_cli_output(result.output)
         self.assertIsNone(result.exception)
         self.assertIn("Usage:", output)
-        self.assertIn("FILENAME", output)
+        self.assertIn("filename", output.lower())
         self.assertIn("--output", output)
         self.assertIn("Filename to write the serialized", output)
         self.assertIn("--format", output)

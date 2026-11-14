@@ -55,13 +55,13 @@ def test_sdist_wheel_contains_resources_and_runs_independently(tmp_path):
         version = metadata['Version']
         supported = SpecifierSet(metadata['Requires-Python'])
         assert '3.9' not in supported
-        assert '3.14' not in supported
-        for python_version in ('3.10', '3.11', '3.12', '3.13'):
+        assert '3.16' not in supported
+        for python_version in ('3.10', '3.11', '3.12', '3.13', '3.14', '3.15'):
             assert python_version in supported
         classifiers = {value.removeprefix('Programming Language :: Python :: ')
                        for value in metadata.get_all('Classifier', [])
                        if value.startswith('Programming Language :: Python :: ')}
-        assert classifiers == {'3.10', '3.11', '3.12', '3.13'}
+        assert classifiers == {'3.10', '3.11', '3.12', '3.13', '3.14', '3.15'}
         assert archive.read('h5rdmtoolbox/data/codemeta.json') == canonical_metadata
         archive.extractall(installed)
     env = {key: value for key, value in os.environ.items()

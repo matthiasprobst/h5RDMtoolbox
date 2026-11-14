@@ -67,12 +67,13 @@ def test_default_ci_has_pr_checks_and_no_zenodo_writes():
     assert {'push', 'pull_request', 'workflow_dispatch'} <= set(workflow['on'])
     assert workflow['permissions'] == {'contents': 'read'}
     assert workflow['env']['H5RDMTOOLBOX_RUN_ZENODO_UPLOAD_TESTS'] == '0'
+    assert workflow['env']['H5RDMTOOLBOX_RUN_ZENODO_READ_TESTS'] == '0'
     assert 'zenodo_cleanup' not in workflow['jobs']
     assert 'clean_zenodo_sandbox.py' not in text
     assert 'secrets.ZENODO' not in text
     assert workflow['jobs']['test']['strategy']['fail-fast'] == 'false'
     assert workflow['jobs']['test']['strategy']['matrix']['python-version'] == [
-        '3.10', '3.11', '3.12', '3.13',
+        '3.10', '3.11', '3.12', '3.13', '3.14',
     ]
     assert 'server' not in workflow['jobs']
     assert 'mongodb' not in text.lower()
@@ -86,16 +87,33 @@ def test_ci_python_matrix_matches_package_support():
                          Loader=yaml.BaseLoader)
     matrix = workflow['jobs']['test']['strategy']['matrix']
     assert matrix['os'] == ['ubuntu-latest', 'macos-latest', 'windows-latest']
-    assert matrix['python-version'] == ['3.10', '3.11', '3.12', '3.13']
+    assert matrix['python-version'] == ['3.10', '3.11', '3.12', '3.13', '3.14']
     assert workflow['jobs']['test']['runs-on'] == '${{ matrix.os }}'
     assert '3.9' not in supported
-    assert '3.14' not in supported
+    assert '3.16' not in supported
     assert all(version in supported for version in matrix['python-version'])
     classifiers = {value.removeprefix('Programming Language :: Python :: ')
                    for value in project['classifiers']
                    if value.startswith('Programming Language :: Python :: ')}
-    assert classifiers == set(matrix['python-version'])
+    assert classifiers == set(matrix['python-version']) | {'3.15'}
+    assert {entry['os'] for entry in matrix['include']} == set(matrix['os'])
+    assert all(entry['python-version'] == '3.15' and entry['experimental'] == 'true'
+               for entry in matrix['include'])
+    assert workflow['jobs']['test']['continue-on-error'] == '${{ matrix.experimental || false }}'
     codemeta = json.loads((repository / 'codemeta.json').read_text(encoding='utf-8'))
     assert set(codemeta['programmingLanguage']) == {'Python 3'} | {
-        f'Python {version}' for version in matrix['python-version']
+        f'Python {version}' for version in [*matrix['python-version'], '3.15']
     }
+
+
+def test_remote_repository_mutations_require_upload_opt_in():
+    import ast
+    source = Path(__file__).parent / "repository" / "test_zenodo.py"
+    tree = ast.parse(source.read_text(encoding="utf-8"))
+    writes = {"test_newSandboxImplementation", "test_new_version", "test_upload_hdf",
+              "test_upload_hdf_new_implementation", "test_ZenodoSandboxDeposit",
+              "test_ZenodoSandboxDeposit_newImplementation"}
+    functions = {node.name: node for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)}
+    for name in writes:
+        assert any(ast.unparse(decorator) == "pytest.mark.zenodo_upload"
+                   for decorator in functions[name].decorator_list), name

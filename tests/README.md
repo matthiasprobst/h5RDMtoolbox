@@ -2,7 +2,7 @@
 
 Install the src-layout project with `python -m pip install -e ".[test]"`.
 Run `python -m pytest --cov=h5rdmtoolbox --cov-report=html` for broad validation,
-or select an affected area. Python 3.10 through 3.13 is supported.
+or select an affected area. Python 3.10 through 3.14 is supported.
 
 Fixtures isolate data/cache/log directories and restore configuration. Use
 `tmp_path` for all generated files. The full suite can read public resources.
@@ -22,3 +22,10 @@ checks only permit explicitly supplied owned deposition IDs.
 
 Use `python -m pylint src/h5rdmtoolbox --rcfile=.pylintrc` for linting and
 `python -m sphinx -b html -D nb_execution_mode=off docs docs/_build/html` for docs.
+
+Python 3.15 compatibility is experimental. CI tests it separately; current
+scientific dependencies may require source builds, including h5py.
+
+Live Zenodo read tests require `H5RDMTOOLBOX_RUN_ZENODO_READ_TESTS=1`. Upload
+tests still require their separate opt-in and Sandbox token. Local credential and
+metadata tests run on every supported Python version.

@@ -1,6 +1,9 @@
 # Building the documentation
 
-Use Python 3.10 through 3.13 and run these commands from the repository root:
+Python 3.15 compatibility is experimental. CI tests it separately; current
+scientific dependencies may require source builds, including h5py.
+
+Use Python 3.10 through 3.14 and run these commands from the repository root:
 
 ```bash
 python -m pip install -e ".[docs]"
