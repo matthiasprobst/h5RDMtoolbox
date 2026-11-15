@@ -1,5 +1,6 @@
 # 3.0 development (unreleased)
 
+- Raise the minimum Python version to 3.11 after Python 3.10 reached end of life.
 - Add Python 3.14 support and experimental Python 3.15 CI coverage.
 - Require explicit opt-ins for live Zenodo reads and uploads on all Python versions.
 - Replace the test-only ssnolib dependency with local ontology models.

@@ -73,7 +73,7 @@ def test_default_ci_has_pr_checks_and_no_zenodo_writes():
     assert 'secrets.ZENODO' not in text
     assert workflow['jobs']['test']['strategy']['fail-fast'] == 'false'
     assert workflow['jobs']['test']['strategy']['matrix']['python-version'] == [
-        '3.10', '3.11', '3.12', '3.13', '3.14',
+        '3.11', '3.12', '3.13', '3.14',
     ]
     assert 'server' not in workflow['jobs']
     assert 'mongodb' not in text.lower()
@@ -87,9 +87,10 @@ def test_ci_python_matrix_matches_package_support():
                          Loader=yaml.BaseLoader)
     matrix = workflow['jobs']['test']['strategy']['matrix']
     assert matrix['os'] == ['ubuntu-24.04', 'macos-latest', 'windows-latest']
-    assert matrix['python-version'] == ['3.10', '3.11', '3.12', '3.13', '3.14']
+    assert matrix['python-version'] == ['3.11', '3.12', '3.13', '3.14']
     assert workflow['jobs']['test']['runs-on'] == '${{ matrix.os }}'
     assert '3.9' not in supported
+    assert '3.10' not in supported
     assert '3.16' not in supported
     assert all(version in supported for version in matrix['python-version'])
     classifiers = {value.removeprefix('Programming Language :: Python :: ')

@@ -66,7 +66,7 @@ contains xarray I/O, units and calibration; `ld/` owns RDF; `validation/` owns t
 shared SHACL service; `database/` owns local query/lazy access; `catalog/` and
 `repository/` own discovery/publication. The facade loads features on demand.
 
-Preserve Python >=3.10,<3.16 (3.15 is experimental) and existing HDF5 values, attributes, coordinates,
+Preserve Python >=3.11,<3.16 (3.15 is experimental) and existing HDF5 values, attributes, coordinates,
 calibration references and RDF annotations. Deliberate API changes require a
 migration entry. Keep explicit imports, four-space indentation, descriptive names
 and NumPy-style public docstrings. Keep low-level imports independent of facade

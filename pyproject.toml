@@ -10,14 +10,13 @@ name = "h5rdmtoolbox"
 version = "2.9.0"
 description = "Supporting a FAIR Research Data lifecycle using Python and HDF5."
 readme = "README.md"
-requires-python = ">=3.10, <3.16"
+requires-python = ">=3.11, <3.16"
 license = "MIT"
 authors = [
     {name = "Matthias Probst", email = "matth.probst@gmail.com"}
 ]
 keywords = ["hdf5", "research data", "fair", "metadata"]
 classifiers = [
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",

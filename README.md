@@ -7,7 +7,7 @@ The latest release is 2.9.0; see the [migration guide](docs/migration-3.md) for 
 Python 3.15 compatibility is experimental. CI tests it separately; current
 scientific dependencies may require source builds, including h5py.
 
-Python 3.10 through 3.14 is supported. To use this development checkout:
+Python 3.11 through 3.14 is supported. To use this development checkout:
 
 ```bash
 python -m pip install -e .

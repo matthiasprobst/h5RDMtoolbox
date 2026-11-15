@@ -36,6 +36,10 @@ Old releases remain accessible at the v2.9.0 tag.
 
 ## Initialization and installation
 
+Python 3.11 is now the minimum supported version. Upgrade Python 3.10
+environments before installing the 3.0 development checkout; Python 3.10 reached
+[end of life on October 1, 2026](https://devguide.python.org/versions/).
+
 Imports no longer create application directories or clean caches. Directory
 creation and cache cleanup happen explicitly. Notebook display uses the optional
 `notebook` extra; catalog dependencies use `catalog`. Global plotting options and
