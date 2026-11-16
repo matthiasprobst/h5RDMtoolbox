@@ -12,6 +12,11 @@ objects independently of validation. SHACL validation consumes graphs; catalog
 validation shares that engine. Publication and network clients load on request.
 Lower-level modules import defining modules rather than the package facade.
 
+Within `validation/`, `_graphs.py` prepares inputs, `service.py` coordinates
+PySHACL, and `results.py` maps reports to structured results. The package exports
+the public validation API. Catalog metadata downloads and initialization share `catalog/utils.py`;
+`catalog/_initialization.py` re-exports the same initialization function.
+
 No ordinary import creates directories, deletes caches, starts network requests,
 or configures application logging. Application directories are created on explicit
 use; cache cleanup is explicit. Calibration is selected per open file with

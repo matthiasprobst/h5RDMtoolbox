@@ -7,6 +7,9 @@ The latest release is 2.9.0; see the [migration guide](docs/migration-3.md) for 
 Python 3.15 compatibility is experimental. CI tests it separately; current
 scientific dependencies may require source builds, including h5py.
 
+See the [development guide](docs/development.md) for package responsibilities
+and the validation service structure.
+
 Python 3.11 through 3.14 is supported. To use this development checkout:
 
 ```bash

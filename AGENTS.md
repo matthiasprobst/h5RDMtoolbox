@@ -65,6 +65,10 @@ Source lives under `src/h5rdmtoolbox/`; tests mirror its retained feature areas.
 contains xarray I/O, units and calibration; `ld/` owns RDF; `validation/` owns the
 shared SHACL service; `database/` owns local query/lazy access; `catalog/` and
 `repository/` own discovery/publication. The facade loads features on demand.
+Validation separates graph preparation (`validation/_graphs.py`), execution
+(`validation/service.py`) and report models/parsing (`validation/results.py`).
+Catalog metadata downloads and initialization share `catalog/utils.py`;
+`catalog/_initialization.py` provides compatibility exports without duplicate logic.
 
 Preserve Python >=3.11,<3.16 (3.15 is experimental) and existing HDF5 values, attributes, coordinates,
 calibration references and RDF annotations. Deliberate API changes require a

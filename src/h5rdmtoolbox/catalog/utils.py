@@ -478,12 +478,13 @@ def database_initialization(
         A list of DownloadStatus entries indicating the result of each download.
     """
     config_filename = pathlib.Path(config_filename)
-    if not pathlib.Path(download_directory).exists():
+    download_directory = pathlib.Path(download_directory)
+    if not download_directory.exists():
         raise ValueError(f"Download directory does not exist: {download_directory}")
-    if not pathlib.Path(download_directory).is_dir():
+    if not download_directory.is_dir():
         raise ValueError(f"Download directory is not a directory: {download_directory}")
-    g = rdflib.Graph()
-    g.parse(
+    config_graph = rdflib.Graph()
+    config_graph.parse(
         config_filename,
         format=get_rdf_format_from_filename(config_filename)
     )
@@ -513,8 +514,8 @@ def database_initialization(
             )
         }
         """
-    results = g.query(query)
-    list_of_ttl_web_resources = [WebResource(
+    results = config_graph.query(query)
+    metadata_resources = [WebResource(
         download_url=row.download,
         checksum=row.checksumValue,
         title=row.title,
@@ -523,10 +524,13 @@ def database_initialization(
     ) for row in results]
 
     logger.debug(
-        f"Found {len(list_of_ttl_web_resources)} TTL web resources to download. Downloading to {download_directory}...")
+        "Found %d metadata resources to download to %s",
+        len(metadata_resources), download_directory,
+    )
     return download(
         download_directory=download_directory,
-        web_resources=list_of_ttl_web_resources
+        web_resources=metadata_resources,
+        use_agent_header=True
     )
 
 
