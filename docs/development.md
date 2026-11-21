@@ -16,6 +16,12 @@ Within `validation/`, `_graphs.py` prepares inputs, `service.py` coordinates
 PySHACL, and `results.py` maps reports to structured results. The package exports
 the public validation API. Catalog metadata downloads and initialization share `catalog/utils.py`;
 `catalog/_initialization.py` re-exports the same initialization function.
+Catalog query interfaces and result models live in `catalog/queries.py`;
+`catalog/store_manager.py` handles named store registration. Concrete adapters
+live in `catalog/stores/`: `memory.py` for local RDF graphs, `sparql.py` for remote
+SPARQL and GraphDB, `sql.py` for SQLite references, and `hdf5.py` for HDF5 files.
+Internal imports use these defining modules. `catalog/core.py` preserves the
+existing import paths through compatibility exports.
 
 No ordinary import creates directories, deletes caches, starts network requests,
 or configures application logging. Application directories are created on explicit

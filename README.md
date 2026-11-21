@@ -8,7 +8,8 @@ Python 3.15 compatibility is experimental. CI tests it separately; current
 scientific dependencies may require source builds, including h5py.
 
 See the [development guide](docs/development.md) for package responsibilities
-and the validation service structure.
+and the validation and catalog module structure. Catalog stores and queries remain
+available through `h5rdmtoolbox.catalog` and the existing `catalog.core` imports.
 
 Python 3.11 through 3.14 is supported. To use this development checkout:
 

@@ -11,23 +11,19 @@ import rdflib
 from ontolutils.ex import dcat, prov
 
 from ._initialization import database_initialization, DownloadStatus
-from .core import (
-    MetadataStore,
-    DataStore,
-    RDFStore,
-    Store,
-    RemoteSparqlStore,
-    StoreManager,
-    HDF5SqlDB,
-    Query,
-    RemoteSparqlQuery,
-    QueryResult,
-    SparqlQuery,
-    GraphDB,
-    InMemoryRDFStore,
+from .abstracts import DataStore, MetadataStore, RDFStore, Store
+from .queries import (
     FederatedQueryResult,
     MetadataStoreQuery,
+    Query,
+    QueryResult,
+    RemoteSparqlQuery,
+    SparqlQuery,
 )
+from .store_manager import StoreManager
+from .stores.memory import InMemoryRDFStore
+from .stores.sparql import GraphDB, RemoteSparqlStore
+from .stores.sql import HDF5SqlDB
 from .stores.hdf5 import HDF5FileStore
 from .profiles import IS_VALID_CATALOG_SHACL
 from .query_templates import GET_ALL_METADATA_CATALOG_DATASETS

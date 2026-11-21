@@ -69,6 +69,10 @@ Validation separates graph preparation (`validation/_graphs.py`), execution
 (`validation/service.py`) and report models/parsing (`validation/results.py`).
 Catalog metadata downloads and initialization share `catalog/utils.py`;
 `catalog/_initialization.py` provides compatibility exports without duplicate logic.
+Catalog queries and result models live in `catalog/queries.py`, store registration
+in `catalog/store_manager.py`, and adapters in `catalog/stores/` (`memory.py`,
+`sparql.py`, `sql.py`, `hdf5.py`). Internal imports target defining modules;
+`catalog/core.py` preserves compatibility exports.
 
 Preserve Python >=3.11,<3.16 (3.15 is experimental) and existing HDF5 values, attributes, coordinates,
 calibration references and RDF annotations. Deliberate API changes require a

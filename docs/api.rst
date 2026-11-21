@@ -16,4 +16,11 @@ API reference
    ld.get_ld
    database.FileDB
    database.FilesDB
+   catalog.StoreManager
+   catalog.InMemoryRDFStore
+   catalog.RemoteSparqlStore
+   catalog.GraphDB
+   catalog.SparqlQuery
+   catalog.RemoteSparqlQuery
+   catalog.QueryResult
    repository.zenodo.ZenodoRecord

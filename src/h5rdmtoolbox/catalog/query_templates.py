@@ -3,7 +3,7 @@ from typing import Union
 import rdflib
 from pydantic import HttpUrl, AnyUrl
 
-from .core import SparqlQuery, RemoteSparqlQuery
+from .queries import SparqlQuery, RemoteSparqlQuery
 
 GET_ALL_METADATA_CATALOG_DATASETS = SparqlQuery(
     query="""
