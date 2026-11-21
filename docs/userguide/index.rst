@@ -1,92 +1,11 @@
-User Guide
+User guide
 ==========
 
-
-.. grid:: 3
-    :gutter: 2
-
-    .. grid-item-card:: Wrapper
-        :img-top: ../_static/icon_wrapper.svg
-        :link: wrapper/index
-        :link-type: doc
-
-        The wrapper is a thin layer on top of the h5py library. Improves
-        interaction with HDF data and provides a set of useful functions.
-
-    .. grid-item-card:: Convention
-        :img-top: ../_static/icon_create_convention.svg
-        :link: convention/index
-        :link-type: doc
-
-        Conventions let you define standardized attributes and ensure
-        consistency across your data.
-
-    .. grid-item-card:: Linked Data
-        :img-top: ../_static/icon_linked_data.svg
-        :link: ld/index
-        :link-type: doc
-
-        RDF integration for HDF5 files. Convert to JSON-LD, validate with SHACL,
-        and build knowledge graphs.
-
-
-.. grid:: 3
-    :gutter: 2
-
-    .. grid-item-card:: Database
-        :img-top: ../_static/icon_database.svg
-        :link: database/index
-        :link-type: doc
-
-        The database sub-package provides interfaces to database
-        solutions, like using the file itself as a database or connection
-        it to dedicated database solutions.
-
-    .. grid-item-card:: Layout
-        :img-top: ../_static/icon_layout.svg
-        :link: layout/index
-        :link-type: doc
-
-        The layout sub-package provides a set of tools to organize your
-        data in a structured way.
-
-    .. grid-item-card:: Repository
-        :img-top: ../_static/icon_repository.svg
-        :link: repository/index
-        :link-type: doc
-
-        Provides interfaces to data repositories using to store your (HDF5)
-        data with persistent identifiers.
-
-
-.. grid:: 3
-    :gutter: 2
-
-    .. grid-item-card:: Catalog
-        :img-top: ../_static/icon_catalog.svg
-        :link: catalog/index
-        :link-type: doc
-
-        The catalog manager lets you work with your (remote and) distributed HDF5 and RDF datasets.
-
-    .. grid-item-card:: Misc
-        :img-top: ../_static/icon_misc.svg
-        :link: misc/index
-        :link-type: doc
-
-        Discover what else there is beyond the core functionalities packed
-        into the sub-packages.
-
-
 .. toctree::
-    :maxdepth: 2
-    :hidden:
+   :maxdepth: 2
 
-    Wrapper <wrapper/index>
-    Convention <convention/index>
-    Linked Data <ld/index>
-    Layout <layout/index>
-    Database <database/index>
-    Repository <repository/index>
-    Catalog <catalog/index>
-    Misc <misc/index>
+   wrapper/index
+   ld/index
+   database/index
+   catalog/index
+   repository/index

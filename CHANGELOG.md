@@ -1,3 +1,16 @@
+# 3.0 development (unreleased)
+
+- Raise the minimum Python version to 3.11 after Python 3.10 reached end of life.
+- Add Python 3.14 support and experimental Python 3.15 CI coverage.
+- Require explicit opt-ins for live Zenodo reads and uploads on all Python versions.
+- Replace the test-only ssnolib dependency with local ontology models.
+- Reduce scope to scientific HDF5 I/O, RDF/SHACL, queries, catalogs and Zenodo.
+- Remove conventions and layouts; validate explicitly using standard SHACL.
+- Select calibration per open file; make package initialization lazy.
+- Remove server, Qt, MongoDB and analysis conveniences; see the migration guide.
+- Remove the incomplete SQL catalog adapter and its SQL-specific query/resource types.
+- Release identity and package version remain 2.9.0 until a new DOI is reserved.
+
 # CHANGELOG
 
 Log of changes in the versions

@@ -11,7 +11,7 @@ from ontolutils import M4I, SCHEMA
 from ontolutils import QUDT_UNIT
 from ontolutils.ex import dcat
 from rdflib.namespace import FOAF, PROV
-from ssnolib import SSNO, StandardName
+from tests._rdf_models import SSNO, StandardName
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.catalog import CatalogManager, QueryResult, FederatedQueryResult, SparqlQuery, RDFStore, DataStore, \

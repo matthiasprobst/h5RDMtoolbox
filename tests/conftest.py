@@ -19,14 +19,6 @@ atexit.register(shutil.rmtree, _TEST_RUNTIME_ROOT, ignore_errors=True)
 import h5rdmtoolbox as h5tbx
 
 
-@pytest.fixture(autouse=True)
-def reset_convention():
-    """Reset convention before each test."""
-    h5tbx.use(None)
-    yield
-    h5tbx.use(None)
-
-
 @pytest.fixture
 def tmp_h5_file(tmp_path):
     """Create a temporary HDF5 file.
@@ -69,3 +61,11 @@ def tmp_h5_dataset(tmp_h5_file):
     h5 = tmp_h5_file
     ds = h5.create_dataset("test_data", data=np.array([1, 2, 3]))
     yield h5, ds
+
+
+@pytest.fixture(autouse=True)
+def restore_configuration():
+    """Keep mutable package configuration local to each test."""
+    original = h5tbx.get_config().copy()
+    yield
+    h5tbx.set_config(**original)

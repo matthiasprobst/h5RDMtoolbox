@@ -1,0 +1,53 @@
+import xarray as xr
+from typing import Optional
+
+from h5rdmtoolbox._cfg import get_ureg
+from h5rdmtoolbox.protocols import H5TbxDataset
+from h5rdmtoolbox.wrapper.accessor import Accessor, register_accessor
+
+
+class ToUnitsInterface:
+    def __init__(self,
+                 dataset: H5TbxDataset,
+                 dataset_unit: Optional[str] = None,
+                 **coord_units):
+        self.dataset = dataset
+        self.dataset_unit = dataset_unit
+        self.coord_units = coord_units
+
+    def _convert_units(self, data: xr.DataArray):
+        if not isinstance(data, xr.DataArray):
+            raise TypeError("Data is not an xarray DataArray")
+        if "units" not in data.attrs:
+            raise KeyError("No units attribute found in the dataset")
+        for c, cn in self.coord_units.items():
+            if c not in data.coords:
+                raise KeyError(f"Coordinate {c} not found in data")
+            if "units" not in data.coords[c].attrs:
+                raise KeyError(f"No units attribute found in the coordinate {c}")
+            data.coords[c] = data.coords[c].pint.quantify(unit_registry=get_ureg()).pint.to(
+                self.coord_units[c]).pint.dequantify()
+        # convert units
+        if self.dataset_unit is None:
+            return data
+        return data.pint.quantify(unit_registry=get_ureg()).pint.to(self.dataset_unit).pint.dequantify()
+
+    def sel(self, method=None, **coords) -> xr.DataArray:
+        return self._convert_units(self.dataset.sel(method=method, **coords))
+
+    def isel(self, **indexers) -> xr.DataArray:
+        return self._convert_units(self.dataset.isel(**indexers))
+
+    def __getitem__(self, *args, **kwargs):
+        return self._convert_units(self.dataset.__getitem__(*args, **kwargs))
+
+
+@register_accessor("to_units", "Dataset")
+class ToUnitsAccessor(Accessor):
+    """Accessor to await selected data to be converted to a new units"""
+
+    def __call__(self, dataset_unit: Optional[str] = None, **coord_units) -> ToUnitsInterface:
+        if isinstance(dataset_unit, dict):  # fix for pint-xarray > 0.4.0
+            coord_units = dataset_unit
+            dataset_unit = None
+        return ToUnitsInterface(self._obj, dataset_unit=dataset_unit, **coord_units)
