@@ -17,6 +17,8 @@ API reference
    database.FileDB
    database.FilesDB
    catalog.StoreManager
+   catalog.CatalogManager
+   catalog.HDF5FileStore
    catalog.InMemoryRDFStore
    catalog.RemoteSparqlStore
    catalog.GraphDB

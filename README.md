@@ -8,8 +8,9 @@ Python 3.15 compatibility is experimental. CI tests it separately; current
 scientific dependencies may require source builds, including h5py.
 
 See the [development guide](docs/development.md) for package responsibilities
-and the validation and catalog module structure. Catalog stores and queries remain
-available through `h5rdmtoolbox.catalog` and the existing `catalog.core` imports.
+and the validation and catalog module structure. RDF/SPARQL catalog APIs remain
+available through `h5rdmtoolbox.catalog` and `catalog.core`; HDF5 file access uses
+`catalog.HDF5FileStore`. The incomplete SQL catalog adapter is removed in 3.0.
 
 Python 3.11 through 3.14 is supported. To use this development checkout:
 

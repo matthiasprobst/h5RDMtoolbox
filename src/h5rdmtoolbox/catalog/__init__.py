@@ -23,7 +23,6 @@ from .queries import (
 from .store_manager import StoreManager
 from .stores.memory import InMemoryRDFStore
 from .stores.sparql import GraphDB, RemoteSparqlStore
-from .stores.sql import HDF5SqlDB
 from .stores.hdf5 import HDF5FileStore
 from .profiles import IS_VALID_CATALOG_SHACL
 from .query_templates import GET_ALL_METADATA_CATALOG_DATASETS
@@ -180,17 +179,21 @@ class CatalogManager:
             catalog: Optional[Union[str, pathlib.Path, ZenodoRecord, dcat.Catalog]] = None,
             working_directory: Union[str, pathlib.Path] = None,
     ):
-        """Initializes the Catalog.
+        """Initialize a catalog with an empty store manager.
 
-        Parameters:
-            rdf_store (MetadataStore): The main RDF metadata store.
-            hdf_store (DataStore, optional): The HDF5 data store. If None
-                a default HDF5SqlDB store will be created.
-            working_directory (Union[str, pathlib.Path], optional): The
-                working directory for the catalog. If None, uses the current
-                working directory. Defaults to None.
-            secondary_rdf_stores: (Dict[str, RDFStore], optional): Additional RDF stores
-                to add to the catalog's store manager. Defaults to None.
+        Parameters
+        ----------
+        catalog : str, pathlib.Path, ZenodoRecord or dcat.Catalog, optional
+            Catalog source to load and save in the RDF directory. If omitted,
+            catalog metadata is queried from the main RDF store on first access.
+        working_directory : str or pathlib.Path, optional
+            Existing directory in which to create the RDF and HDF5 directories.
+            Defaults to the current working directory.
+
+        Notes
+        -----
+        Register stores explicitly with ``add_main_rdf_store``, ``add_hdf_store``
+        and ``add_secondary_rdf_store``. No default store is created.
         """
         if catalog is not None:
             self._catalog = _parse_catalog(catalog)
@@ -463,7 +466,6 @@ __all__ = (
     "SparqlQuery",
     "Store",
     "StoreManager",
-    "HDF5SqlDB",
     "HDF5Store",
     "Query",
     "RemoteSparqlQuery",

@@ -34,6 +34,20 @@ xarray/Pint for analysis, and matplotlib/RDFLib for visualization and metrics.
 Local HDF5 queries, SPARQL, catalogs and Zenodo publication remain available.
 Old releases remain accessible at the v2.9.0 tag.
 
+## Catalog SQL adapter
+
+The incomplete `HDF5SqlDB` adapter and the `SQLQuery`, `DataStoreQuery` and
+`DatabaseResource` types are removed, including their `catalog.core` exports.
+There is no built-in SQL replacement or automatic SQLite database migration.
+Existing HDF5 files and RDF metadata are unaffected.
+
+Use `catalog.HDF5FileStore` for file registration and access, `catalog.SparqlQuery`
+for RDF metadata discovery, and `database.FileDB` or `database.FilesDB` for local
+HDF5 queries. These APIs do not accept SQL syntax. Register catalog stores
+explicitly with `add_main_rdf_store` and `add_hdf_store`; `CatalogManager` does not
+create a default data store. Applications that depend on a SQLite index must
+manage it separately.
+
 ## Initialization and installation
 
 Python 3.11 is now the minimum supported version. Upgrade Python 3.10

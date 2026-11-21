@@ -19,9 +19,10 @@ the public validation API. Catalog metadata downloads and initialization share `
 Catalog query interfaces and result models live in `catalog/queries.py`;
 `catalog/store_manager.py` handles named store registration. Concrete adapters
 live in `catalog/stores/`: `memory.py` for local RDF graphs, `sparql.py` for remote
-SPARQL and GraphDB, `sql.py` for SQLite references, and `hdf5.py` for HDF5 files.
-Internal imports use these defining modules. `catalog/core.py` preserves the
-existing import paths through compatibility exports.
+SPARQL and GraphDB, and `hdf5.py` for HDF5 files. Internal imports use these defining
+modules. `catalog/core.py` preserves import paths for the retained APIs through
+compatibility exports. The SQL catalog adapter is removed in 3.0; catalogs use
+RDF/SPARQL discovery and explicit HDF5 file stores.
 
 No ordinary import creates directories, deletes caches, starts network requests,
 or configures application logging. Application directories are created on explicit

@@ -4,7 +4,7 @@
 
 The approved 3.0 implementation keeps scientific HDF5 I/O, xarray/Pint,
 RDF/SPARQL, explicit SHACL validation, local queries, catalogs and Zenodo.
-Conventions, layouts, HTTP server, Qt GUI, MongoDB and excluded analysis helpers
+Conventions, layouts, HTTP server, Qt GUI, MongoDB, the SQL catalog adapter and excluded analysis helpers
 are removed. See [development](docs/development.md) and
 [migration](docs/migration-3.md).
 
@@ -71,7 +71,7 @@ Catalog metadata downloads and initialization share `catalog/utils.py`;
 `catalog/_initialization.py` provides compatibility exports without duplicate logic.
 Catalog queries and result models live in `catalog/queries.py`, store registration
 in `catalog/store_manager.py`, and adapters in `catalog/stores/` (`memory.py`,
-`sparql.py`, `sql.py`, `hdf5.py`). Internal imports target defining modules;
+`sparql.py`, `hdf5.py`). Internal imports target defining modules;
 `catalog/core.py` preserves compatibility exports.
 
 Preserve Python >=3.11,<3.16 (3.15 is experimental) and existing HDF5 values, attributes, coordinates,

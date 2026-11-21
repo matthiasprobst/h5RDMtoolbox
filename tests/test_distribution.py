@@ -47,7 +47,8 @@ def test_sdist_wheel_contains_resources_and_runs_independently(tmp_path):
                     'h5rdmtoolbox/convention/', 'h5rdmtoolbox/layout/',
                     'h5rdmtoolbox/gui/', 'h5rdmtoolbox/server/',
                     'h5rdmtoolbox/server.py', 'h5rdmtoolbox/database/mongo.py',
-                    'h5rdmtoolbox/plotting.py', 'h5rdmtoolbox/ld/metrics.py')
+                    'h5rdmtoolbox/plotting.py', 'h5rdmtoolbox/ld/metrics.py',
+                    'h5rdmtoolbox/catalog/stores/sql.py')
         assert not any(name.startswith(excluded) for name in names)
         assert any(name.endswith('/LICENSE') for name in names)
         metadata_path, = [name for name in names if name.endswith('.dist-info/METADATA')]
@@ -78,6 +79,15 @@ import h5rdmtoolbox as h
 assert Path(h.__file__).resolve().is_relative_to(Path(sys.argv[1]).resolve())
 assert h.get_package_meta()['version'] == h.__version__ == sys.argv[2]
 assert h.get_package_meta()['@id'] == sys.argv[3]
+from h5rdmtoolbox import catalog
+from h5rdmtoolbox.catalog import core, queries
+for module in (catalog, core, queries):
+    for name in ('HDF5SqlDB', 'SQLQuery', 'DataStoreQuery', 'DatabaseResource'):
+        assert not hasattr(module, name), (module.__name__, name)
+store = catalog.InMemoryRDFStore(Path('rdf'))
+store.upload_data('<urn:sample> <urn:value> "example" .', format='turtle')
+result = catalog.SparqlQuery('SELECT ?value WHERE { ?s ?p ?value }').execute(store)
+assert str(result.data.iloc[0]['value']) == 'example'
 with h.File('measurement.hdf', 'w') as handle:
     assert handle.create_dataset('data', data=[1, 2])[()].values.tolist() == [1, 2]
 '''

@@ -94,26 +94,6 @@ class Query(AbstractQuery, ABC):
         return f'{self.__class__.__name__}(query="{self.query}", description="{description_repr}")'
 
 
-class DataStoreQuery(Query, ABC):
-    """Data store query interface (concrete implementations can be sql or non sql query)."""
-
-
-class SQLQuery(DataStoreQuery):
-    """SQL query specification with optional filters for a data store."""
-
-    def __init__(
-        self,
-        query: str,
-        description: str = None,
-        filters=None,
-    ):
-        super().__init__(query, description)
-        self.filters = filters
-
-    def execute(self, *args, **kwargs) -> QueryResult:
-        pass
-
-
 class MetadataStoreQuery(Query, ABC):
     """RDF Store Query interface."""
 

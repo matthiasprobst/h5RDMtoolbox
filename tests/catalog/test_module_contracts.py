@@ -12,19 +12,18 @@ from h5rdmtoolbox.catalog import core
 
 def test_compatibility_exports_preserve_class_identity():
     from h5rdmtoolbox.catalog import abstracts, queries, store_manager
-    from h5rdmtoolbox.catalog.stores import memory, sparql, sql
+    from h5rdmtoolbox.catalog.stores import memory, sparql
 
     definitions = {
         abstracts: ("DataStore", "MetadataStore", "RDFStore", "Store"),
         queries: (
-            "AbstractQuery", "DataStoreQuery", "FederatedQueryResult",
+            "AbstractQuery", "FederatedQueryResult",
             "MetadataStoreQuery", "Query", "QueryResult", "RemoteSparqlQuery",
-            "SparqlQuery", "SQLQuery",
+            "SparqlQuery",
         ),
         store_manager: ("StoreManager",),
         memory: ("InMemoryRDFStore",),
         sparql: ("GraphDB", "RemoteSparqlStore"),
-        sql: ("DatabaseResource", "HDF5SqlDB"),
     }
     for module, names in definitions.items():
         for name in names:

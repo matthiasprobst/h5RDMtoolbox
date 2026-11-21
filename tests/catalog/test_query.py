@@ -29,16 +29,16 @@ def skip_transient_wikidata_error(exc):
 
 class TestQuery(unittest.TestCase):
     def test_query(self):
-        class SQLQuery(Query):
+        class ExampleQuery(Query):
             def execute(self) -> QueryResult:
                 return QueryResult(self, data="result", description=self.description)
 
-        q = SQLQuery("SELECT * FROM Customers;", "Get all customers")
+        q = ExampleQuery("example query", "Example description")
         res = q.execute()
         self.assertEqual(res.query, q)
-        self.assertEqual(res.description, "Get all customers")
+        self.assertEqual(res.description, "Example description")
 
-        res = SQLQuery("SELECT * FROM Customers;", "Get all customers").execute()
+        res = ExampleQuery("example query", "Example description").execute()
         self.assertIsInstance(res, QueryResult)
 
     def test_sparql_query(self):
