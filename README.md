@@ -186,6 +186,7 @@ You may perform SPARQL queries or view the file as a graph, as shown below:
   <img src="docs/_static/screenshot-served-hdf5-as-graph.png" alt="Serve UI screenshot" width="640">
 </p>
 
+For an interactive notebook example, see [Visualize HDF5 in a knowledge graph](https://h5rdmtoolbox.readthedocs.io/en/latest/practical_examples/knowledge_graph.html).
 
 The same graph metrics are available from Python:
 
@@ -561,5 +562,4 @@ python -m sphinx -W -b html -D nb_execution_mode=off docs docs/_build/html
 
 For notebook behavior changes, omit `-D nb_execution_mode=off` to use the configured
 execution policy.
-
 

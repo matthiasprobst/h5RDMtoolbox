@@ -18,6 +18,12 @@ python -m sphinx -W -b html docs docs/_build/html
 
 Open `docs/_build/html/index.html` in your browser.
 
+The knowledge graph notebook is excluded from execution during documentation
+builds. To refresh its interactive outputs after editing it, install `pyvis`,
+execute the notebook in Jupyter, and save it with both graph outputs present.
+The graphs embed their visualization resources rather than linking to generated
+files in the notebook's working directory.
+
 To update the pdf, run
 
     python -m sphinx -b latex docs docs/_build/latex
