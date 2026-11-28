@@ -12,6 +12,7 @@ import zipfile
 
 from build import ProjectBuilder
 import ontolutils
+import pytest
 from packaging.specifiers import SpecifierSet
 
 
@@ -97,4 +98,9 @@ with h.File('measurement.hdf', 'w') as handle:
                              json.loads(canonical_metadata)['@id'],
                              str(Path(ontolutils.__file__).resolve().parents[1])],
                             cwd=tmp_path, env=env, capture_output=True, text=True, timeout=60)
-    assert result.returncode == 0, result.stdout + result.stderr
+    if result.returncode != 0:
+        pytest.fail(
+            f'Wheel smoke test exited with code {result.returncode} using {sys.executable}.\n'
+            f'{result.stdout}{result.stderr}',
+            pytrace=False,
+        )
