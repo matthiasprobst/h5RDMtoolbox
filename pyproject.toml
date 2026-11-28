@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "h5rdmtoolbox"
-version = "2.9.0"
+version = "3.0.0b1"
 description = "Supporting a FAIR Research Data lifecycle using Python and HDF5."
 readme = "README.md"
 requires-python = ">=3.11, <3.16"
@@ -36,7 +36,7 @@ dependencies = [
     "pint_xarray>=0.2.1, <=0.6.0",
     "regex>=2020.7.9",
     "packaging>=24.1",
-    "ontolutils>=1.0.0, <2.0.0",
+    "ontolutils==1.0.0b1",
     "requests>=2.32.4",
     "pydantic~=2.8; python_version < '3.14'",
     "pydantic>=2.12,<3; python_version >= '3.14'",

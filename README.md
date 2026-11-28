@@ -1,7 +1,7 @@
 # HDF5 Research Data Management Toolbox
 
 Scientific HDF5 access with xarray/Pint, RDF metadata, explicit SHACL validation,
-local queries, catalogs, and Zenodo publication. This documentation describes the unreleased 3.0 API.
+local queries, catalogs, and Zenodo publication. This documentation describes the unreleased `3.0.0b1` API.
 The latest release is 2.9.0; see the [migration guide](docs/migration-3.md) for API changes.
 
 Python 3.15 compatibility is experimental. CI tests it separately; current
@@ -24,8 +24,8 @@ Install `".[catalog]"` for catalog dependencies or `".[notebook]"` for notebook
 display. `python -m pip install h5RDMtoolbox` installs the published release,
 whose API differs from the development version documented here.
 
-This checkout requires `ontolutils>=1.0.0,<2.0.0`. For development with the
-unreleased `1.0.0b1`, see the [local beta setup](docs/development.md#local-ontolutils-beta).
+This beta requires `ontolutils==1.0.0b1`. To develop before the dependency is
+available on PyPI, follow the [local beta setup](docs/development.md#local-ontolutils-beta).
 
 See [installation](docs/installation.md), the [user guide](docs/userguide/index.rst), [API reference](docs/api.rst),
 and [documentation build instructions](docs/README.md).
@@ -202,7 +202,7 @@ analysis conveniences. See [the migration guide](docs/migration-3.md) and
 ## Citing the package
 
 If you use the package in your work, cite the software using its version-specific
-[Zenodo DOI for version 2.9.0](https://doi.org/10.5281/zenodo.24057487).
+[reserved Zenodo DOI for version 3.0.0b1](https://doi.org/10.5281/zenodo.24625901).
 A related paper is published in the
 journal [inggrid](https://www.inggrid.org/article/id/4028/). Thank you!
 

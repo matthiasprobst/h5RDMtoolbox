@@ -26,10 +26,11 @@ are removed. See [development](docs/development.md) and
 
 ## Release identity
 
-Version metadata remains 2.9.0, DOI `10.5281/zenodo.24057487`, preparation date
-2026-11-12 (Europe/Berlin), until the user provides a new reserved version-specific
-3.0.0 Zenodo DOI in the existing version family. Do not reuse the old DOI, invent
-an identifier or commit a placeholder. A reserved DOI need not resolve yet.
+The prepared release is `3.0.0b1` with reserved DOI `10.5281/zenodo.24625901`
+and preparation date 2026-11-28 (Europe/Berlin). Future versions require a new
+reserved version-specific Zenodo DOI within the existing version family. Do not
+reuse a DOI, invent an identifier or commit a placeholder. A reserved DOI need
+not resolve yet.
 
 After receiving the DOI, update pyproject.toml, CITATION.cff, root codemeta.json,
 Colab quickstart pin, changelog and README citation in one coherent commit.

@@ -6,11 +6,9 @@ checkout before running tests or editing the source.
 
 ## Local ontolutils beta
 
-In a development environment with the other Toolbox dependencies installed, run
-`python -m pip install -e ../ontology-utils` and
-`python -m pip install -e . --no-deps` to use the local `1.0.0b1` checkout.
-The beta precedes `1.0.0`, so it falls outside the published dependency range.
-The local beta also declares Python `<3.15`.
+In a development environment on Python 3.11 through 3.14, install the two local
+checkouts together with `python -m pip install -e ../ontology-utils -e .`.
+The Toolbox beta pins `ontolutils==1.0.0b1`, which declares Python `<3.15`.
 
 Catalog and Zenodo use static models for DCAT catalogs, datasets and distributions,
 their creator and publisher metadata, and SPDX checksums. Related resources such
