@@ -1,14 +1,27 @@
 import os
 import pathlib
+import shutil
 from abc import abstractmethod, ABC
 from contextlib import contextmanager
-from typing import Union
+from typing import Protocol, Union, runtime_checkable
 from urllib.parse import urlparse
 
 import rdflib
-from h5rdmtoolbox.models import dcat
+from ontolutils.classes.utils import download_file
 
 from ..abstracts import DataStore
+from ..utils import file_uri_or_path_to_path
+
+
+@runtime_checkable
+class FileDistribution(Protocol):
+    """Fields needed to register a distribution in an HDF5 file store."""
+
+    @property
+    def id(self) -> object: ...
+
+    @property
+    def downloadURL(self) -> object: ...
 
 
 def _get_filename(downloadURL):
@@ -46,19 +59,19 @@ class HDF5Store(DataStore, ABC):
 
     def _upload_file(
             self,
-            distribution: dcat.Distribution,
+            distribution: FileDistribution,
             validate: bool = False,
             skip_unsupported: bool = False,
     ):
         """Register an HDF5 file in the store (without downloading)."""
-        if not isinstance(distribution, dcat.Distribution):
-            raise ValueError("distribution must be a dcat.Distribution instance.")
-        media_type = distribution.mediaType
-        if media_type is not None and media_type.lower() not in {"application/x-hdf5", "application/hdf5",
+        if not isinstance(distribution, FileDistribution):
+            raise ValueError("distribution must provide id and downloadURL.")
+        media_type = getattr(distribution, "mediaType", None)
+        if media_type is not None and str(media_type).lower() not in {"application/x-hdf5", "application/hdf5",
                                                                  "https://www.iana.org/assignments/media-types/application/x-hdf5",
                                                                  "https://www.iana.org/assignments/media-types/application/hdf5"}:
             raise ValueError(f"Unsupported media type: {media_type}")
-        downloadURL = distribution.download_URL
+        downloadURL = distribution.downloadURL
         if downloadURL is None:
             raise ValueError("Distribution must have a downloadURL to register.")
         if downloadURL in self._file_registry:
@@ -66,8 +79,8 @@ class HDF5Store(DataStore, ABC):
         local_filename = _get_filename(downloadURL=downloadURL)
         entry = {
             "id": str(distribution.id),
-            "download_url": str(distribution.download_URL),
-            "title": distribution.title,
+            "download_url": str(downloadURL),
+            "title": getattr(distribution, "title", None),
             "filename": local_filename,
         }
         self._file_registry[str(distribution.id)] = entry
@@ -91,16 +104,14 @@ class HDF5FileStore(HDF5Store):
         if local_filename.exists():
             return local_filename
 
-        # download to target directory
-        # _download_url = file_info["download_url"]
-        # if str(_download_url).startswith("file:///"):
-        #     _download_url = pathlib.Path(urlparse(str(_download_url)).path).as_uri()
-        dist = dcat.Distribution(
-            download_URL=file_info["download_url"]
-        )
-        return dist.download(
-            dest_filename=local_filename,
-        )
+        source_url = file_info["download_url"]
+        if urlparse(source_url).scheme == "file":
+            source_path = file_uri_or_path_to_path(source_url)
+            shutil.copy(source_path, local_filename)
+            return local_filename
+        if not local_filename.suffix:
+            raise ValueError("Destination filename must have a valid suffix/extension")
+        return pathlib.Path(download_file(source_url, local_filename))
 
     def __len__(self):
         """Number of registered files in the store."""
@@ -121,11 +132,11 @@ class HDF5FileStore(HDF5Store):
             else:
                 yield f[object_name] if object_name in f else None
 
-    def open(self, identifier_download_url_or_filename: Union[str, rdflib.URIRef, pathlib.Path, dcat.Distribution]):
+    def open(self, identifier_download_url_or_filename: Union[str, rdflib.URIRef, pathlib.Path, FileDistribution]):
         from ...wrapper.core import File
 
-        if isinstance(identifier_download_url_or_filename, dcat.Distribution):
-            local_filename = self._get_or_download_file(identifier_download_url_or_filename.id)
+        if isinstance(identifier_download_url_or_filename, FileDistribution):
+            local_filename = self._get_or_download_file(str(identifier_download_url_or_filename.id))
         elif isinstance(identifier_download_url_or_filename, rdflib.URIRef):
             download_url_or_filename = str(identifier_download_url_or_filename)
             local_filename = self._get_or_download_file(download_url_or_filename)

@@ -11,6 +11,7 @@ See the [development guide](docs/development.md) for package responsibilities
 and the validation and catalog module structure. RDF/SPARQL catalog APIs remain
 available through `h5rdmtoolbox.catalog` and `catalog.core`; HDF5 file access uses
 `catalog.HDF5FileStore`. The incomplete SQL catalog adapter is removed in 3.0.
+The file store accepts distributions generated from an ontology with Ontolutils.
 
 Python 3.11 through 3.14 is supported. To use this development checkout:
 
