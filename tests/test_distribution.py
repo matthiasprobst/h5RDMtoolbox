@@ -11,6 +11,7 @@ import tarfile
 import zipfile
 
 from build import ProjectBuilder
+import ontolutils
 from packaging.specifiers import SpecifierSet
 
 
@@ -75,6 +76,7 @@ def test_sdist_wheel_contains_resources_and_runs_independently(tmp_path):
 import sys
 from pathlib import Path
 sys.path.insert(0, sys.argv[1])
+sys.path.insert(1, sys.argv[4])
 import h5rdmtoolbox as h
 assert Path(h.__file__).resolve().is_relative_to(Path(sys.argv[1]).resolve())
 assert h.get_package_meta()['version'] == h.__version__ == sys.argv[2]
@@ -92,6 +94,7 @@ with h.File('measurement.hdf', 'w') as handle:
     assert handle.create_dataset('data', data=[1, 2])[()].values.tolist() == [1, 2]
 '''
     result = subprocess.run([sys.executable, '-I', '-c', script, str(installed), version,
-                             json.loads(canonical_metadata)['@id']],
+                             json.loads(canonical_metadata)['@id'],
+                             str(Path(ontolutils.__file__).resolve().parents[1])],
                             cwd=tmp_path, env=env, capture_output=True, text=True, timeout=60)
     assert result.returncode == 0, result.stdout + result.stderr

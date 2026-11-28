@@ -20,7 +20,7 @@ from h5rdmtoolbox.ld.rdf import RDF_PREDICATE_ATTR_NAME
 from h5rdmtoolbox.ld.utils import get_obj_bnode
 from h5rdmtoolbox.wrapper.h5attr import AttrDescriptionError
 
-from ontolutils.ex import time
+from tests import _time_models as time
 
 
 class TestRDF(unittest.TestCase):

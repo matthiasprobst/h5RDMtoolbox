@@ -3,8 +3,9 @@ from typing import Optional
 
 import rdflib
 from ontolutils import namespaces, urirefs
-from ontolutils.ex.dcat import Dataset
-from ontolutils.ex.skos import Concept, ConceptScheme
+from h5rdmtoolbox.models.dcat import Dataset
+from h5rdmtoolbox.models.skos import Concept, ConceptScheme
+from ontolutils.typing import AnyIri
 from ontolutils.utils.qudt_units import qudt_lookup
 from pydantic import ConfigDict, Field, field_validator
 
@@ -23,7 +24,7 @@ class StandardNameTable(ConceptScheme):
 class StandardName(Concept):
     model_config = ConfigDict(populate_by_name=True)
     standardName: str = Field(alias="standard_name")
-    unit: str
+    unit: AnyIri
     standardNameTable: Optional[StandardNameTable] = Field(default=None, alias="standard_name_table")
 
     @field_validator("unit", mode="before")

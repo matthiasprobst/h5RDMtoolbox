@@ -11,7 +11,7 @@ from datetime import datetime
 import pydantic
 import rdflib
 import requests
-from ontolutils.ex import dcat
+from h5rdmtoolbox.models import dcat
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import UserDir

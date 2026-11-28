@@ -4,6 +4,18 @@ The package provides scientific HDF5 I/O, RDF, explicit SHACL validation,
 local discovery, catalogs, and Zenodo publication. Install the development
 checkout before running tests or editing the source.
 
+## Local ontolutils beta
+
+In a development environment with the other Toolbox dependencies installed, run
+`python -m pip install -e ../ontology-utils` and
+`python -m pip install -e . --no-deps` to use the local `1.0.0b1` checkout.
+The beta precedes `1.0.0`, so it falls outside the published dependency range.
+The local beta also declares Python `<3.15`.
+
+The catalog and Zenodo integrations use models in `h5rdmtoolbox.models`.
+These definitions originate from the ontology-utils fixtures and carry their
+MIT license. Ontolutils provides the RDF model engine.
+
 ## Dependency boundaries
 
 The public facade imports features on first use. Scientific I/O wraps h5py and

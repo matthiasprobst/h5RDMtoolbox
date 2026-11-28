@@ -7,12 +7,11 @@ import unittest
 from unittest import mock
 
 import numpy as np
-import ontolutils
 import rdflib
 import requests
 from tests import _rdf_models as rdf_models
 from ontolutils import namespaces, urirefs, Thing, QUDT_UNIT
-from ontolutils.ex import dcat
+from h5rdmtoolbox.models import dcat
 from ontolutils.namespacelib import M4I
 from ontolutils.namespacelib import SCHEMA
 from ontolutils.utils.qudt_units import qudt_lookup
@@ -912,20 +911,18 @@ WHERE {
     def test_codemeta_to_hdf(self):
         codemeta_filename = __this_dir__ / '../../codemeta.json'
 
-        data = ontolutils.dquery(
-            'schema:SoftwareSourceCode',
-            codemeta_filename,
-            context={'schema': 'http://schema.org/'})  # Note, that codemeta uses the unsecure http
-
-        self.assertIsInstance(data, list)
-        self.assertEqual(len(data), 1)
-        self.assertEqual(data[0]['version'].replace("-rc.", "rc"), __version__)
-        self.assertTrue('author' in data[0])
-        self.assertIsInstance(data[0]['author'], list)
+        data = json.loads(codemeta_filename.read_text(encoding='utf-8'))
+        self.assertEqual(data['version'].replace("-rc.", "rc"), __version__)
         with temporary_user_cache():
             with h5tbx.File('test.hdf', 'w') as h5:
-                jsonld.to_hdf(grp=h5.create_group('person'), data=data[0],
-                              context={'@import': "https://doi.org/10.5063/schema/codemeta-2.0"})
+                jsonld.to_hdf(
+                    grp=h5.create_group('person'),
+                    data={'author': data['author']},
+                    context={name: f'http://schema.org/{name}' for name in (
+                        'author', 'Person', 'Organization', 'givenName', 'familyName',
+                        'email', 'affiliation', 'name',
+                    )},
+                )
                 self.assertEqual(h5['person']['author1'].attrs[rdf.RDF_PREDICATE_ATTR_NAME]['SELF'],
                                  'http://schema.org/author')
 

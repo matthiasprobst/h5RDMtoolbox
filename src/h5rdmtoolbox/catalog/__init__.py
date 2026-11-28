@@ -8,7 +8,7 @@ from typing import Union, List, Dict, Optional
 
 import pandas as pd
 import rdflib
-from ontolutils.ex import dcat, prov
+from ..models import dcat
 
 from ._initialization import database_initialization, DownloadStatus
 from .abstracts import DataStore, MetadataStore, RDFStore, Store
@@ -114,50 +114,12 @@ def _download_catalog_datasets(
 
 def _query_catalog_from_rdf_store(rdf_store: RDFStore) -> dcat.Catalog:
     """Queries the catalog from the given RDF store."""
-    q = dcat.Catalog.create_query()
-    res = rdf_store.graph.query(q)
-    cat = dcat.Catalog.from_sparql(res)
+    catalogs = dcat.Catalog.from_graph(rdf_store.graph)
 
-    if len(cat) != 1:
-        raise ValueError(f"Expected one catalog in RDF store, found {len(cat)}.")
+    if len(catalogs) != 1:
+        raise ValueError(f"Expected one catalog in RDF store, found {len(catalogs)}.")
 
-    _creators = []
-    creator = cat[0].creator
-    if creator is not None:
-        if isinstance(creator, str):
-            _creator = prov.Person.from_graph(rdf_store.graph, subject=creator)
-            _creators.extend(_creator)
-        elif isinstance(creator, list):
-            for person in creator:
-                if isinstance(person, str):
-                    _creator = prov.Person.from_graph(rdf_store.graph, subject=person)
-                    _creators.extend(_creator)
-    if len(_creators) > 0:
-        if len(_creators) == 1:
-            cat[0].creator = _creators[0]
-        else:
-            cat[0].creator = _creators
-    # augment catalog with datasets and distributions
-    _datasets = []
-    if cat[0].dataset is None:
-        return cat[0]
-
-    for dataset_iri in cat[0].dataset:
-        datasets = dcat.Dataset.from_graph(rdf_store.graph, subject=dataset_iri)
-        _distributions = []
-        for dataset in datasets:
-            distributions = dataset.distribution
-            if distributions is None:
-                continue
-            for distribution_iri in dataset.distribution:
-                dist = dcat.Distribution.from_graph(
-                    rdf_store.graph, subject=distribution_iri
-                )
-                _distributions.extend(dist)
-            dataset.distribution = _distributions
-        _datasets.extend(datasets)
-    cat[0].dataset = _datasets
-    return cat[0]
+    return catalogs[0]
 
 
 class CatalogManager:

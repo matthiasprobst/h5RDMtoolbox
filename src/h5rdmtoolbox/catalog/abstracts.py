@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from typing import Union, Any, Dict
 
 import rdflib
-from ontolutils.ex import dcat
+from h5rdmtoolbox.models import dcat
 from rdflib.graph import _TripleType
 
 

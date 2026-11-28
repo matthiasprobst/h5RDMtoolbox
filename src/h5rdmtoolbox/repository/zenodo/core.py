@@ -6,8 +6,8 @@ import warnings
 from typing import Union, Dict, Optional
 
 import requests
-from ontolutils.ex import dcat, foaf
-from ontolutils.ex import prov
+from h5rdmtoolbox.models import dcat, foaf
+from h5rdmtoolbox.models import prov
 from packaging.version import Version
 from rdflib import Graph
 

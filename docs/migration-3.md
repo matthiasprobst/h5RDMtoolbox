@@ -50,6 +50,9 @@ manage it separately.
 
 ## Initialization and installation
 
+Use `h5rdmtoolbox.models` in place of `ontolutils.ex` when constructing DCAT,
+FOAF or PROV models for Toolbox integrations. The Toolbox requires ontolutils 1.x.
+
 Python 3.11 is now the minimum supported version. Upgrade Python 3.10
 environments before installing the 3.0 development checkout; Python 3.10 reached
 [end of life on October 1, 2026](https://devguide.python.org/versions/).

@@ -6,7 +6,7 @@ from typing import Union
 from urllib.parse import urlparse
 
 import rdflib
-from ontolutils.ex import dcat
+from h5rdmtoolbox.models import dcat
 
 from ..abstracts import DataStore
 

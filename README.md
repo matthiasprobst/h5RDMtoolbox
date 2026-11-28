@@ -22,6 +22,9 @@ Install `".[catalog]"` for catalog dependencies or `".[notebook]"` for notebook
 display. `python -m pip install h5RDMtoolbox` installs the published release,
 whose API differs from the development version documented here.
 
+This checkout requires `ontolutils>=1.0.0,<2.0.0`. For development with the
+unreleased `1.0.0b1`, see the [local beta setup](docs/development.md#local-ontolutils-beta).
+
 See [installation](docs/installation.md), the [user guide](docs/userguide/index.rst), [API reference](docs/api.rst),
 and [documentation build instructions](docs/README.md).
 

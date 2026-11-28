@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 import rdflib
 import requests
-from ontolutils.ex import dcat
+from h5rdmtoolbox.models import dcat
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.catalog import Query, QueryResult, SparqlQuery, RemoteSparqlQuery, RemoteSparqlStore, StoreManager, \
