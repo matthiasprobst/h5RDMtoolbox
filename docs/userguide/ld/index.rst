@@ -1,108 +1,38 @@
-.. _ld:
+RDF and SHACL
+=============
 
+RDF annotations describe files, groups, datasets and attributes. The structural
+graph represents HDF5 names, membership, dimensions, datatypes and filters; the
+contextual graph contains the semantic annotations. Export using ``ld.get_ld``
+or file ``serialize`` methods. The CLI supports ``h5tbx ld dump example.h5``.
 
-Linked Data (LD)
-================
-
-The linked data module enables RDF (Resource Description Framework) integration with HDF5 files,
-bringing semantic web capabilities to your scientific data.
-
-Background
-----------
-
-While HDF5 files provide a hierarchical structure for storing data and metadata, they lack
-standardized semantics. RDF provides a framework for describing resources with unique identifiers
-and relationships, enabling:
-
-- **Global uniqueness**: Persistent identifiers (e.g., ORCID, DOI) for researchers and data
-- **Interoperability**: Common vocabularies and ontologies for domain-specific terms
-- **Machine-readable metadata**: Enable automated discovery and integration
-- **Knowledge graphs**: Build interconnected datasets that can be queried with SPARQL
-
-The h5rdmtoolbox ld module bridges HDF5 and RDF by enabling:
-
-1. **Structural RDF**: Automatically converting HDF5 structure to RDF (groups, datasets, attributes)
-2. **Contextual RDF**: Mapping HDF5 attributes to semantic concepts via ontologies
-3. **SHACL validation**: Validating HDF5 data against RDF shapes
-4. **Serialization**: Exporting to JSON-LD, Turtle, and other RDF formats
-
-
-Key Concepts
-------------
-
-**Structural RDF**
-   Automatically generated RDF from HDF5 structure (groups, datasets, datatypes).
-
-**Contextual RDF**
-   User-defined mappings from HDF5 attributes to semantic concepts.
-
-**RDF Mappings**
-   Define how HDF5 attributes map to RDF predicates and objects.
-
-**SHACL Shapes**
-   RDF shapes that HDF5 metadata must conform to.
-
-Command Line and Web Viewer
----------------------------
-
-The ``h5tbx`` command exposes the linked-data tools without writing Python code.
-Use ``ld dump`` to serialize a file directly from the shell. See
-:doc:`cli` for details.
-
-.. code-block:: bash
-
-   h5tbx ld dump example.h5
-   h5tbx ld dump example.h5 --format json-ld --file-uri https://example.org/data/ --prefix ex
-   h5tbx ld dump example.h5 --structural=false
-   h5tbx ld dump example.h5 --contextual=false
-
-By default, structural and contextual RDF are both included. Use
-``--structural=false`` or ``--contextual=false`` to restrict the output. The
-``--file-uri`` option defines stable subject IRIs; ``--prefix`` binds a compact
-prefix for that URI in serializations that support prefixes.
-
-For interactive inspection, start the local web viewer. See
-:doc:`web_viewer` for the available pages and graph controls.
-
-.. code-block:: bash
-
-   h5tbx serve example.h5
-   h5tbx serve data/ --h5ext=.h5 --h5ext=.hdf5
-   h5tbx serve example.h5 --file-uri https://doi.org/10.5281/zenodo.17572275# --local-iri-pattern "https://doi.org/10.5281/zenodo.*"
-
-``h5tbx serve`` accepts files and folders. Folder inputs are searched for
-``.h5``, ``.hdf``, and ``.hdf5`` files by default; repeat ``--h5ext`` to limit
-folder discovery to specific extensions.
-
-Graph Metrics from Python
--------------------------
-
-The metrics shown in the web viewer are also available from Python. Use
-``h5rdmtoolbox.compute_metrics`` for a filename, or ``File.metrics`` for an
-opened file:
+Validation is explicit and uses standard SHACL files or RDFLib graphs:
 
 .. code-block:: python
 
-   import h5rdmtoolbox as h5tbx
+   from h5rdmtoolbox.validation import validate
+   report = validate("measurement.h5", "shapes.ttl")
+   print(report.conforms)
+   for violation in report.violations:
+       print(violation.hdf_path, violation.messages)
 
-   metrics = h5tbx.compute_metrics("example.h5")
+Metadata-only validation reads no dataset payloads, including nested datasets
+with contextual data predicates. Opt in to scalar values with
+``include_scalar_values=True``. Array contents remain in scientific analysis.
+Invalid input and engine failures raise exceptions; a failed constraint returns
+a nonconforming report. Open file handles stay open and caller graphs are not
+modified. Ontology inference defaults to ``none`` and can be enabled explicitly.
 
-   with h5tbx.File("example.h5") as h5:
-       metrics = h5.metrics()
+Example shape requiring every dataset to have a name:
 
-The returned dictionary contains the same RDF knowledge-graph metrics as the web
-page, including graph size, predicate and class usage, connectivity, datatype
-distribution, label coverage, and external namespace usage.
+.. code-block:: turtle
 
+   @prefix sh: <http://www.w3.org/ns/shacl#> .
+   @prefix hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#> .
+   @prefix ex: <https://example.org/> .
+   ex:NamedDataset a sh:NodeShape; sh:targetClass hdf:Dataset;
+       sh:property [sh:path hdf:name; sh:minCount 1] .
 
-.. toctree::
-    :titlesonly:
-    :glob:
-    :hidden:
-
-    getting_started.ipynb
-    cli
-    web_viewer
-    resolver
-    metrics
-    shacl_validation.ipynb
+Use qualified counts for required dataset paths, ``sh:or``/``sh:in`` for
+alternatives, and SHACL-SPARQL for conditional cross-object requirements. The
+regressions in ``tests/ld/test_validation.py`` provide executable examples.

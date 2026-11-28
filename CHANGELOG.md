@@ -1,3 +1,18 @@
+# 3.0.0b1 (unreleased)
+
+Prepared 2026-11-28. Reserved release DOI: [10.5281/zenodo.24625901](https://doi.org/10.5281/zenodo.24625901).
+
+- Raise the minimum Python version to 3.11 after Python 3.10 reached end of life.
+- Add Python 3.14 support and experimental Python 3.15 CI coverage.
+- Require explicit opt-ins for live Zenodo reads and uploads on all Python versions.
+- Replace the test-only ssnolib dependency with local ontology models.
+- Reduce scope to scientific HDF5 I/O, RDF/SHACL, queries, catalogs and Zenodo.
+- Remove conventions and layouts; validate explicitly using standard SHACL.
+- Select calibration per open file; make package initialization lazy.
+- Remove server, Qt, MongoDB and analysis conveniences; see the migration guide.
+- Remove the incomplete SQL catalog adapter and its SQL-specific query/resource types.
+- Pin `ontolutils==1.0.0b1` for this beta and use static RDF models for catalog and Zenodo workflows.
+
 # CHANGELOG
 
 Log of changes in the versions

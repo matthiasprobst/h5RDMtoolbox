@@ -2,14 +2,14 @@ import unittest
 import xarray as xr
 
 import h5rdmtoolbox as h5tbx
+from h5rdmtoolbox.science.xarray_io import HDFArrayAccessor
 
 
 class TestXr2HDF(unittest.TestCase):
 
     def test_xr2hdf(self):
-        h5tbx.use(None)
         da = xr.DataArray([1, 2, 3], dims='x')
-        self.assertIsInstance(da.hdf, h5tbx.wrapper.core.xr2hdf.HDFArrayAccessor)
+        self.assertIsInstance(da.hdf, HDFArrayAccessor)
         self.assertIsInstance(da.hdf._obj, xr.DataArray)
 
         with self.assertRaises(AttributeError):

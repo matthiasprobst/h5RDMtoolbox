@@ -1,8 +1,9 @@
 import datetime
 import pathlib
-import sys
 import time
 import unittest
+
+import pytest
 
 import h5py
 
@@ -10,14 +11,6 @@ import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.utils import DownloadFileManager
 
 __this_dir__ = pathlib.Path(__file__).parent
-
-
-def get_python_version():
-    """Get the current Python version as a tuple."""
-    return sys.version_info.major, sys.version_info.minor, sys.version_info.micro
-
-
-TESTING_VERSIONS = (14,)
 
 
 class TestUtils(unittest.TestCase):
@@ -100,21 +93,18 @@ class TestUtils(unittest.TestCase):
         self.assertEqual((None, [], [], []), h5tbx.utils.DocStringParser.parse_docstring(''))
 
     def test_has_datasets(self):
-        with h5tbx.use(None):
-            with h5tbx.set_config(auto_create_h5tbx_version=False):
-                with h5tbx.File() as h5:
-                    self.assertFalse(h5tbx.utils.has_datasets(h5))
-                    h5.create_dataset('test', data=1)
-                    self.assertTrue(h5tbx.utils.has_datasets(h5))
-                    self.assertFalse(h5tbx.utils.has_groups(h5))
-                    h5.create_group('testgroup')
-                    self.assertTrue(h5tbx.utils.has_groups(h5))
+        with h5tbx.set_config(auto_create_h5tbx_version=False):
+            with h5tbx.File() as h5:
+                self.assertFalse(h5tbx.utils.has_datasets(h5))
+                h5.create_dataset('test', data=1)
+                self.assertTrue(h5tbx.utils.has_datasets(h5))
+                self.assertFalse(h5tbx.utils.has_groups(h5))
+                h5.create_group('testgroup')
+                self.assertTrue(h5tbx.utils.has_groups(h5))
+            self.assertTrue(h5tbx.utils.has_datasets(h5.hdf_filename))
+            self.assertTrue(h5tbx.utils.has_groups(h5.hdf_filename))
 
-                self.assertTrue(h5tbx.utils.has_datasets(h5.hdf_filename))
-                self.assertTrue(h5tbx.utils.has_groups(h5.hdf_filename))
-
-    @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
-                         reason=f"Nur auf Python {TESTING_VERSIONS} testen")
+    @pytest.mark.zenodo_read
     def test_download_manager(self):
         dfm = DownloadFileManager()
         self.assertTrue(dfm.file_directory.exists())

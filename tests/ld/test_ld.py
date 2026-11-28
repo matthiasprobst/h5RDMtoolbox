@@ -7,12 +7,11 @@ import unittest
 from unittest import mock
 
 import numpy as np
-import ontolutils
 import rdflib
 import requests
-import ssnolib
+from tests import _rdf_models as rdf_models
 from ontolutils import namespaces, urirefs, Thing, QUDT_UNIT
-from ontolutils.ex import dcat
+from h5rdmtoolbox.models import dcat
 from ontolutils.namespacelib import M4I
 from ontolutils.namespacelib import SCHEMA
 from ontolutils.utils.qudt_units import qudt_lookup
@@ -912,20 +911,18 @@ WHERE {
     def test_codemeta_to_hdf(self):
         codemeta_filename = __this_dir__ / '../../codemeta.json'
 
-        data = ontolutils.dquery(
-            'schema:SoftwareSourceCode',
-            codemeta_filename,
-            context={'schema': 'http://schema.org/'})  # Note, that codemeta uses the unsecure http
-
-        self.assertIsInstance(data, list)
-        self.assertEqual(len(data), 1)
-        self.assertEqual(data[0]['version'].replace("-rc.", "rc"), __version__)
-        self.assertTrue('author' in data[0])
-        self.assertIsInstance(data[0]['author'], list)
+        data = json.loads(codemeta_filename.read_text(encoding='utf-8'))
+        self.assertEqual(data['version'].replace("-rc.", "rc"), __version__)
         with temporary_user_cache():
             with h5tbx.File('test.hdf', 'w') as h5:
-                jsonld.to_hdf(grp=h5.create_group('person'), data=data[0],
-                              context={'@import': "https://doi.org/10.5063/schema/codemeta-2.0"})
+                jsonld.to_hdf(
+                    grp=h5.create_group('person'),
+                    data={'author': data['author']},
+                    context={name: f'http://schema.org/{name}' for name in (
+                        'author', 'Person', 'Organization', 'givenName', 'familyName',
+                        'email', 'affiliation', 'name',
+                    )},
+                )
                 self.assertEqual(h5['person']['author1'].attrs[rdf.RDF_PREDICATE_ATTR_NAME]['SELF'],
                                  'http://schema.org/author')
 
@@ -986,9 +983,9 @@ WHERE {
     def test_hdf2jsonld_with_standard_name_table(self):
         with h5tbx.File() as h5:
             h5.attrs["snt_file"] = "https://sandbox.zenodo.org/uploads/125545"
-            h5.frdf["snt_file"].predicate = ssnolib.namespace.SSNO.usesStandardNameTable
+            h5.frdf["snt_file"].predicate = rdf_models.SSNO.usesStandardNameTable
             h5["/"].attrs["snt_rootgroup"] = "https://sandbox.zenodo.org/uploads/12554567"
-            h5["/"].rdf["snt_rootgroup"].predicate = ssnolib.namespace.SSNO.usesStandardNameTable
+            h5["/"].rdf["snt_rootgroup"].predicate = rdf_models.SSNO.usesStandardNameTable
 
         jdict = json.loads(
             h5tbx.dump_jsonld(h5.hdf_filename, indent=2, contextual=True, structural=True,
@@ -998,11 +995,11 @@ WHERE {
         with h5tbx.File() as h5:
             h5.create_group('grp')
             h5.attrs["snt_file"] = "https://sandbox.zenodo.org/uploads/125545"
-            h5["grp"].frdf["snt_file"].predicate = ssnolib.namespace.SSNO.usesStandardNameTable
+            h5["grp"].frdf["snt_file"].predicate = rdf_models.SSNO.usesStandardNameTable
             h5["grp"].frdf["snt_file"].object = DCAT.Dataset
             self.assertEqual(
                 h5["/"].attrs[RDF_FILE_PREDICATE_ATTR_NAME]["snt_file"],
-                str(ssnolib.namespace.SSNO.usesStandardNameTable)
+                str(rdf_models.SSNO.usesStandardNameTable)
             )
 
     def test_frdf(self):
@@ -1086,7 +1083,7 @@ WHERE {
             h5.frdf["snt"].predicate = "https://matthiasprobst.github.io/ssno#usesStandardNameTable"
             h5.frdf["snt"].object = "https://zenodo.org/records/17572275/files/opencefadb_standard_name_table.jsonld"
             del h5.frdf["snt"].object
-            h5.frdf["snt"].object = ssnolib.StandardNameTable(
+            h5.frdf["snt"].object = rdf_models.StandardNameTable(
                 id="https://doi.org/10.5281/zenodo.17572275#StandardNameTable",
                 dataset=dcat.Dataset(
                     id="https://doi.org/10.5281/zenodo.17572275",
@@ -1136,7 +1133,7 @@ WHERE {
             if _unit is not None:
                 units = _get_qudt_unit(_unit, None)
                 if units is not None:
-                    return ssnolib.StandardName(
+                    return rdf_models.StandardName(
                         standard_name=value,
                         unit=units)  # units should be canonical, so this is not yet totally correct
             return None
@@ -1150,7 +1147,7 @@ WHERE {
                 "predicate": SKOS.altLabel
             },
             "standard_name": {
-                "predicate": ssnolib.SSNO.hasStandardName,
+                "predicate": rdf_models.SSNO.hasStandardName,
                 "object": _make_standard_name
             }
         }
@@ -1232,7 +1229,7 @@ hdf:H5T_INTEL_I64 a hdf:Datatype .
                 "object": lambda *_: None,
             },
             "standard_name": {
-                "predicate": ssnolib.SSNO.hasStandardName,
+                "predicate": rdf_models.SSNO.hasStandardName,
                 "object": lambda value, _: f"https://example.org/standard-name/{value}",
             },
         }

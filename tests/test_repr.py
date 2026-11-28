@@ -7,7 +7,7 @@ from h5rdmtoolbox import _repr
 from h5rdmtoolbox._repr import process_string_for_link
 
 # noinspection PyUnresolvedReferences
-from h5rdmtoolbox.database import mongo
+
 
 
 class TestRepr(unittest.TestCase):

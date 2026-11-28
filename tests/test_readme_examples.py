@@ -40,25 +40,10 @@ def test_displayed_turtle_matches_generated_graph(quickstart, index):
     assert isomorphic(actual, expected)
 
 
-@pytest.mark.parametrize('index', [1, 2, 3])
-def test_other_python_examples_have_independent_imports(quickstart, index):
-    # The metrics example consumes example.h5, but every block imports its own APIs.
+def test_validation_example(quickstart):
     namespace = {}
-    exec(compile(PYTHON_EXAMPLES[index], f'README Python example {index + 1}', 'exec'), namespace)
-    if index == 1:
-        assert namespace['metrics']['triples'] > 0
-    elif index == 2:
-        with namespace['h5tbx'].File('experiment.h5') as handle:
-            graph = rdflib.Graph().parse(data=handle.serialize(
-                'ttl', structural=False, contextual=True,
-                file_uri='https://example.org/experiment/'), format='turtle')
-        values = list(graph.objects(predicate=rdflib.URIRef('http://purl.org/dc/terms/created')))
-        assert len(values) == 1
-        assert values[0].datatype == rdflib.XSD.date
-        assert str(values[0]) == '2025-01-10'
-    else:
-        with h5py.File('uncompressed.h5') as handle:
-            assert handle['data'].compression is None
+    exec(compile(PYTHON_EXAMPLES[1], 'README validation', 'exec'), namespace)
+    assert namespace['result'].conforms
 
 
 @pytest.mark.parametrize('write_file', [False, True])

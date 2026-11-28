@@ -1,16 +1,18 @@
 [run]
 omit =
-    h5rdmtoolbox/cli.py
+    src/h5rdmtoolbox/cli.py
     gui.py
     tests/*
-    h5rdmtoolbox/tutorial.py
-    h5rdmtoolbox/errors.py
-    h5rdmtoolbox/protocols.py
+    src/h5rdmtoolbox/tutorial.py
+    src/h5rdmtoolbox/errors.py
+    src/h5rdmtoolbox/protocols.py
 relative_files = true
 
 [paths]
 source =
-    tests
+    src/h5rdmtoolbox
+    */wheel/h5rdmtoolbox
+    wheel/h5rdmtoolbox
 
 [report]
 exclude_lines =

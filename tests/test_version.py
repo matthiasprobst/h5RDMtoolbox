@@ -1,4 +1,5 @@
 import datetime
+import json
 import pathlib
 import re
 import unittest
@@ -41,20 +42,20 @@ class TestVersion(unittest.TestCase):
         self.assertEqual(codemeta["@id"], f"https://doi.org/{doi}")
 
     def test_colab_version(self):
-        """open colab jupyter notebook and check first cell for version"""
-        with open(__this_dir__ / "../docs" / "colab" / "quickstart.ipynb") as f:
-            lines = f.readlines()
-
-        found = False
-        for line in lines:
-            if "pip install" in line:
-                self.assertTrue(
-                    f'"# !pip install h5rdmtoolbox=={__version__}"'
-                    in parse_to_py_version(line.strip())
-                )
-                found = True
-                break
-        self.assertTrue(found)
+        """Check the package pin in the notebook's executable install cell."""
+        notebook = __this_dir__ / "../docs/colab/quickstart.ipynb"
+        with notebook.open(encoding="utf-8") as stream:
+            cells = json.load(stream)["cells"]
+        install_pins = [
+            match.group(1)
+            for cell in cells if cell["cell_type"] == "code"
+            for line in "".join(cell["source"]).splitlines()
+            if (match := re.fullmatch(
+                r"%pip install ['\"]?h5rdmtoolbox(?:\[[^\]]+\])?==([^'\"\s]+)['\"]?",
+                line.strip(),
+            ))
+        ]
+        self.assertEqual(install_pins, [__version__])
 
     def test_citation_cff(self):
         citation_cff = __this_dir__ / "../CITATION.cff"

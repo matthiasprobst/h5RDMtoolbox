@@ -6,12 +6,38 @@ import numpy as np
 import pytest
 import rdflib
 import requests
-from ontolutils.ex import dcat
+from h5rdmtoolbox.models import dcat
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.catalog import Query, QueryResult, SparqlQuery, RemoteSparqlQuery, RemoteSparqlStore, StoreManager, \
     InMemoryRDFStore, GraphDB
 from h5rdmtoolbox.catalog.stores.hdf5 import HDF5FileStore
+
+
+def test_hdf5_store_accepts_generated_dcat_distribution(tmp_path):
+    from ontolutils.onto import load
+    from pydantic import FileUrl
+
+    ontology = tmp_path / 'dcat.ttl'
+    ontology.write_text('''
+@prefix dcat: <http://www.w3.org/ns/dcat#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+dcat:Distribution a owl:Class .
+dcat:downloadURL a owl:ObjectProperty ; rdfs:domain dcat:Distribution .
+''', encoding='utf-8')
+    distribution_model = load(ontology).models.Distribution
+    source = tmp_path / 'sample file.h5'
+    with h5tbx.File(source, mode='w') as handle:
+        handle.create_dataset('temperature', data=42)
+
+    distribution = distribution_model(
+        id='https://example.org/sample', downloadURL=FileUrl(source.as_uri()),
+    )
+    store = HDF5FileStore(tmp_path / 'cache')
+    assert store.upload_file(distribution=distribution) is distribution
+    with store.open(distribution) as handle:
+        assert handle['temperature'].values[()] == 42
 
 __this_dir__ = pathlib.Path(__file__).parent
 
@@ -240,9 +266,9 @@ ex:PersonShape
         """
         with open("valid_person.ttl", "w") as f:
             f.write(valid_person_data)
-        gdb.upload_file("valid_person.ttl")
+        gdb.upload_file("valid_person.ttl", validate=True)
         with self.assertRaises(ValueError):
-            gdb.upload_file("invalid_person.ttl")
+            gdb.upload_file("invalid_person.ttl", validate=True)
 
         pathlib.Path("valid_person.ttl").unlink()
         pathlib.Path("invalid_person.ttl").unlink()

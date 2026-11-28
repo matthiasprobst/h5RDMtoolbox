@@ -1,44 +1,26 @@
-.. _wrapper:
+Scientific HDF5 I/O
+===================
 
-Working with HDF
-================
+``File``, ``Group`` and ``Dataset`` extend h5py with metadata-aware xarray reads.
+Set attributes explicitly; validation is a separate operation.
 
-While processing data, auxiliary data is required to understand the context of the data. This includes information
-about the data itself (e.g. units, data type, etc.) as well as information about the data generation (e.g. instrument
-settings, etc.). This information is often stored in separate files, however, for HDF5 files it is stored in
-attributes right next to the data. This is a powerful feature of HDF5 files. However, `h5py` only returns the data 
-as `numpy` arrays. The attribute data needs to be read separately. Also, information about dimension scales is not returned 
-to the user.
+.. code-block:: python
 
-The `h5rdmtoolbox` makes use of `xarray` objects, which wrap a very similar concept around a `numpy` array, such that 
-attributes and coordinates (respective concept to HDF dimension scales) are provided with the dataset values. The below
-figure illustrates the principle workflow. Before data is returned to the user, attributes and possibly related dimension 
-scale data is retrieved to instantiate a `xarray.DataArray` object, which is returned to the user. With this, not only all 
-information is grant to the user, but also very helpful features of the `xarray` library (e.g. plotting) are obtained.  
+   import h5rdmtoolbox as h5tbx
+   with h5tbx.File("measurement.h5", "w") as h5:
+       ds = h5.create_dataset("signal", data=[1., 2.], attrs={"units": "m"})
+       scale = h5.create_dataset("scale", data=2., attrs={"units": ""})
+       offset = h5.create_dataset("offset", data=3., attrs={"units": "m"})
+       ds.attach_data_scale_and_offset(scale, offset)
+   with h5tbx.File("measurement.h5", decode_calibration=True) as h5:
+       assert h5["signal"][()].values.tolist() == [5., 7.]
+       assert h5["signal"].values[()].tolist() == [1., 2.]
 
-.. image:: ../../_static/hdf_to_xarray_interface.svg
-  :width: 700
-  :alt: Alternative text
-  :align: center
+Calibration is disabled by default, scoped to each open file, and preserved by
+child objects and lazy query handles. Missing references or incompatible units
+raise errors during decoded reads. Existing files need no conversion.
 
-All in all, the wrapper module aims to provide simple interfaces to HDF5 files to enhance data
-generation, processing, and analysis. The following sections will guide you through those steps.
-
-.. note::
-
-   The package extends but does not limit the functionality of the `h5py` package. The syntax is also "`h5py`-like".
-   So, users that are familiar to the `h5py` package will find all features.
-
-
-.. toctree::
-    :maxdepth: 2
-    :hidden:
-
-    CreateFile.ipynb
-    DatasetCreation.ipynb
-    FAIRAttributes.ipynb
-    DatasetSlicing.ipynb
-    GroupCreation.ipynb
-    DumpFile.ipynb
-    NaturalNaming.ipynb
-    SpecialIO.ipynb
+Dimension scales become xarray coordinates. Use ``sel`` and ``isel`` for
+coordinate/index selection; unit conversion uses the package Pint registry.
+For plotting, normalization and vector operations, operate on the returned xarray
+objects directly. Notebook HTML display requires the ``notebook`` extra.

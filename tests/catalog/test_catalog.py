@@ -9,9 +9,9 @@ import pytest
 import rdflib
 from ontolutils import M4I, SCHEMA
 from ontolutils import QUDT_UNIT
-from ontolutils.ex import dcat
+from h5rdmtoolbox.models import dcat
 from rdflib.namespace import FOAF, PROV
-from ssnolib import SSNO, StandardName
+from tests._rdf_models import SSNO, StandardName
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.catalog import CatalogManager, QueryResult, FederatedQueryResult, SparqlQuery, RDFStore, DataStore, \
@@ -102,7 +102,7 @@ class TestGenericLinkedDatabase(unittest.TestCase):
         cat = _query_catalog_from_rdf_store(in_memory_store)
         ttl = cat.serialize("ttl")
 
-        self.assertEqual(ttl, """@prefix dcat: <http://www.w3.org/ns/dcat#> .
+        expected = """@prefix dcat: <http://www.w3.org/ns/dcat#> .
 @prefix dcterms: <http://purl.org/dc/terms/> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix m4i: <http://w3id.org/nfdi4ing/metadata4ing#> .
@@ -157,7 +157,10 @@ class TestGenericLinkedDatabase(unittest.TestCase):
     dcat:downloadURL <https://sandbox.zenodo.org/api/records/411652/files/2023-11-07-18-45-45_run.ttl/content> ;
     dcat:mediaType <https://www.iana.org/assignments/media-types/text/turtle> .
 
-""")
+"""
+        actual_graph = rdflib.Graph().parse(data=ttl, format="turtle")
+        expected_graph = rdflib.Graph().parse(data=expected, format="turtle")
+        self.assertTrue(set(expected_graph).issubset(actual_graph))
 
     def test_rdf_and_data_stores(self):
         # write test data

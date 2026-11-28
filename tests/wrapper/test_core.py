@@ -16,8 +16,7 @@ import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import __version__
 
 # noinspection PyUnresolvedReferences
-from h5rdmtoolbox.extensions import units
-from h5rdmtoolbox.wrapper import h5yaml
+from h5rdmtoolbox.science import units
 from h5rdmtoolbox.wrapper.h5attr import AttributeString
 
 logger = h5tbx.set_loglevel("ERROR")
@@ -37,12 +36,12 @@ class TestCore(unittest.TestCase):
         h5tbx.set_config(auto_create_h5tbx_version=False)
 
     def test_File(self):
-        self.assertEqual(str(h5tbx.File), "<class 'h5rdmtoolbox.wrapper.core.File'>")
+        self.assertEqual(str(h5tbx.File), "<class 'h5rdmtoolbox.wrapper.file.File'>")
         h5tbx.set_config(auto_create_h5tbx_version=False)
         self.assertEqual(h5tbx.get_config("auto_create_h5tbx_version"), False)
         with h5tbx.File() as h5:
             self.assertTrue("h5rdmtoolbox" not in h5)
-            self.assertEqual(h5.__str__(), '<class "File" convention: "h5py">')
+            self.assertIn("HDF5", str(h5))
 
         h5tbx.set_config(auto_create_h5tbx_version=True)
         self.assertEqual(h5tbx.get_config("auto_create_h5tbx_version"), True)
@@ -71,16 +70,16 @@ class TestCore(unittest.TestCase):
 """,
             )
             self.assertFalse("h5rdmtoolbox" not in h5)
-            self.assertEqual(h5.__str__(), '<class "File" convention: "h5py">')
+            self.assertIn("HDF5", str(h5))
 
         with h5tbx.set_config(auto_create_h5tbx_version=False):
             with h5tbx.File() as h5:
                 self.assertTrue("h5rdmtoolbox" not in h5)
-                self.assertEqual(h5.__str__(), '<class "File" convention: "h5py">')
+                self.assertIn("HDF5", str(h5))
 
         with h5tbx.File() as h5:
             self.assertFalse("h5rdmtoolbox" not in h5)
-            self.assertEqual(h5.__str__(), '<class "File" convention: "h5py">')
+            self.assertIn("HDF5", str(h5))
 
         assert h5.hdf_filename.exists()
         _h5_filename = h5.hdf_filename
@@ -120,22 +119,6 @@ class TestCore(unittest.TestCase):
             self.assertIsInstance(attr_str, AttributeString)
             grp.attrs["mystr"] = attr_str
 
-    def test_del(self):
-        with h5tbx.use("h5tbx"):
-            with h5tbx.File() as h5:
-                ds = h5.create_dataset(
-                    "ds", data=np.arange(10), units="m/s", attrs={"comment": "test"}
-                )
-
-                with self.assertRaises(ValueError):
-                    del ds.units
-
-                with self.assertRaises(AttributeError):
-                    with h5tbx.set_config(natural_naming=False):
-                        del ds.ds
-
-                del h5.ds
-                self.assertTrue("ds" not in h5)
 
     def test_delattr(self):
         with h5tbx.File() as h5:
@@ -225,141 +208,6 @@ class TestCore(unittest.TestCase):
             h5.create_dataset("ds4", np.arange(20))
             np.testing.assert_equal(h5["ds4"][:], np.arange(20))
 
-    def test_create_datasets_from_csv(self):
-        df = pd.DataFrame({"x": [1, 5, 10, 0], "y": [-3, 20, 0, 11.5]})
-        csv_filename1 = h5tbx.utils.generate_temporary_filename(
-            suffix=".csv", touch=False
-        )
-        self.assertEqual(csv_filename1.suffix, ".csv")
-        self.assertFalse(csv_filename1.exists())
-        csv_filename1 = h5tbx.utils.generate_temporary_filename(
-            suffix=".csv", touch=True
-        )
-        self.assertEqual(csv_filename1.suffix, ".csv")
-        self.assertTrue(csv_filename1.exists())
-
-        df.to_csv(csv_filename1, index=None)
-
-        with h5tbx.File() as h5:
-            with self.assertRaises(ValueError):
-                h5.create_datasets_from_csv(
-                    csv_filenames=csv_filename1, combine_opt="invlaid"
-                )
-            h5.create_datasets_from_csv(csv_filenames=csv_filename1)
-            self.assertEqual(
-                pathlib.Path(h5["x"].attrs["source_filename"]).resolve().absolute(),
-                csv_filename1.resolve().absolute(),
-            )
-            self.assertEqual(
-                h5["x"].attrs["source_filename_hash_md5"],
-                h5tbx.utils.get_checksum(csv_filename1),
-            )
-            self.assertEqual(
-                pathlib.Path(h5["y"].attrs["source_filename"]).resolve().absolute(),
-                csv_filename1.resolve().absolute(),
-            )
-            self.assertEqual(
-                h5["y"].attrs["source_filename_hash_md5"],
-                h5tbx.utils.get_checksum(csv_filename1),
-            )
-            self.assertEqual(h5["x"].shape, (4,))
-            self.assertEqual(h5["y"].shape, (4,))
-            np.testing.assert_equal(h5["x"][:], np.array([1, 5, 10, 0]))
-            np.testing.assert_equal(h5["y"][:], np.array([-3, 20, 0, 11.5]))
-
-        with h5tbx.File() as h5:
-            h5.create_dataset_from_csv(csv_filename=csv_filename1)
-            self.assertEqual(h5["x"].shape, (4,))
-            self.assertEqual(h5["y"].shape, (4,))
-            np.testing.assert_equal(h5["x"][:], np.array([1, 5, 10, 0]))
-            np.testing.assert_equal(h5["y"][:], np.array([-3, 20, 0, 11.5]))
-
-        with h5tbx.File() as h5:
-            x, y = h5.create_dataset_from_csv(
-                csv_filename=csv_filename1, shape=(2, 2), dimension=None
-            )
-            self.assertEqual(x.shape, (2, 2))
-            self.assertEqual(y.shape, (2, 2))
-            np.testing.assert_equal(x[:], df["x"].values.reshape((2, 2)))
-            np.testing.assert_equal(y[:], df["y"].values.reshape((2, 2)))
-
-        with h5tbx.File() as h5:
-            x, y = h5.create_dataset_from_csv(csv_filename=csv_filename1, dimension="x")
-            self.assertTrue(x.is_scale)
-            self.assertFalse(y.is_scale)
-            self.assertEqual(h5["x"], h5["y"].dims[0][0])
-
-        csv_filename2 = h5tbx.utils.generate_temporary_filename(suffix=".csv")
-
-        df2 = -1 * df
-        df2.to_csv(csv_filename2, index=None)
-
-        # test concatenate
-        with h5tbx.File() as h5:
-            h5.create_datasets_from_csv(
-                csv_filenames=[csv_filename1, csv_filename2], combine_opt="concatenate"
-            )
-            self.assertEqual(h5["x"].shape, (8,))
-            filenames = sorted(
-                [
-                    pathlib.Path(f).resolve().absolute()
-                    for f in h5["y"].attrs["source_filename"]
-                ]
-            )
-            ref_filenames = sorted(
-                [csv_filename1.resolve().absolute(), csv_filename2.resolve().absolute()]
-            )
-            self.assertEqual(filenames, ref_filenames)
-            self.assertEqual(
-                h5["y"].attrs["source_filename_hash_md5"],
-                [
-                    h5tbx.utils.get_checksum(csv_filename1),
-                    h5tbx.utils.get_checksum(csv_filename2),
-                ],
-            )
-            self.assertEqual(h5["y"].shape, (8,))
-
-        # test stack
-        with h5tbx.File() as h5:
-            h5.create_datasets_from_csv(
-                csv_filenames=[csv_filename1, csv_filename2],
-                combine_opt="stack",
-                axis=0,
-            )
-            self.assertEqual(h5["x"].shape, (2, 4))
-            np.testing.assert_equal(df["x"].values, h5["x"].values[0, :])
-            np.testing.assert_equal(df2["x"].values, h5["x"].values[1, :])
-            np.testing.assert_equal(df["y"].values, h5["y"].values[0, :])
-            np.testing.assert_equal(df2["y"].values, h5["y"].values[1, :])
-
-        with h5tbx.File() as h5:
-            h5.create_datasets_from_csv(
-                csv_filenames=[csv_filename1, csv_filename2],
-                combine_opt="stack",
-                axis=-1,
-            )
-            self.assertEqual(h5["x"].shape, (4, 2))
-            self.assertEqual(h5["y"].shape, (4, 2))
-
-        with h5tbx.File() as h5:
-            h5.create_datasets_from_csv(
-                csv_filenames=[csv_filename1, csv_filename2],
-                combine_opt="stack",
-                axis=0,
-                shape=(2, 2),
-            )
-            self.assertEqual(h5["x"].shape, (2, 2, 2))
-            self.assertEqual(h5["y"].shape, (2, 2, 2))
-
-        with h5tbx.File() as h5:
-            h5.create_datasets_from_csv(
-                csv_filenames=[csv_filename1, csv_filename2],
-                combine_opt="stack",
-                axis=-1,
-                shape=(2, 2),
-            )
-            self.assertEqual(h5["x"].shape, (2, 2, 2))
-            self.assertEqual(h5["y"].shape, (2, 2, 2))
 
     def test_slicing(self):
         with h5tbx.File() as h5:
@@ -493,7 +341,7 @@ class TestCore(unittest.TestCase):
 
             self.assertEqual(
                 str(h5.grp),
-                '<HDF5 wrapper group "/grp" (members: 2, convention: "h5py")>',
+                '<HDF5 wrapper group "/grp" (members: 2)>',
             )
 
             h5.grp["ds_from_xr_data_array"] = xr.DataArray(np.random.rand(10, 20, 30))
@@ -605,7 +453,6 @@ class TestCore(unittest.TestCase):
                 )
 
         imgreader._index = 0
-        h5tbx.use("h5py")
         with h5tbx.File() as h5:
             ds = h5.create_dataset_from_image(
                 imgreader, "testimg", axis=0, attrs=dict(units="", long_name="test")
@@ -635,7 +482,7 @@ class TestCore(unittest.TestCase):
             self.assertEqual(ds.name, "/testimg")
 
     def test_properties(self):
-        with h5tbx.File() as h5:
+        with h5tbx.set_config(auto_create_h5tbx_version=True), h5tbx.File() as h5:
             self.assertIsInstance(h5.creation_time, datetime)
             now = datetime.now().astimezone()
             file_now = h5.creation_time
@@ -723,37 +570,7 @@ class TestCore(unittest.TestCase):
 
                 self.assertEqual(obj.attrs.get("non_existing_attribute"), None)
 
-    def test_create_from_yaml(self):
-        h5y = h5yaml.H5Yaml(__this_dir__ / "../data/from_yaml.yaml")
-        with h5tbx.File() as h5:
-            h5y.write(h5)
-            self.assertIn("grp", h5)
-            self.assertEqual(h5.grp.attrs["comment"], "test")
-            self.assertIn("grp/supgrp", h5)
-            self.assertIn("velocity", h5["grp/supgrp"])
-            self.assertEqual("Title of the file", h5.attrs["title"])
-            self.assertEqual("0000-1234-1234-1234", h5.attrs["contact"])
 
-        with h5tbx.File() as h5:
-            h5.create_from_yaml(__this_dir__ / "../data/from_yaml.yaml")
-            self.assertIn("grp", h5)
-            self.assertIn("grp/supgrp", h5)
-            self.assertIn("velocity", h5["grp/supgrp"])
-            self.assertEqual("Title of the file", h5.attrs["title"])
-            self.assertEqual("0000-1234-1234-1234", h5.attrs["contact"])
-            h5.dumps()
-
-    def test_create_from_dict_does_not_mutate_input(self):
-        data = {
-            "group_a": {
-                "attrs": {"note": "test"},
-                "dataset_a": {"data": [1, 2, 3], "dtype": "float32"},
-            }
-        }
-        reference = deepcopy(data)
-        with h5tbx.File() as h5:
-            h5.create_from_dict(data)
-        self.assertDictEqual(data, reference)
 
     def test_deprecated_object_kwarg_sets_rdf_object(self):
         with h5tbx.File() as h5:

@@ -1,0 +1,685 @@
+import copy
+import json
+import logging
+import pathlib
+import warnings
+from typing import Union, Dict, Optional
+
+import requests
+from h5rdmtoolbox.models import dcat, foaf
+from h5rdmtoolbox.models import prov
+from packaging.version import Version
+from rdflib import Graph
+
+from .metadata import Metadata
+from .tokens import get_api_token
+from ..interface import RepositoryInterface, RepositoryFile
+from ..._version import __version__
+
+logger = logging.getLogger('h5rdmtoolbox')
+
+IANA_DICT = {
+    '.json': 'application/json',
+    '.jsonld': 'application/ld+json',
+    '.pdf': 'application/pdf',
+    '.png': 'image/png',
+    '.tiff': 'image/tiff',
+    '.yaml': 'application/x-yaml',
+    '.hdf': 'application/x-hdf5',
+    '.hdf5': 'application/x-hdf5',
+    '.h5': 'application/x-hdf5',
+    '.csv': 'text/csv',
+    '.txt': 'text/plain',
+    '.xml': 'application/xml',
+    '.zip': 'application/zip',
+    '.ttl': 'text/turtle',
+    '.turtle': 'text/turtle',
+    '.md': 'text/markdown',
+}
+
+# Zenodo temporarily blocked requests with empty user agents. Using a User-Agent header helps them distinguish legitimate tools from abusive traffic
+USER_AGENT_HEADER = {
+    "User-Agent": f"h5rdmtoolbox/{__version__} (https://github.com/matthiasprobst/h5rdmtoolbox)",
+}
+
+
+def _auth_headers(access_token: Optional[str], headers: Optional[Dict] = None) -> Dict:
+    """Build request headers without exposing credentials in the URL."""
+    merged = dict(USER_AGENT_HEADER)
+    merged.update(headers or {})
+    if access_token:
+        merged["Authorization"] = f"Bearer {access_token}"
+    return merged
+
+
+def _get_media_type(filename: Optional[str]):
+    if filename is None:
+        return None
+    suffix = pathlib.Path(filename).suffix
+
+    return IANA_DICT.get(suffix, suffix[1:])
+
+
+class APIError(Exception):
+    """Raised when an API error occurs."""
+
+
+def _bump_version(version: str, part: str) -> str:
+    """Bump a version string.
+
+    Parameters
+    ----------
+    version : str
+        The version string to bump.
+    part : str
+        The part to bump. Must be one of "major", "minor", or "patch".
+
+    Returns
+    -------
+    str
+        The bumped version string.
+
+    Raises
+    ------
+    ValueError
+        If the part is not one of "major", "minor", or "patch".
+    """
+    v = Version(version)
+    major, minor, patch = v.release
+    if part == 'major':
+        major += 1
+        minor = 0
+        patch = 0
+    elif part == 'minor':
+        minor += 1
+        patch = 0
+    elif part == 'patch':
+        patch += 1
+    else:
+        raise ValueError('part must be one of "major", "minor", or "patch".')
+    return f"{major}.{minor}.{patch}"
+
+
+def _spdx_checksum_from_zenodo(checksum_str: str):
+    """
+    Convert Zenodo's 'md5:abcdef...' string to an SPDX checksum object.
+    """
+    if not checksum_str:
+        return None
+    if ":" in checksum_str:
+        algo, value = checksum_str.split(":", 1)
+    else:
+        algo, value = "md5", checksum_str  # fallback
+
+    algo_map = {
+        "md5": "https://spdx.org/rdf/terms#checksumAlgorithm_md5",
+        "sha1": "https://spdx.org/rdf/terms#checksumAlgorithm_sha1",
+        "sha256": "https://spdx.org/rdf/terms#checksumAlgorithm_sha256",
+        "sha512": "https://spdx.org/rdf/terms#checksumAlgorithm_sha512",
+    }
+    algo_iri = algo_map.get(algo.lower())
+    return {
+        "algorithm": algo_iri if algo_iri else algo,
+        "checksumValue": value,
+    }
+
+
+class ZenodoRecord(RepositoryInterface):
+    """Interface to Zenodo records.
+
+    .. note: If you want to use the sandbox (testing) environment,
+        please init with sandbox=True.
+    """
+
+    def __init__(self,
+                 source: Union[int, str, None] = None,
+                 sandbox: bool = False,
+                 env_name_for_token: Optional[str] = None,
+                 **kwargs):
+        self.env_name_for_token = env_name_for_token
+        rec_id = kwargs.pop('rec_id', None)
+        if rec_id is not None:
+            warnings.warn("The `rec_id` parameter is deprecated. Please use the source parameter instead.",
+                          DeprecationWarning)
+            source = rec_id
+        self.sandbox = sandbox
+        self._cached_json = {}
+        if isinstance(source, int):
+            rec_id = source
+        elif isinstance(source, str):
+            """assuming it is a url"""
+            if not source.startswith('http'):
+                raise ValueError(f"String input should be a valid URL, which {source} seems not to be. If you intend "
+                                 "to provide a record id, please provide an integer.")
+            if source.startswith(f"{self.base_url}/record"):
+                rec_id = int(source.split('/')[-1])
+            elif source.startswith('https://doi.org/'):
+                r = requests.get(
+                    source,
+                    allow_redirects=True,
+                    headers=_auth_headers(None, {"Content-Type": "application/json"}),
+                )
+                r.raise_for_status()
+                # the redirected url contains the ID:
+                rec_id = int(r.url.split('/')[-1])
+        elif source is None:
+            # create a new deposit (with new rec_id and without metadata!)
+            r = requests.post(
+                self.depositions_url,
+                json={},
+                headers=_auth_headers(self.access_token, {"Content-Type": "application/json"}),
+            )
+            r.raise_for_status()
+            rec_id = r.json()['id']
+        self.rec_id = rec_id
+        assert self.rec_id is not None
+        self._original_rec_id = rec_id
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__} (id={self.rec_id}, url={self.record_url})"
+
+    @property
+    def identifier(self) -> str:
+        identifier = self.get_metadata().get('identifier', None)
+        if identifier is None:
+            return self.get_metadata().get('prereserve_doi', {}).get('recid', 'no identifier found')
+        return identifier
+
+    @property
+    def title(self):
+        return self.get_metadata().get('title', 'No title')
+
+    @property
+    def base_url(self) -> str:
+        """Returns the base url of the repository"""
+        if self.sandbox:
+            return 'https://sandbox.zenodo.org'
+        return 'https://zenodo.org'
+
+    @property
+    def depositions_url(self):
+        return f"{self.base_url}/api/deposit/depositions"
+
+    @property
+    def record_url(self):
+        """Return the (published) url. Note, that it must not necessarily exist if you
+        just created a new record and have not published it yet!"""
+        return f"{self.base_url}/records/{self.rec_id}"
+
+    @property
+    def uploads_url(self):
+        """Return the (published) url. Note, that it must not necessarily exist if you
+        just created a new record and have not published it yet!"""
+        return f"{self.base_url}/uploads/{self.rec_id}"
+
+    @property
+    def access_token(self):
+        """Get the access token for the Zenodo API. This is needed to upload files."""
+        return get_api_token(sandbox=self.sandbox, env_var_name=self.env_name_for_token)
+
+    def _get(self, authenticate: bool = False):
+        """Get the deposit metadata as JSON. Using authenticate=True enforces authentication."""
+        url = f"{self.depositions_url}/{self.rec_id}"
+
+        if authenticate:
+            access_token = self.access_token
+            r = requests.get(url, headers=_auth_headers(access_token))
+            r.raise_for_status()
+            return r.json()
+
+        record_url = url.replace("deposit/depositions/", "records/")
+        r = requests.get(record_url, headers=USER_AGENT_HEADER)
+        if r.status_code == 404:
+            access_token = self.access_token
+            r = requests.get(url, headers=_auth_headers(access_token))
+        r.raise_for_status()
+        return r.json()
+
+    def get_metadata(self, authenticate=False) -> Dict:
+        return self._get(authenticate=authenticate)['metadata']
+
+    def set_metadata(self, metadata: Union[Dict, Metadata]):
+        """update the metadata of the deposit"""
+        if isinstance(metadata, dict):
+            metadata = Metadata(**metadata)
+
+        if not isinstance(metadata, Metadata):
+            raise TypeError('The metadata must be of type Metadata, not {type(metadata)}')
+
+        url_latest_draft = f"{self.depositions_url}/{self.rec_id}"
+        r = requests.put(
+            url_latest_draft,
+            data=json.dumps(dict(metadata=metadata.model_dump(exclude_none=True))),
+            headers=_auth_headers(self.access_token),
+            # headers={"Content-Type": "application/json"}
+        )
+        if r.status_code == 400:
+            logger.critical(f"Bad request message: {r.json()}")
+        r.raise_for_status()
+        self.rec_id = r.json()["id"]
+
+    def get_doi(self) -> str:
+        """Get the DOI of the deposit."""
+        metadata = self.get_metadata()
+        doi = metadata.get('doi', None)
+        if doi is None:
+            return metadata['prereserve_doi']['doi']
+        return doi
+
+    def get_doi_url(self) -> str:
+        """Get the DOI url of the deposit."""
+        return f"https://doi.org/{self.get_doi()}"
+
+    def exists(self) -> bool:
+        """Check if the deposit exists on Zenodo. Note, that only published records are detected!"""
+        url = f"{self.depositions_url}/{self.rec_id}"
+        record_url = url.replace("deposit/depositions/", "records/")
+        r = requests.get(record_url, headers=USER_AGENT_HEADER)
+        if r.status_code == 404:
+            access_token = self.access_token
+            r = requests.get(url, headers=_auth_headers(access_token))
+        return r.ok
+
+    def is_published(self) -> bool:
+        """Check if the deposit is published."""
+        return self._get()['submitted']
+
+    submitted = is_published  # alias
+
+    @property
+    def files(self) -> Dict[str, RepositoryFile]:
+        is_submitted = self.submitted()
+
+        def _parse_download_url(url, filename):
+            if url is None:
+                return url
+            if is_submitted:
+                return f"{self.record_url}/files/{filename}"
+            return url
+
+        def _parse(data: Dict):
+            filename = data.get("filename", None)
+            if filename is None:
+                return dict(
+                    download_url=_parse_download_url(data['links']['self'], data['key']),
+                    access_url=f"https://doi.org/{self.get_doi()}",
+                    name=data["key"],
+                    media_type=_get_media_type(data.get('key')),
+                    identifier=data.get('id', None),
+                    identifier_url=None,
+                    size=data.get('size', None),
+                    checksum=(
+                        data['checksum'].split(':', 1)[-1]
+                        if data.get('checksum')
+                        else None
+                    ),
+                    checksum_algorithm=data.get('checksum_algorithm', "md5"),
+                )
+            return dict(
+                download_url=_parse_download_url(data['links']['download'], data['filename']),
+                access_url=f"https://doi.org/{self.get_doi()}",
+                name=data.get('filename', None),
+                media_type=_get_media_type(data.get('filename', None)),
+                identifier=data.get('id', None),
+                identifier_url=data.get('id', None),
+                size=data.get('filesize', None),
+                checksum=data.get('checksum', None),
+                checksum_algorithm=data.get('checksum_algorithm', None),
+                access_token=self.access_token
+            )
+
+        rfiles = [RepositoryFile(**_parse(data)) for data in self._get()['files']]
+        return {f.name: f for f in rfiles}
+
+    def download_file(self, filename: str, target_folder: Optional[Union[str, pathlib.Path]] = None) -> pathlib.Path:
+        """Download a file based on URL. The url is validated using pydantic
+
+        Parameters
+        ----------
+        filename : str
+            The filename.
+        target_folder : Union[str, pathlib.Path], optional
+            The target folder, by default None
+            If None, the file will be downloaded to the default folder, which is in
+            the user data directory of the h5rdmtoolbox package.
+
+        Returns
+        -------
+        pathlib.Path
+            The path to the downloaded file.
+        """
+        warnings.warn("Please use `.files.get(filename).download()`", DeprecationWarning)
+        return self.files.get(filename).download(target_folder=target_folder)
+
+    def delete(self) -> requests.Response:
+        """Delete the deposit."""
+        r = requests.delete(
+            f"{self.depositions_url}/{self.rec_id}",
+            headers=_auth_headers(self.access_token),
+        )
+        if r.status_code == 405:
+            logger.error(f'Only unpublished records can be deleted. Record "{self.rec_id}" is published.')
+        return r
+
+    def new_version(self, new_version_string: str = None, increase_part: str = None):
+        """Sets the record into edit mode while creating a new version. You need to call `.publish()` after
+        adding new files, metadata etc.
+
+        Parameters
+        ----------
+        new_version_string : str
+            The new version string. It must be higher than the current version. This
+            is checked using the `packaging.version.Version` class.
+        increase_part: str
+            If provided, the new version string is automatically generated by increasing
+            the specified part. Must be one of "major", "minor", or "patch".
+            Only works if the version can be parsed by `packaging.version.Version`.
+
+        Returns
+        -------
+        ZenodoInterface
+            The new ZenodoInterface with the new version.
+
+        Raises
+        ------
+        ValueError
+            If the new version is not higher than the current version.
+        APIError
+            If the new version cannot be created because permission is missing.
+        """
+
+        if new_version_string is None and increase_part is None:
+            raise ValueError('Either new_version_string or increase_part must be provided.')
+        if new_version_string is not None and increase_part is not None:
+            raise ValueError('Only one of new_version_string or increase_part must be provided.')
+        if increase_part is not None:
+            metadata = self._get(authenticate=True)["metadata"]
+            new_version_string = _bump_version(metadata['version'], increase_part)
+
+        self.unlock()
+        jdata = self._get(authenticate=True)
+
+        curr_version = Version(jdata['metadata']['version'])
+        new_version = Version(new_version_string)
+        if not new_version > curr_version:
+            raise ValueError(f'The new version must be higher than the current version {curr_version}.')
+
+        new_vers_url = self.get_actions_url("newversion")
+
+        r = requests.post(new_vers_url, headers=_auth_headers(self.access_token))
+
+        r.raise_for_status()
+        latest_draft = r.json()['links']['latest_draft']
+        _id = latest_draft.split('/')[-1]
+
+        new_record = copy.deepcopy(self)
+        new_record.rec_id = _id
+        current_metadata = new_record.get_metadata(authenticate=True)
+        current_metadata["version"] = str(new_version)
+        new_record.set_metadata(current_metadata)
+        return new_record
+
+    def publish(self) -> dcat.Dataset:
+        """Be careful. The record cannot be deleted afterward!"""
+        url = self.get_actions_url("publish")
+        r = requests.post(
+            url,
+            # data=json.dumps({'publication_date': '2024-03-03', 'version': '1.2.3'}),
+            headers=_auth_headers(self.access_token),
+        )
+        r.raise_for_status()
+
+        resp_json = {}
+        try:
+            resp_json = r.json()
+        except Exception:
+            resp_json = {}
+
+        rec_id = None
+        # Preferred: explicit id
+        if isinstance(resp_json, dict) and "id" in resp_json:
+            rec_id = resp_json.get("id")
+        else:
+            # try to find a URL to parse an id from
+            links = resp_json.get("links", {}) if isinstance(resp_json, dict) else {}
+            rec_url = links.get("record") or links.get("self") or links.get("latest_draft")
+            if rec_url:
+                try:
+                    rec_id = int(str(rec_url).rstrip("/").split("/")[-1])
+                except Exception:
+                    rec_id = None
+
+        # Fallback: try to refresh deposit data (may still work) to get id
+        if rec_id is None:
+            try:
+                jdata = self._get(authenticate=True)
+                rec_id = jdata.get("id")
+            except Exception:
+                rec_id = None
+
+        if rec_id is not None:
+            self.rec_id = rec_id
+            self._original_rec_id = rec_id
+        #
+        # jdata = self._get()
+        # self.rec_id = jdata['id']
+        # self._original_rec_id = self.rec_id
+        return self.as_dcat_dataset()
+
+    def as_dcat_dataset(self) -> dcat.Dataset:
+        """Returns the record metadata as DCAT Dataset."""
+        record = self._get()
+
+        md = record.get("metadata", {})
+        if not md:
+            raise ValueError("No metadata found in the record.")
+
+        license_ = md.get("license", None)
+        if isinstance(license_, dict):
+            license_ = license_["id"]
+        creators = md.get("creators") or []
+        keywords = md.get("keywords") or []
+        doi = md.get("doi")
+        landing = record.get("links", {}).get("self")
+
+        publisher = md.get("imprint_publisher", None)
+        if publisher:
+            if publisher.lower() == "zenodo":
+                publisher = foaf.Organization(
+                    id="https://www.wikidata.org/wiki/Q22661177",
+                    name=publisher,
+                    homepage="https://zenodo.org/"
+                )
+            else:
+                publisher = foaf.Agent(
+                    name=publisher
+                )
+
+        dcat_creators = []
+        for c in creators:
+            name = c.get("name") or c.get("affiliation")
+            orcid = c.get("orcid") or ""
+            affiliation = c.get("affiliation", None)
+            person = {
+                "id": f"https://orcid.org/{orcid.replace('https://orcid.org/', '')}",
+                "name": name,
+                "orcid": orcid
+            }
+            if affiliation:
+                person["affiliation"] = {
+                    "name": affiliation
+                }
+            dcat_creators.append(prov.Person.model_validate(person))
+
+        # Build distributions from files
+        distributions = []
+        for f in record.get("files"):
+            key = f.get("key") or f.get("filename") or "file"
+            doi = doi or str(record.get("doi"))
+            title = key
+            media_type = pathlib.Path(key).suffix
+            size = f.get("filesize", f.get("size", None))
+            links = f.get("links", {})
+            access_url = links.get("self") or record.get("links", {}).get("files")
+            download_url = links.get("download", links.get("self"))
+            if record["submitted"]:
+                download_url = download_url.replace("/draft/files", "/files")
+            checksum_value = f.get("checksum")
+            if checksum_value:
+                if not checksum_value.startswith(("md5:", "sha1:", "sha256:", "sha512:")):
+                    checksum_value = f"md5:{checksum_value}"
+            checksum_obj = _spdx_checksum_from_zenodo(checksum_value)
+
+            dist = {
+                "id": links["self"],
+                "title": title,
+                "accessURL": access_url,
+                "downloadURL": download_url,
+                "mediaType": media_type,
+                "byteSize": size,
+                "checksum": checksum_obj
+            }
+            dcat_dist = dcat.Distribution.model_validate(dist)
+            distributions.append(dcat_dist)
+
+        # Build dataset
+        dataset = {
+            "id": record["links"].get("doi", record["links"].get("self", None)),
+            "title": md.get("title"),
+            "description": md.get("description"),
+            "identifier": doi or str(record.get("id")),
+            "issued": record.get("created"),
+            "modified": record.get("modified"),
+            "publisher": publisher,
+            "creator": dcat_creators,
+            "keyword": keywords,
+            "landingPage": landing,
+            "license": license_,
+            "accessRights": md.get("access_right"),
+            "version": md.get("version"),
+            "distribution": distributions,
+        }
+        dcat_dataset = dcat.Dataset.model_validate(
+            remove_none(dataset)
+        )
+        return dcat_dataset
+
+    def get_actions_url(self, action: str) -> str:
+        return f"{self.base_url}/api/deposit/depositions/{self.rec_id}/actions/{action}"
+
+    def discard(self):
+        """Discard the latest action, e.g. creating a new version"""
+        jdata = self._get(authenticate=True)
+        r = requests.post(
+            jdata['links']['discard'],
+            headers=_auth_headers(self.access_token),
+        )
+        r.raise_for_status()
+
+        self.rec_id = self._original_rec_id
+        return self
+
+    def unlock(self):
+        """unlock the deposit. To lock it call publish()
+
+        Raises
+        ------
+        APIError
+            If the record cannot be unlocked because permission is missing.
+        """
+        edit_url = self._get(authenticate=True)['links'].get('edit', None)
+        if edit_url is None:
+            raise APIError('Unable to unlock the record. Please check your permission of the Zenodo API Token.')
+
+        r = requests.post(edit_url, headers=_auth_headers(self.access_token))
+        if r.status_code == 400:
+            print(f'Cannot publish data. This might be because metadata is missing. Check on the website, which '
+                  f'fields are required!')
+        r.raise_for_status()
+
+    def __upload_file__(self, filename, overwrite: bool = False):
+        """Uploading file to record"""
+        filename = pathlib.Path(filename)
+        if not filename.exists():
+            raise FileNotFoundError(f'File "{filename}" does not exist.')
+
+        # existing_filenames = [file.name for file in self.files.values()]
+        # file_exists_in_record = filename.name in existing_filenames
+
+        # if not overwrite and file_exists_in_record:
+        #     logger.debug(f'Overwriting file "{filename}" in record "{self.rec_id}"')
+        #     warnings.warn(f'Filename "{filename}" already exists in deposit. Skipping..."', UserWarning)
+        #     return
+
+        # file exists in record. get file id
+        # if file_exists_in_record:
+        #     file_id = self.files.get(filename.name).identifier
+        #     url = f"{self.depositions_url}/{self.rec_id}/files/{file_id}"
+        #     logger.debug(f'requests.delete(url={url}, ...)')
+        #     r = requests.delete(url=url,
+        #                         params={'access_token': self.access_token})
+        #     r.raise_for_status()
+
+        # https://developers.zenodo.org/?python#quickstart-upload
+        bucket_url = self._get(authenticate=True)["links"]["bucket"]
+        logger.debug(f'adding file "{filename}" to record "{self.rec_id}"')
+        with open(filename, "rb") as fp:
+            r = requests.put(f"{bucket_url}/{filename.name}",
+                             data=fp,
+                             headers=_auth_headers(self.access_token),
+                             )
+            if r.status_code == 403:
+                logger.critical(
+                    f"Access denied message: {r.json()}. This could be because the record is published. "
+                    f"You can only modify metadata.")
+            r.raise_for_status()
+
+    def export(self, fmt, target_filename: Optional[Union[str, pathlib.Path]] = None):
+        """Exports the record (see Export button on record website). Format must be one of the
+        possible options, e.g. dcat.ap, json, ..."""
+        if target_filename is None:
+            from ...utils import generate_temporary_filename
+            target_filename = generate_temporary_filename()
+        else:
+            target_filename = pathlib.Path(target_filename)
+
+        _links = self._get()["links"]
+        _html_url = _links.get("html", _links.get("self_html"))
+        export_url = f"{_html_url}/export/{fmt}"
+
+        r = requests.get(export_url,
+                         headers=USER_AGENT_HEADER, )
+        if r.status_code == 404:
+            access_token = self.access_token
+            r = requests.get(export_url, headers=_auth_headers(access_token))
+        r.raise_for_status()
+        with open(target_filename, 'wb') as f:
+            f.write(r.content)
+
+        return target_filename
+
+    def get_jsonld(self) -> str:
+        """Return the json-ld representation of the record."""
+        tmp_dcat_filename = self.export(fmt='dcat-ap')
+        g = Graph()
+        g.parse(tmp_dcat_filename, format='xml')
+        return g.serialize(format='json-ld',
+                           indent=4,
+                           context={'dcat': 'http://www.w3.org/ns/dcat#',
+                                    'foaf': 'http://xmlns.com/foaf/0.1/',
+                                    'adms': 'http://www.w3.org/ns/adms#',
+                                    'skos': 'http://www.w3.org/2004/02/skos/core#',
+                                    'dcterms': 'http://purl.org/dc/terms/',
+                                    'org': 'http://www.w3.org/ns/org#',
+                                    'xsd': 'http://www.w3.org/2001/XMLSchema#',
+                                    'owl': 'http://www.w3.org/2002/07/owl#',
+                                    'dctype': 'http://purl.org/dc/dcmitype/'
+                                    })
+
+
+def remove_none(obj):
+    if isinstance(obj, dict):
+        return {k: remove_none(v) for k, v in obj.items() if v is not None}
+    if isinstance(obj, list):
+        return [remove_none(v) for v in obj if v is not None]
+    return obj

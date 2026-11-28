@@ -9,17 +9,18 @@ from ontolutils.namespacelib import M4I, OBO, SSN_SYSTEM, SCHEMA
 from ontolutils.utils.qudt_units import qudt_lookup
 from rdflib import FOAF, PROV
 from rdflib.namespace import SOSA, SSN
-from ssnolib import SSNO, ssno
+from tests._rdf_models import SSNO
+from tests import _rdf_models as ssno
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import Attribute
-from h5rdmtoolbox import use
+
 from h5rdmtoolbox.ld.rdf import RDFError
 from h5rdmtoolbox.ld.rdf import RDF_PREDICATE_ATTR_NAME
 from h5rdmtoolbox.ld.utils import get_obj_bnode
 from h5rdmtoolbox.wrapper.h5attr import AttrDescriptionError
 
-from ontolutils.ex import time
+from tests import _time_models as time
 
 
 class TestRDF(unittest.TestCase):
