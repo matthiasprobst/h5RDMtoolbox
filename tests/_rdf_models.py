@@ -2,9 +2,8 @@
 from typing import Optional
 
 import rdflib
-from ontolutils import namespaces, urirefs
+from ontolutils import Thing, namespaces, urirefs
 from h5rdmtoolbox.models.dcat import Dataset
-from h5rdmtoolbox.models.skos import Concept, ConceptScheme
 from ontolutils.typing import AnyIri
 from ontolutils.utils.qudt_units import qudt_lookup
 from pydantic import ConfigDict, Field, field_validator
@@ -14,14 +13,14 @@ SSNO = rdflib.Namespace("https://matthiasprobst.github.io/ssno#")
 
 @namespaces(ssno=str(SSNO))
 @urirefs(StandardNameTable="ssno:StandardNameTable", dataset="ssno:dataset")
-class StandardNameTable(ConceptScheme):
+class StandardNameTable(Thing):
     dataset: Optional[Dataset] = None
 
 
 @namespaces(ssno=str(SSNO))
 @urirefs(StandardName="ssno:StandardName", standardName="ssno:standardName",
          unit="ssno:unit", standardNameTable="ssno:standardNameTable")
-class StandardName(Concept):
+class StandardName(Thing):
     model_config = ConfigDict(populate_by_name=True)
     standardName: str = Field(alias="standard_name")
     unit: AnyIri

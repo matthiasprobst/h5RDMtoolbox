@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import Union, List, Optional
 
 from pydantic import HttpUrl, Field, field_validator, model_validator
@@ -6,16 +5,9 @@ from pydantic import HttpUrl, Field, field_validator, model_validator
 from ontolutils import LangString
 from ontolutils import Thing, as_id
 from ontolutils import urirefs, namespaces
-from ..skos import Concept
 from ontolutils.typing import AnyIri, AnyThing, AnyIriOrListOf, Mailbox
 
 __version__ = "2013.19.05"
-
-
-@namespaces(dcat="http://www.w3.org/ns/dcat#")
-@urirefs(Role='dcat:Role')
-class Role(Concept):
-    """Pydantic implementation of dcat:Role"""
 
 
 @namespaces(prov="http://www.w3.org/ns/prov#",
@@ -142,7 +134,7 @@ class Attribution(Thing):
     """
     agent: Union[AnyThing, Person, List[Person], AnyThing, Organization, List[Organization], List[
         Union[Person, Organization]]]
-    hadRole: Union[str, AnyThing, Role, List[Union[str, AnyThing, Role]]] = Field(alias="had_role",
+    hadRole: Union[str, AnyThing, List[Union[str, AnyThing]]] = Field(alias="had_role",
                                                                                   default=None)
 
     @field_validator('agent', mode='before')
@@ -157,69 +149,10 @@ class Attribution(Thing):
         return agent
 
 
-@namespaces(prov="http://www.w3.org/ns/prov#")
-@urirefs(SoftwareAgent='prov:SoftwareAgent')
-class SoftwareAgent(Agent):
-    """Pydantic Model for http://www.w3.org/ns/prov#SoftwareAgent"""
-
-
-@namespaces(prov="http://www.w3.org/ns/prov#")
-@urirefs(Entity='prov:Entity',
-         wasGeneratedBy='prov:wasGeneratedBy',
-         wasDerivedFrom='prov:wasDerivedFrom',
-         wasAttributedTo='prov:wasAttributedTo',
-         qualifiedAttribution='prov:qualifiedAttribution',
-         hadPrimarySource='prov:hadPrimarySource'
-         )
-class Entity(Thing):
-    """Implementation of prov:Entity"""
-    wasGeneratedBy: Union[AnyThing, "Activity"] = Field(default=None, alias="was_generated_by")
-    wasDerivedFrom: Union[AnyThing, "Entity", List[Union[AnyThing, "Entity"]]] = Field(default=None,
-                                                                                       alias="was_derived_from")
-    wasAttributedTo: Union[AnyThing, Agent, List[Union[Agent, AnyThing]]] = Field(default=None,
-                                                                                  alias="was_attributed_to")
-    qualifiedAttribution: Union[AnyThing, List[Attribution]] = Field(default=None, alias="qualified_attribution")
-    hadPrimarySource: Union[AnyThing, "Entity", List[Union[AnyThing, "Entity"]]] = Field(default=None,
-                                                                                         alias="had_primary_source")
-
-
-@namespaces(prov="http://www.w3.org/ns/prov#")
-@urirefs(Activity='prov:Activity',
-         startedAtTime='prov:startedAtTime',
-         endedAtTime='prov:endedAtTime',
-         used='prov:used',
-         generated='prov:generated',
-         wasStartedBy='prov:wasStartedBy',
-         wasEndedBy='prov:wasEndedBy'
-         )
-class Activity(Thing):
-    """Pydantic Model for http://www.w3.org/ns/prov#Activity"""
-    startedAtTime: datetime = Field(default=None, alias="startedAtTime")
-    endedAtTime: datetime = Field(default=None, alias="endedAtTime")
-    used: Union[AnyThing, List[Union[AnyThing, Entity]], Entity] = Field(default=None, alias="used")
-    generated: Union[AnyThing, List[Union[AnyThing, Entity]], Entity] = Field(default=None, alias="generated")
-    wasStartedBy: Union[AnyThing, List[Union[AnyThing, Entity]], Entity] = Field(default=None,
-                                                                                 alias="was_started_by")
-    wasEndedBy: Union[AnyThing, List[Union[AnyThing, Entity]], Entity] = Field(default=None, alias="was_ended_by")
-
-
-@namespaces(prov="http://www.w3.org/ns/prov#")
-@urirefs(Plan='prov:Plan', )
-class Plan(Thing):
-    """Pydantic Model for http://www.w3.org/ns/prov#Plan"""
-
-
-Entity.model_rebuild()
-
 __all__ = [
     "Attribution",
     "Person",
     "Organization",
     "Agent",
-    "SoftwareAgent",
-    "Activity",
-    "Entity",
-    "Role",
-    "Plan",
     "__version__"
 ]

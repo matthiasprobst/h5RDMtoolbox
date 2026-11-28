@@ -187,7 +187,7 @@ class Resource(Thing):
     versionNotes: Optional[Union[LangString, List[LangString]]] = Field(default=None,
                                                                         alias='version_notes')  # adms:versionNotes
 
-    wasGeneratedBy: AnyIriOf[prov.Activity] = Field(
+    wasGeneratedBy: AnyThing = Field(
         default=None,
         alias='was_generated_by'
     )  # prov:wasGeneratedBy
@@ -217,15 +217,6 @@ class Resource(Thing):
         elif isinstance(license, list):
             return [_parse_license(lic) if isinstance(lic, str) else lic for lic in license]
         return license
-
-
-@namespaces(dcat=_NS)
-@urirefs(DataService='dcat:DataService',
-         endpointURL='dcat:endpointURL',
-         servesDataset='dcat:servesDataset')
-class DataService(Resource):
-    endpointURL: Union[HttpUrl, FileUrl] = Field(alias='endpoint_url', default=None)  # dcat:endpointURL
-    servesDataset: "Dataset" = Field(alias='serves_dataset', default=None)  # dcat:servesDataset
 
 
 @namespaces(dcat=_NS,
@@ -264,7 +255,7 @@ class Distribution(Resource):
     byteSize: int = Field(default=None, alias='byte_size')  # dcat:byteSize
     hasPart: Optional[AnyThing] = Field(default=None, alias='has_part')  # dcterms:hasPart
     checksum: Optional[AnyIriOf[Checksum]] = None  # spdx:checksum
-    accessService: Optional[AnyIriOf[DataService]] = Field(default=None, alias='access_service')  # dcat:accessService
+    accessService: Optional[AnyThing] = Field(default=None, alias='access_service')  # dcat:accessService
     conformsTo: Optional[AnyThing] = Field(default=None, alias='conforms_to')  # dcterms:conformsTo
 
     def _repr_html_(self):
@@ -368,22 +359,6 @@ class Distribution(Resource):
         return downloadURL
 
 
-@namespaces(dcat=_NS)
-@urirefs(DatasetSeries='dcat:DatasetSeries')
-class DatasetSeries(Resource):
-    """Pydantic implementation of dcat:DatasetSeries"""
-
-
-@namespaces(dcterms="http://purl.org/dc/terms/",
-            dcat=_NS)
-@urirefs(startDate='dcat:startDate',
-         endDate='dcat:endDate')
-class PeriodOfTime(Thing):
-    startDate: datetime = Field(default=None, alias='start_date',
-                                description="The start of the period.")  # dcat:startDate
-    endDate: datetime = Field(default=None, alias='end_date', description="The end of the period.")  # dcat:endDate
-
-
 @namespaces(dcat=_NS,
             prov="http://www.w3.org/ns/prov#",
             dcterms="http://purl.org/dc/terms/")
@@ -424,7 +399,7 @@ class Dataset(Resource):
         Landing page of the resource (dcat:landingPage)
     modified: datetime = None
         Last modified date of the resource (dcterms:modified)
-    inSeries: DatasetSeries = None
+    inSeries: Thing or IRI, optional
         The series the dataset belongs to (dcat:inSeries)
     """
     identifier: Union[
@@ -433,14 +408,14 @@ class Dataset(Resource):
     distribution: Optional[AnyIriOrListOf[Distribution]] = Field(default=None)  # dcat:Distribution
     modified: datetime = Field(default=None)  # dcterms:modified
     landingPage: HttpUrl = Field(default=None, alias="landing_page")  # dcat:landingPage
-    inSeries: DatasetSeries = Field(default=None, alias='in_series')  # dcat:inSeries
+    inSeries: Optional[AnyThing] = Field(default=None, alias='in_series')  # dcat:inSeries
     license: Optional[IriList] = Field(default=None)  # dcat:license
     spatial: Optional[AnyIriOrListOf[str]] = Field(default=None)  # dcterms:spatial
     spatialResolutionInMeters: Optional[Union[float, str]] = Field(
         default=None,
         alias='spatial_resolution_in_meters'
     )  # dcterms:spatialResolutionInMeters
-    temporal: Optional[PeriodOfTime] = Field(
+    temporal: Optional[AnyThing] = Field(
         default=None,
         alias='temporal',
         description="The temporal period that the dataset covers."
@@ -481,11 +456,10 @@ class Catalog(Dataset):
     primaryTopic: AnyThingOrList = None  # dcterms:primaryTopic
     record: AnyThingOrList = Field(default=None, alias='catalog_record')  # dcterms:catalogRecord
     resource: Optional[AnyIriOrListOf[Resource]] = None  # dcterms:resource
-    service: Optional[AnyIriOrListOf[DataService]] = None  # dcterms:service
+    service: Optional[AnyThingOrList] = None  # dcterms:service
     homepage: Optional[AnyIri] = None  # foaf:homepage
     catalog: "Catalog" = None  # dcat:catalog
     themeTaxonomy: Optional[AnyThingOrList] = Field(default=None, alias='theme')  # dcat:themeTaxonomy
 
 
-DataService.model_rebuild()
 Catalog.model_rebuild(force=True)

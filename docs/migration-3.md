@@ -52,6 +52,8 @@ manage it separately.
 
 Use `h5rdmtoolbox.models` in place of `ontolutils.ex` when constructing DCAT,
 FOAF or PROV models for Toolbox integrations. The Toolbox requires ontolutils 1.x.
+The model package covers the catalog and Zenodo workflows. Use Ontolutils
+`Thing` models or IRIs for references to other ontology resources.
 
 Python 3.11 is now the minimum supported version. Upgrade Python 3.10
 environments before installing the 3.0 development checkout; Python 3.10 reached
